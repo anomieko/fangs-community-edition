@@ -2,7 +2,7 @@
 # Run one or more headless FANGS instances inside a private network namespace
 # (loopback only, nothing leaves the machine), off-screen via Xvfb.
 #
-# Usage: tools/run/headless.sh <seconds> <client-dir> -- <name>:<delay>:<MOBA.exe args> [-- ...]
+# Usage: tools/run/headless.sh <seconds> <client-dir> -- <name>:<delay>:<game args> [-- ...]
 #   Each instance gets its own reflink copy at work/run/<name> (logs in its MOBA/Saved/Logs).
 # Env: UE4SS=1 installs UE4SS + tools/ue4ss mods (FangsCtl: append commands to
 #      work/run/<name>/MOBA/Binaries/Win64/fangsctl_cmd.txt).
@@ -28,6 +28,7 @@ done
 [[ -n $cur ]] && specs+=("$cur")
 
 script=$(mktemp); trap 'rm -f "$script"' EXIT
+exe=; for e in MOBA-Win64-Shipping.exe MOBA.exe; do [[ -f "$client/MOBA/Binaries/Win64/$e" ]] && { exe=$e; break; }; done
 if [[ ${RENDER:-0} == 1 || ${GPU:-0} == 1 ]]; then rflags="-windowed -ResX=1280 -ResY=720 -d3d11"; else rflags="-nullrhi"; fi
 launcher="xvfb-run -a -s '-screen 0 1280x720x24'"
 if [[ ${GPU:-0} == 1 ]]; then
@@ -36,9 +37,9 @@ if [[ ${GPU:-0} == 1 ]]; then
   export WINEPREFIX=$REPO/work/wine/prefix-gpu WINEDLLOVERRIDES="dwmapi,d3d11,dxgi,d3d10core=n,b"
 fi
 {
-  echo 'ip link set lo up; mount -t tmpfs tmpfs /tmp/.X11-unix'
+  echo 'ip link set lo up; mount -t tmpfs tmpfs /tmp/.X11-unix; pgids=()'
   if [[ ${RUN_BACKEND:-0} == 1 ]]; then
-    echo "'$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} > '$REPO/work/logs/backend.stdout' 2>&1 &"
+    echo "'$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} --game-dir '$client' > '$REPO/work/logs/backend.stdout' 2>&1 &"
     echo "sleep 1"
   fi
   for s in "${specs[@]}"; do
@@ -52,22 +53,32 @@ fi
       cp -a "$REPO/tools/ue4ss/Mods/." "$bin/ue4ss/Mods/"
       cp "$REPO/tools/ue4ss/mods.txt" "$bin/ue4ss/Mods/mods.txt"
       cp "$REPO/tools/ue4ss/UE4SS-settings.ini" "$bin/ue4ss/UE4SS-settings.ini"
-      cp -a "$REPO/tools/ue4ss/UE4SS_Signatures" "$bin/ue4ss/"
+      [[ $exe == MOBA.exe ]] && cp -a "$REPO/tools/ue4ss/UE4SS_Signatures" "$bin/ue4ss/"
       : > "$bin/fangsctl_cmd.txt"
     fi
+    # Own Wine prefix per instance: Shipping builds keep Saved/ (config, saves) in %LOCALAPPDATA%.
+    pfx=$REPO/work/run/$name.prefix; rm -rf "$pfx"; cp -a --reflink=auto "$WINEPREFIX" "$pfx"
     if [[ -n ${BACKEND:-} ]]; then
-      mkdir -p "$dir/MOBA/Saved/Config/WindowsNoEditor"
-      sed "s/@BACKEND@/$BACKEND/g" "$REPO/tools/run/config/Engine.ini.template" > "$dir/MOBA/Saved/Config/WindowsNoEditor/Engine.ini"
+      for cfg in "$dir/MOBA/Saved/Config/WindowsNoEditor" "$pfx/drive_c/users/$USER/AppData/Local/MOBA/Saved/Config/WindowsNoEditor"; do
+        mkdir -p "$cfg"
+        sed "s/@BACKEND@/$BACKEND/g" "$REPO/tools/run/config/Engine.ini.template" > "$cfg/Engine.ini"
+      done
     fi
     if [[ -n ${SAVES:-} ]]; then
       mkdir -p "$dir/MOBA/Saved/SaveGames"; cp "$SAVES"/*.sav "$dir/MOBA/Saved/SaveGames/"
     fi
-    echo "( sleep $delay; cd '$dir/MOBA/Binaries/Win64' && exec $launcher wine MOBA.exe $margs $rflags -nosound -unattended -nosplash -log ) > '$REPO/work/logs/$name.stdout' 2>&1 &"
+    # own session/process group per instance so everything it spawns (gamescope, wine) is killed at the end
+    echo "setsid bash -c \"sleep $delay; cd '$dir/MOBA/Binaries/Win64' && export WINEPREFIX='$pfx' && exec $launcher wine $exe $margs $rflags -nosound -unattended -nosplash -log\" > '$REPO/work/logs/$name.stdout' 2>&1 & pgids+=(\$!)"
   done
-  echo "sleep $secs; wineserver -k; sleep 3; kill \$(jobs -p) 2>/dev/null; wait"
+  echo "sleep $secs; for pg in \${pgids[@]}; do kill -TERM -- -\$pg 2>/dev/null; done; wineserver -k; sleep 3"
+  echo "for pg in \${pgids[@]}; do kill -KILL -- -\$pg 2>/dev/null; done; kill \$(jobs -p) 2>/dev/null; wait"
 } > "$script"
 mkdir -p "$REPO/work/logs"
 env -u WAYLAND_DISPLAY -u DISPLAY unshare -rnm bash "$script" || true
+# sweep: any Wine process still using one of our prefixes (never touches the user's own Wine/Proton games)
+for pid in $(pgrep -u "$(id -u)" -f 'wine|\.exe' 2>/dev/null); do
+  tr '\0' '\n' < /proc/$pid/environ 2>/dev/null | grep -q "^WINEPREFIX=$REPO/work/" && kill -9 "$pid" 2>/dev/null
+done
 for s in "${specs[@]}"; do
   name=${s%%:*}
   cp "$REPO/work/run/$name/MOBA/Saved/Logs/MOBA.log" "$REPO/work/logs/$name.log" 2>/dev/null && echo "log: work/logs/$name.log"

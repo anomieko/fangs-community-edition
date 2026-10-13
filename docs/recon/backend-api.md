@@ -51,7 +51,8 @@ Discovered by running the client against `backend/fangs_backend.py` (which logs 
 - Lambda URLs are built as `FANGSApiBaseURL + "/dev/" + <route>`; seen routes:
   `update-player-record-key` (POST `{RecordId, Key, Value}`), `get-player-missions`,
   `update-player-info` (PUT `{namespace, cosmeticType, cosmeticId, version}`), `update-player-settings`,
-  `vivox-token`. All carry the player's AccelByte bearer token.
+  `vivox-token`. All carry the player's AccelByte bearer token. The environment segment is `/dev/` in the
+  Dec 2023 playtest and `/prod/` in the Feb 2023 build.
 
 ## `PROFILE_INFO_KEY` (FPlayerInfo)
 

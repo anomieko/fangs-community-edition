@@ -6,7 +6,7 @@ returns an AccelByte-style 404 so we can see what the game needs next.
 
 Run:  backend/.venv/bin/python backend/fangs_backend.py --port 8080
 """
-import argparse, asyncio, base64, json, re, time, uuid
+import argparse, asyncio, base64, hashlib, hmac, json, os, re, time, uuid
 from pathlib import Path
 
 from aiohttp import web, WSMsgType
@@ -76,6 +76,16 @@ class Store:
             self.save()
         return users[username]
 
+    def check_secret(self, user, secret):
+        """Names are first-come: the first login binds the name to the launcher's per-install secret."""
+        if 'secret' not in user:
+            salt = os.urandom(8).hex()
+            user['secret'] = f"{salt}${hashlib.sha256((salt + secret).encode()).hexdigest()}"
+            self.save()
+            return True
+        salt, digest = user['secret'].split('$', 1)
+        return hmac.compare_digest(digest, hashlib.sha256((salt + secret).encode()).hexdigest())
+
     def user_by_id(self, user_id):
         return next((u for u in self.data['users'].values() if u['user_id'] == user_id), None)
 
@@ -112,6 +122,15 @@ def caller(request):
     return {}
 
 
+def is_local(request):
+    """Game hosts run on this machine and talk to us over loopback."""
+    return request.remote in ('127.0.0.1', '::1')
+
+
+def is_server(request):
+    return is_local(request) or 'client' in caller(request)
+
+
 # ---------------------------------------------------------------- IAM
 
 @route('POST', r'/iam(?:/v3)?/oauth/token')
@@ -123,8 +142,22 @@ async def oauth_token(request):
     if request.headers.get('Authorization', '').startswith('Basic '):
         client_id = base64.b64decode(request.headers['Authorization'][6:]).decode().split(':')[0]
     if gt == 'password':
-        return web.json_response(make_token(store, user=store.user_for(form.get('username', 'player')), client_id=client_id))
-    if gt == 'client_credentials':
+        secret = form.get('password', '')
+        code = request.app['cfg'].join_code
+        if code:  # launcher sends "<community join code>:<per-install secret>"
+            given, _, secret = secret.partition(':')
+            if not hmac.compare_digest(given, code):
+                return err(401, 10131, 'wrong community join code')
+        name = form.get('username', '')
+        if not re.fullmatch(r'[A-Za-z0-9_]{3,16}', name):
+            return err(400, 10132, 'invalid player name')
+        user = store.user_for(name)
+        if not store.check_secret(user, secret):
+            return err(401, 10130, 'this name is taken (wrong secret)')
+        return web.json_response(make_token(store, user=user, client_id=client_id))
+    if gt == 'client_credentials':  # server login: only our own game hosts, which run on this machine
+        if not is_local(request):
+            return err(401, 10133, 'server login is only allowed locally')
         return web.json_response(make_token(store, client_id=client_id))
     if gt == 'refresh_token':
         who = store.tokens.get(form.get('refresh_token', ''))
@@ -137,11 +170,8 @@ async def oauth_token(request):
 
 @route('POST', r'/iam/v3/oauth/platforms/(?P<platform>[^/]+)/token')
 async def platform_token(request):
-    store = request.app['store']
-    form = await request.post()
-    # No real platform verification — derive a stable account from the platform token's first 16 chars.
-    name = f"{request.match_info['platform']}-{(form.get('platform_token') or 'anon')[:16]}"
-    return web.json_response(make_token(store, user=store.user_for(name)))
+    # Platform logins (Steam/Epic/Xbox) can't be verified without those services; use -TestUser logins.
+    return err(401, 10134, 'platform login not supported; use the Fangs CE launcher')
 
 
 @route('POST', r'/iam/v3/oauth/revoke')
@@ -186,6 +216,11 @@ def record_body(key, value, user_id=None, is_public=False):
 async def player_record(request):
     store = request.app['store']
     uid, key = request.match_info['uid'], request.match_info['key']
+    who = caller(request)
+    if not who and not is_local(request):
+        return err(401, 20001, 'unauthorized')
+    if request.method != 'GET' and not is_server(request) and who.get('user_id') != uid:
+        return err(403, 20013, 'you can only change your own records')
     recs = store.data['player_records'].setdefault(uid, {})
     if request.method == 'GET':
         if key not in recs and (default := default_player_record(store, uid, key)) is not None:
@@ -210,6 +245,8 @@ async def game_record(request):
     store = request.app['store']
     key = request.match_info['key']
     recs = store.data['game_records']
+    if request.method != 'GET' and not is_server(request):
+        return err(403, 20013, 'game records are read-only')
     if request.method == 'GET':
         if key not in recs:
             return err(404, 18003, f'game record {key} not found')
@@ -247,12 +284,12 @@ def lambda_user(request):
     return caller(request).get('user_id')
 
 
-@route('GET', r'/fangsapi/dev/vivox-token')
+@route('GET', r'/fangsapi/[^/]+/vivox-token')
 async def fangs_vivox_token(request):
     return web.json_response({'token': 'fangs-local-vivox'})
 
 
-@route('POST', r'/fangsapi/dev/update-player-record-key')
+@route('POST', r'/fangsapi/[^/]+/update-player-record-key')
 async def fangs_update_record_key(request):
     store, uid = request.app['store'], lambda_user(request)
     if not uid:
@@ -264,7 +301,7 @@ async def fangs_update_record_key(request):
     return web.json_response({'success': True, 'RecordId': body['RecordId'], 'Key': body['Key']})
 
 
-@route('PUT', r'/fangsapi/dev/update-player-info')
+@route('PUT', r'/fangsapi/[^/]+/update-player-info')
 async def fangs_update_player_info(request):
     store, uid = request.app['store'], lambda_user(request)
     if not uid:
@@ -279,7 +316,7 @@ async def fangs_update_player_info(request):
     return web.json_response(info)
 
 
-@route('GET', r'/fangsapi/dev/get-player-missions')
+@route('GET', r'/fangsapi/[^/]+/get-player-missions')
 async def fangs_player_missions(request):
     return web.json_response({})
 
@@ -342,6 +379,12 @@ def session_view(sess):
 @route('POST', r'/sessionbrowser/namespaces/[^/]+/gamesession')
 async def session_create(request):
     app, who = request.app, caller(request)
+    if 'user_id' not in who:
+        return err(401, 20001, 'unauthorized')
+    for old in [s for s in app['sessions'].values() if s['user_id'] == who['user_id']]:
+        app['sessions'].pop(old['session_id'], None)          # one custom lobby per player
+        if old['_host']:
+            asyncio.create_task(app['hosts'].stop(old['_host'], 'owner created a new lobby'))
     body = await request.json()
     user = app['store'].user_by_id(who.get('user_id', '')) or {}
     sid = uuid.uuid4().hex
@@ -411,6 +454,20 @@ async def session_one(request):
             asyncio.create_task(app['hosts'].stop(sess['_host'], 'session deleted'))
         return web.json_response(session_view(sess))
     return web.json_response(session_view(sess))
+
+
+# ---------------------------------------------------------------- Player package downloads
+# Served behind the community join code: http://<server>/download/<join code>/<file>
+
+@route('GET', r'/download/(?P<code>[^/]+)/(?P<name>[A-Za-z0-9._-]+)')
+async def download(request):
+    cfg = request.app['cfg']
+    if not cfg.downloads or not cfg.join_code or not hmac.compare_digest(request.match_info['code'], cfg.join_code):
+        return err(404, 404, 'not found')
+    path = Path(cfg.downloads) / request.match_info['name']
+    if not path.is_file():
+        return err(404, 404, 'not found')
+    return web.FileResponse(path, headers={'Content-Disposition': f'attachment; filename="{path.name}"'})
 
 
 # ---------------------------------------------------------------- Telemetry (accept and drop)
@@ -491,7 +548,7 @@ async def dispatch(request, handler):
     body = await request.read()
     entry = {'t': round(time.time(), 3), 'method': request.method, 'path': request.path, 'query': request.query_string}
     if body:
-        entry['body'] = body[:2000].decode('utf-8', 'replace')
+        entry['body'] = re.sub(r'(password=)[^&]*', r'\1<redacted>', body[:2000].decode('utf-8', 'replace'))
     if 'Authorization' in request.headers:
         entry['auth'] = request.headers['Authorization'][:24]
     if request.path.rstrip('/') == '/lobby':
@@ -530,6 +587,9 @@ def main():
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', type=int, default=8080)
     ap.add_argument('--public-ip', default='127.0.0.1', help='address clients use to reach this machine')
+    ap.add_argument('--downloads', default='', help='directory with player packages served at /download/<join code>/')
+    ap.add_argument('--join-code', default=os.environ.get('FANGS_JOIN_CODE', ''),
+                    help='community code players need to log in (baked into the player package)')
     ap.add_argument('--qos-port', type=int, default=11032)
     ap.add_argument('--seed', default=str(Path(__file__).parent / 'seed' / 'game_records.json'))
     ap.add_argument('--game-dir', default=str(Path(__file__).parent.parent / 'clients' / 'playtest-main_v0_0_444'))

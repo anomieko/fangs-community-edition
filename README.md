@@ -22,9 +22,10 @@ built and played the game can run private custom matches again.
 
 ## Status
 
-Two players can create and join a custom lobby, pick heroes and play a match on a self-hosted server.
-Matchmaking is intentionally not supported (custom lobbies only) and all content is unlocked.
-See **[docs/STATUS.md](docs/STATUS.md)** for details and next steps.
+Players can create and join custom lobbies, pick heroes and play matches on a self-hosted server.
+Target game build: **15 February 2023 (Steam build 10554626)**. Matchmaking is intentionally not
+supported (custom lobbies only) and all content is unlocked.
+See **[docs/STATUS.md](docs/STATUS.md)** and **[docs/SERVER.md](docs/SERVER.md)**.
 
 ## How it works
 
@@ -63,4 +64,6 @@ python3 -I tools/bpdump/bp2txt.py work/bpjson -o work/bp                # JSON -
 tools/run/test_lobby.sh
 ```
 
-Player and server packages are in progress (see [docs/STATUS.md](docs/STATUS.md)).
+- Server: `server/` (Docker image, hardening script, deploy script) — see [docs/SERVER.md](docs/SERVER.md).
+- Players (Windows): `player/build-full-client.sh` / `player/build-package.sh` → launcher `FangsCE.bat`.
+- Players (Linux): `tools/play/local.sh <name>`.

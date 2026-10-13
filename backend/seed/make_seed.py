@@ -31,15 +31,17 @@ version_data = {
     'AvailableMaps': [{'Name': n, 'Map': m, 'Custom': True} for n, m in maps],
 }
 records = {
-    'FANGSConfig': {'NoServerMessage': 'FANGS revival server',
-                    # GetMobaVersion() spelling not yet confirmed — provide both.
-                    'main_v0_0_444': version_data, '0.0.444': version_data},
+    # Keyed by the client's MOBA/Content/Data/version.txt. Known builds:
+    #   main_v0_0_444            Closed Playtest, Dec 2023 (app 1831080)
+    #   Playtest021523v1_v0_0_02 FANGS build 10554626, 15 Feb 2023 (app 1717990)
+    'FANGSConfig': {'NoServerMessage': 'Fangs: Community Edition server',
+                    **{v: version_data for v in ('main_v0_0_444', 'Playtest021523v1_v0_0_02')}},
     'season': {}, 'HeroLevelRewards': {}, 'Mission': {},
     'Justice': {'justiceSchema': '1.1', 'subsystemEnabled': False, 'pollTimeSeconds': 600, 'resetTimeHours': 24,
                 'afkPenaltyEnabled': False, 'crashPenaltyEnabled': False, 'dodgePenaltyEnabled': False,
                 'leavingPenaltyEnabled': False, 'partyPenaltyEnabled': False,
                 'afkPenaltyTiers': [], 'crashPenaltyTiers': [], 'dodgePenaltyTiers': [], 'leavingPenaltyTiers': []},
 }
-out = Path(__file__).with_name('game_records.json')
+out = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).with_name('game_records.json')
 out.write_text(json.dumps(records, indent=1))
 print(f'wrote {out}')

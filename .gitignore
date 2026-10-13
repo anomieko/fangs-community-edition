@@ -9,3 +9,4 @@ obj/
 __pycache__/
 /backend/.venv/
 /backend/data/
+/dist/

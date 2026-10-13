@@ -75,12 +75,15 @@ class HostManager:
         while host.proc.returncode is None:
             await asyncio.sleep(2)
             if not host.ready.is_set():
+                # Development builds log the listen line; Shipping builds barely log, so also accept
+                # FangsHost's heartbeat reporting the lobby map.
                 try:
-                    if needle in host.log_path.read_text(errors='replace'):
-                        host.ready.set()
-                        self.log({'host': host.id, 'event': 'ready', 'port': host.port})
+                    logged = needle in host.log_path.read_text(errors='replace')
                 except OSError:
-                    pass
+                    logged = False
+                if logged or host.status.get('map', '').endswith('LE_Lobby_Map'):
+                    host.ready.set()
+                    self.log({'host': host.id, 'event': 'ready', 'port': host.port})
                 continue
             st = host.status
             players = st.get('players', 0)
