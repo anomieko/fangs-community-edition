@@ -24,14 +24,17 @@ ssh_ 'set -e; export DEBIAN_FRONTEND=noninteractive
       command -v rsync >/dev/null || sudo apt-get install -y -qq rsync >/dev/null; sudo systemctl enable --now docker >/dev/null 2>&1 || true
       sudo mkdir -p '"$remote"'/game '"$remote"'/repo'
 
-echo "==> uploading game files (first time ~13 GB; movies are skipped, servers do not need them)"
-rsync_ -a --delete --info=progress2 --exclude 'MOBA/Content/Movies/' --exclude 'MOBA/Saved/' \
+echo "==> uploading game files (first time ~14 GB; later runs only send changes)"
+rsync_ -a --delete --info=progress2 --exclude 'MOBA/Saved/' \
   "$game/" "$target:$remote/game/"
 
 echo "==> uploading server code"
+ue4ss_zip=$REPO/third_party/ue4ss/dl/UE4SS_v3.0.1-1170-g9e7fed53.zip   # see server/Dockerfile
+[[ -f $ue4ss_zip ]] || { echo "missing $ue4ss_zip (UE4SS v3.0.1-1170-g9e7fed53)" >&2; exit 1; }
+cp "$ue4ss_zip" "$REPO/server/ue4ss.zip"
 rsync_ -a --delete --relative \
   "$REPO/./backend/fangs_backend.py" "$REPO/./backend/hosts.py" "$REPO/./backend/seed/make_seed.py" \
-  "$REPO/./server/" "$REPO/./tools/ue4ss/" "$REPO/./tools/run/config/" "$REPO/./.dockerignore" \
+  "$REPO/./server/" "$REPO/./tools/ue4ss/" "$REPO/./tools/run/config/" "$REPO/./player/" "$REPO/./.dockerignore" \
   "$target:$remote/repo/"
 
 echo "==> building and starting (public address: $public)"
