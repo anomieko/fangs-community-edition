@@ -194,13 +194,18 @@ async def users_me(request):
 
 # ---------------------------------------------------------------- CloudSave
 
+# GameplayTutorialComplete (WB_MainMenu): 0 forced tutorial, 1 starter-hero pick, 2 menu hints, 3 done.
+# Everything is unlocked, so players start past all of it.
+TUTORIAL_DONE = 3
+
+
 def default_player_record(store, uid, key):
     """Records the old AWS lambdas created for new players (CreatePlayerURL); schema from FPlayerInfo."""
     user = store.user_by_id(uid) or {'display_name': uid[:8]}
     if key == 'PROFILE_INFO_KEY':
         return {'Username': user['display_name'], 'Version': 'main_v0_0_444', 'AccountType': 'Player',
                 'Hero': 'Berserker', 'Region': 'Local', 'Sigil': '', 'Stickers': [],
-                'GameplayTutorialComplete': 1, 'Cosmetics': {}}
+                'GameplayTutorialComplete': TUTORIAL_DONE, 'Cosmetics': {}}
     return None
 
 
@@ -225,6 +230,9 @@ async def player_record(request):
     if request.method == 'GET':
         if key not in recs and (default := default_player_record(store, uid, key)) is not None:
             recs[key] = default; store.save()
+        if key == 'PROFILE_INFO_KEY' and isinstance(recs.get(key), dict) \
+                and recs[key].get('GameplayTutorialComplete', 0) < TUTORIAL_DONE:   # profiles from older versions
+            recs[key]['GameplayTutorialComplete'] = TUTORIAL_DONE; store.save()
         if key not in recs:
             return err(404, 18022, f'record {key} not found for user {uid}')
         return web.json_response(record_body(key, recs[key], uid, bool(request.match_info['pub'])))
