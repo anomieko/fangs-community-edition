@@ -94,13 +94,20 @@ def b64url(obj):
     return base64.urlsafe_b64encode(json.dumps(obj, separators=(',', ':')).encode()).rstrip(b'=').decode()
 
 
+def tagged_name(user):
+    """AccelByte-style display name "<name>#<4 digits>". The client splits names on '#' and uses the first
+    part as the player name; an untagged name reads as empty (top bar "#name", lobby creator not owner)."""
+    tag = int(hashlib.sha256(user['user_id'].encode()).hexdigest(), 16) % 10000
+    return f"{user['display_name']}#{tag:04d}"
+
+
 def make_token(store, *, user=None, client_id=''):
     exp = int(time.time()) + 3600 * 24
     claims = {'namespace': NAMESPACE, 'client_id': client_id, 'exp': exp, 'iat': int(time.time()),
               'iss': 'fangs-backend', 'jti': uuid.uuid4().hex, 'scope': 'account commerce social publishing analytics',
               'roles': [], 'permissions': [], 'bans': [], 'jflgs': 0}
     if user:
-        claims.update({'sub': user['user_id'], 'display_name': user['display_name']})
+        claims.update({'sub': user['user_id'], 'display_name': tagged_name(user)})
     access = f"{b64url({'alg': 'RS256', 'typ': 'JWT', 'kid': 'fangs'})}.{b64url(claims)}.{b64url('sig')}"
     refresh = uuid.uuid4().hex
     who = {'user_id': user['user_id']} if user else {'client': client_id}
@@ -111,7 +118,7 @@ def make_token(store, *, user=None, client_id=''):
             'permissions': [], 'roles': [], 'bans': [], 'namespace': NAMESPACE, 'scope': claims['scope'],
             'jflgs': 0, 'user_id': '', 'display_name': '', 'platform_id': '', 'platform_user_id': ''}
     if user:
-        body.update({'user_id': user['user_id'], 'display_name': user['display_name']})
+        body.update({'user_id': user['user_id'], 'display_name': tagged_name(user)})
     return body
 
 
@@ -185,7 +192,7 @@ async def users_me(request):
     u = store.user_by_id(caller(request).get('user_id', ''))
     if not u:
         return err(401, 20001, 'unauthorized')
-    return web.json_response({'userId': u['user_id'], 'displayName': u['display_name'], 'userName': u['display_name'],
+    return web.json_response({'userId': u['user_id'], 'displayName': tagged_name(u), 'userName': u['display_name'],
                               'namespace': NAMESPACE, 'emailAddress': '', 'country': 'US', 'dateOfBirth': '2000-01-01',
                               'emailVerified': True, 'enabled': True, 'eligible': True, 'createdAt': u['created_at'],
                               'bans': [], 'permissions': [], 'roles': [], 'namespaceRoles': [], 'platformId': '',
@@ -201,9 +208,9 @@ TUTORIAL_DONE = 3
 
 def default_player_record(store, uid, key):
     """Records the old AWS lambdas created for new players (CreatePlayerURL); schema from FPlayerInfo."""
-    user = store.user_by_id(uid) or {'display_name': uid[:8]}
+    user = store.user_by_id(uid) or {'user_id': uid, 'display_name': uid[:8]}
     if key == 'PROFILE_INFO_KEY':
-        return {'Username': user['display_name'], 'Version': 'main_v0_0_444', 'AccountType': 'Player',
+        return {'Username': tagged_name(user), 'Version': 'main_v0_0_444', 'AccountType': 'Player',
                 'Hero': 'Berserker', 'Region': 'Local', 'Sigil': '', 'Stickers': [],
                 'GameplayTutorialComplete': TUTORIAL_DONE, 'Cosmetics': {}}
     return None
@@ -230,9 +237,12 @@ async def player_record(request):
     if request.method == 'GET':
         if key not in recs and (default := default_player_record(store, uid, key)) is not None:
             recs[key] = default; store.save()
-        if key == 'PROFILE_INFO_KEY' and isinstance(recs.get(key), dict) \
-                and recs[key].get('GameplayTutorialComplete', 0) < TUTORIAL_DONE:   # profiles from older versions
-            recs[key]['GameplayTutorialComplete'] = TUTORIAL_DONE; store.save()
+        if key == 'PROFILE_INFO_KEY' and isinstance(recs.get(key), dict):   # profiles from older versions
+            info, user = recs[key], store.user_by_id(uid)
+            if info.get('GameplayTutorialComplete', 0) < TUTORIAL_DONE:
+                info['GameplayTutorialComplete'] = TUTORIAL_DONE; store.save()
+            if user and '#' not in str(info.get('Username', '#')):
+                info['Username'] = tagged_name(user); store.save()
         if key not in recs:
             return err(404, 18022, f'record {key} not found for user {uid}')
         return web.json_response(record_body(key, recs[key], uid, bool(request.match_info['pub'])))

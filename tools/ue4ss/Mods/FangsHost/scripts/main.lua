@@ -153,11 +153,36 @@ local function installShim()
     return all
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Custom lobbies start when the owner wants. The stock lobby only lets the owner launch once every
+-- slot is filled (MatchSize players). FangsBoot shows the Launch button as soon as everyone present
+-- has picked a side; here, when Launch arrives (StartHeroSelectionTimer, a server RPC), the match is
+-- shrunk to the players actually present so the server's "all present / all slots chosen" checks pass.
+local function startWithPresentPlayers(ctx)
+    local gm, gs = FindFirstOf("BP_GM_Lobby_GameMode_C"), FindFirstOf("GS_Lobby_GameState_C")
+    if not (gm and gm:IsValid() and gs and gs:IsValid()) then return end
+    local n = gm.PlayerControllersRP:GetArrayNum()
+    if n < 1 or n >= gm.MaxPlayers then return end
+    log(string.format("lobby: owner launched with %d of %d players", n, gm.MaxPlayers))
+    gm.MaxPlayers = n
+    gs:FlushNetDormancy(); gs.MatchSize = n
+    local push = StaticFindObject("/Script/NetCore.Default__NetPushModelHelpers")
+    if push and push:IsValid() then push:MarkPropertyDirtyFromRepIndex(gs, 14, FName("MatchSize")) end
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    if gi and gi:IsValid() then gi.MapPlayerCount = n end
+    -- the hook runs after the RPC body, which already gave up waiting for the missing players: run it again
+    later(function() if gm:IsValid() then gm:ShowHeroSelectionMenu() end end)
+end
+
+local function installLaunchHook()
+    return hook(LOBBY_PC .. ":StartHeroSelectionTimer", startWithPresentPlayers)
+end
+
 local shimDone = false
 LoopAsync(1000, function()
     ExecuteInGameThread(function()
         if shimDone then return end
-        local s, all = pcall(installShim)
+        local s, all = pcall(function() return installShim() and installLaunchHook() end)
         if not s then log("shim install error: " .. tostring(all)) elseif all then
             shimDone = true; log("server CloudSave shim installed (data: " .. tostring(dataDir) .. ")")
         end
