@@ -44,6 +44,16 @@ if [[ -n ${FANGS_PREFIX_PER_HOST:-} && -n ${WINEPREFIX:-} ]]; then
   fi
   export WINEPREFIX=$pfx
 fi
+# Shipping builds read the user config from the Wine user's AppData, not from MOBA/Saved
+# (the Wine user's profile, whatever its name: in a user namespace `id -un` is root but the profile isn't)
+if [[ -n ${FANGS_BACKEND:-} && -n ${WINEPREFIX:-} ]]; then
+  profiles=(); for d in "$WINEPREFIX"/drive_c/users/*/; do [[ $(basename "$d") == Public ]] || profiles+=("$d"); done
+  [[ ${#profiles[@]} -gt 0 ]] || profiles=("$WINEPREFIX/drive_c/users/${USER:-$(id -un)}/")
+  for d in "${profiles[@]}"; do
+    appcfg=${d}AppData/Local/MOBA/Saved/Config/WindowsNoEditor
+    mkdir -p "$appcfg" && cp "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini" "$appcfg/Engine.ini"
+  done
+fi
 
 cd "$bin"
 export WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi=n,b"

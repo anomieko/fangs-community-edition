@@ -14,6 +14,13 @@ LOBBY='lua local gs=FindFirstOf("GS_Lobby_GameState_C"); if not (gs and gs:IsVal
 ' return "lobby: " .. #t .. " players (" .. table.concat(t, ", ") .. ")"'
 WHERE='lua local gs=FindFirstOf("GameStateBase"); local p=FindFirstOf("BP_PlayerChar_C");'\
 ' return "map=" .. (gs:GetFullName():match("Maps/([%w_]+)") or "?") .. " pawn=" .. (p and p:IsValid() and p:GetFName():ToString() or "none")'
+NET_SERVER='lua local out={} for _, d in ipairs(FindAllOf("IpNetDriver") or {}) do if d:IsValid() and not d:GetFullName():find("Default__",1,true) then'\
+' local c={} pcall(function() d.ClientConnections:ForEach(function(_, e) c[#c+1]=tostring(e:get().CurrentNetSpeed) end) end)'\
+' out[#out+1]=string.format("%s rate=%d/%d conns=[%s]", d.NetDriverName:ToString(), d.MaxClientRate, d.MaxInternetClientRate, table.concat(c, ",")) end end'\
+' return "server net: " .. table.concat(out, " | ")'
+NET_CLIENT='lua local lp=FindFirstOf("LocalPlayer"); local sc="none" for _, d in ipairs(FindAllOf("IpNetDriver") or {}) do'\
+' if d:IsValid() and d.ServerConnection and d.ServerConnection:IsValid() then sc=tostring(d.ServerConnection.CurrentNetSpeed) end end'\
+' return string.format("client net: configured=%d connection=%s", lp.ConfiguredInternetSpeed, sc)'
 pick() {
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("'"$2"'", false); pcall(function() pc:UpdateChosenHero("'"$2"'") end); return "clicked '"$2"'"' >> "$1"
 }
@@ -45,6 +52,16 @@ pick() {
   sleep 4
   for f in $A $B; do echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> $f; done
   for _ in 1 2 3 4; do sleep 20; echo "$WHERE" >> $A; echo "$WHERE" >> $B; done
+  if [[ -n ${PROBE:-} ]]; then   # live network rates, server frame times and CPU, mid-match
+    for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do echo "$NET_SERVER" >> $h/fangsctl_cmd.txt; done
+    echo "$NET_CLIENT" >> $A; echo "$NET_CLIENT" >> $B
+    for h in work/run/$R-hosts/host-*; do echo "probe $(basename $h): $(cat $h/MOBA/Binaries/Win64/fangshost_status.json)"; done
+    for pid in $(pgrep -x GameThread); do   # CPU over 10 s of this run's game servers
+      cwd=$(readlink /proc/$pid/cwd 2>/dev/null); [[ $cwd == *"/$R-hosts/"* ]] || continue
+      t0=$(awk '{print $14+$15}' /proc/$pid/stat); sleep 10; t1=$(awk '{print $14+$15}' /proc/$pid/stat)
+      echo "probe cpu $(basename "$(dirname "$(dirname "$(dirname "$cwd")")")"): $(( (t1 - t0) * 100 / 10 / $(getconf CLK_TCK) ))% of a core"
+    done
+  fi
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
   BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts" \
@@ -53,3 +70,5 @@ UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
 wait
 for n in alice bob; do grep -h 'lua \(ok\|error\)' work/run/$R-$n/MOBA/Binaries/Win64/fangsctl.log | sed "s/^/$n: /" | cut -c1-200; done
 grep -h 'lobby:' work/run/$R-bob/MOBA/Binaries/Win64/fangsboot.log | sed 's/^/bob boot: /' | tail -4
+grep -h 'lua \(ok\|error\): server net' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | sed 's/^/host: /' | cut -c1-200
+grep -h 'tick:' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangshost.log 2>/dev/null | sed 's/^/host: /'

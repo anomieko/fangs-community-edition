@@ -13,9 +13,15 @@ end
 -- Runs fn on the game thread every `ms` milliseconds until it returns true. (LoopAsync + ExecuteInGameThread
 -- ran Lua on two threads at once, which now and then crashed the game inside UE4SS's Lua VM: exit code 3.)
 local function every(ms, fn)
-    local handle
+    local handle, failures = nil, 0
     handle = LoopInGameThreadWithDelay(ms, function()
-        if fn() == true and handle and IsValidDelayedActionHandle(handle) then CancelDelayedAction(handle) end
+        local ok, done = pcall(fn)   -- an error must not end the loop (objects vanish during map changes)
+        if not ok then
+            failures = failures + 1
+            if failures <= 3 then log("loop error (" .. ms .. " ms loop): " .. tostring(done)) end
+        elseif done == true and handle and IsValidDelayedActionHandle(handle) then
+            CancelDelayedAction(handle)
+        end
     end)
     return handle
 end
@@ -84,6 +90,44 @@ end)
 -- joins, from that config, so players must not be sent here before it is loaded.
 configLoaded = false
 launched = false   -- the lobby started its match (LaunchGame); the backend stops abandoned lobbies quickly
+
+-- Server frame rate and hitches for the heartbeat, in real time (world time stops while a match is paused):
+-- frames counted per real second; a hitch shows up as a long gap between runs of this 100 ms sampler.
+local function realTime(gs) return UEHelpers.GetGameplayStatics():GetRealTimeSeconds(gs) end
+local lastSample, worstGap = nil, 0
+every(100, function()
+    local gs = FindFirstOf("GameStateBase")
+    if not (gs and gs:IsValid()) then lastSample = nil; return end
+    local t = realTime(gs)
+    if lastSample and t > lastSample then worstGap = math.max(worstGap, t - lastSample) end
+    lastSample = t
+end)
+local frameMark = nil   -- {frames, real time, world} at the last heartbeat
+local function frameStats(gs)
+    local frames = UEHelpers.GetKismetSystemLibrary():GetFrameCount()
+    local t, world = realTime(gs), gs:GetFullName():match("/Game/[^%.]+") or ""
+    local fps = nil
+    if frameMark and frameMark.world == world and t > frameMark.t then fps = (frames - frameMark.frames) / (t - frameMark.t) end
+    frameMark = { frames = frames, t = t, world = world }
+    local hitch = math.max(0, worstGap - 0.1) * 1000   -- the sampler's own 100 ms isn't a hitch
+    worstGap = 0
+    return fps, hitch
+end
+
+-- Frame-rate cap by what the server is doing: a full tick (FANGS_TICKRATE, 60) only in matches. An empty
+-- server ticking at 60 used most of a CPU core for nothing, taken from the matches on the same machine.
+local MATCH_FPS = tonumber(os.getenv("FANGS_TICKRATE") or "") or 60
+local fpsCap = nil
+local function capFps(map, players)
+    local want = (map ~= "" and not map:find("LE_Lobby_Map", 1, true)) and MATCH_FPS or (players > 0 and 30 or 15)
+    if want == fpsCap then return end
+    local gs = FindFirstOf("GameStateBase")
+    if not (gs and gs:IsValid()) then return end
+    UEHelpers.GetKismetSystemLibrary():ExecuteConsoleCommand(gs, "t.MaxFPS " .. want, nil)
+    fpsCap = want
+    log("tick: " .. want .. " fps (" .. (map:match("[^/]+$") or "?") .. ", " .. players .. " players)")
+end
+
 every(3000, function()
     local map, players = "", 0
     local gs = FindFirstOf("GameStateBase")
@@ -91,10 +135,14 @@ every(3000, function()
     for _, p in ipairs(FindAllOf("PlayerController") or {}) do
         if p:IsValid() and not p:GetFullName():find("Default__", 1, true) and not isLocal(p) then players = players + 1 end
     end
+    pcall(capFps, map, players)
+    local ok, fps, hitch = pcall(frameStats, gs)
+    if not ok then fps, hitch = nil, 0 end
     local f = io.open("fangshost_status.json.tmp", "w")
     if f then
-        f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "launched": %s, "time": %d}', map, players,
-            tostring(configLoaded), tostring(launched), os.time()))
+        f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "launched": %s, "fps_cap": %d, '
+            .. '"fps": %.1f, "hitch_ms": %.0f, "time": %d}', map, players, tostring(configLoaded),
+            tostring(launched), fpsCap or 0, fps or 0, hitch or 0, os.time()))
         f:close(); os.remove("fangshost_status.json"); os.rename("fangshost_status.json.tmp", "fangshost_status.json")
     end
 end)

@@ -27,3 +27,13 @@ GameTelemetryServerUrl="http://@BACKEND@/game-telemetry"
 LobbyServerUrl="http://@BACKEND@/lobby/"
 CloudSaveServerUrl="http://@BACKEND@/cloudsave"
 SessionBrowserServerUrl="http://@BACKEND@/sessionbrowser"
+
+; Network rate caps (bytes/s). The game shipped with 40000 for both sides; replication is cut once a
+; connection hits its cap (choppy movement in big fights). Server and client both apply these.
+[/Script/OnlineSubsystemUtils.IpNetDriver]
+MaxClientRate=100000
+MaxInternetClientRate=100000
+
+[/Script/Engine.Player]
+ConfiguredInternetSpeed=100000
+ConfiguredLanSpeed=100000
