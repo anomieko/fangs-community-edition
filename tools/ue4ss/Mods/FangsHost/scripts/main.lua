@@ -78,6 +78,7 @@ end)
 -- has its server config (FANGSConfig): the lobby picks a matchmade game's random map when the first player
 -- joins, from that config, so players must not be sent here before it is loaded.
 configLoaded = false
+launched = false   -- the lobby started its match (LaunchGame); the backend stops abandoned lobbies quickly
 LoopAsync(3000, function()
     ExecuteInGameThread(function()
         local map, players = "", 0
@@ -88,8 +89,8 @@ LoopAsync(3000, function()
         end
         local f = io.open("fangshost_status.json.tmp", "w")
         if f then
-            f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "time": %d}', map, players,
-                tostring(configLoaded), os.time()))
+            f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "launched": %s, "time": %d}', map, players,
+                tostring(configLoaded), tostring(launched), os.time()))
             f:close(); os.remove("fangshost_status.json"); os.rename("fangshost_status.json.tmp", "fangshost_status.json")
         end
     end)
@@ -304,6 +305,7 @@ end
 -- nowhere and everyone hangs on "Waiting for players". Travel through a connected player instead.
 local LOBBY_GM = "/Game/BluePrints/Lobby/BP_GM_Lobby_GameMode.BP_GM_Lobby_GameMode_C"
 local function ensureTravel(ctx)
+    launched = true
     local gm = ctx:get()
     local first = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gm, 0)
     if first and first:IsValid() and not isLocal(first) then return end   -- the game's own travel went through

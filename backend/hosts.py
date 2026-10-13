@@ -35,13 +35,18 @@ class Host:
 
 class HostManager:
     """Starts game servers on demand, keeps `standby` booted idle servers so lobbies/matches start at once,
-    and restarts a server that dies while booting (a few % of starts under Wine die early)."""
+    and restarts a server that dies while booting (a few % of starts under Wine die early).
+
+    Servers are stopped when nobody needs them: a lobby everyone left (before its match started) after
+    `lobby_grace`, a match everyone left after `idle_grace` (time to reconnect), a server nobody joined after
+    `unused_timeout`. When every slot is taken, the longest-empty server is stopped for a new one."""
 
     def __init__(self, *, game_dir, inst_root, ports, run_script, backend_addr, log, data_dir,
-                 ready_timeout=180, idle_grace=180, unused_timeout=180, standby=1, attempts=3):
+                 ready_timeout=180, idle_grace=180, lobby_grace=20, unused_timeout=180, standby=1, attempts=3):
         self.game_dir, self.inst_root, self.ports = game_dir, Path(inst_root), list(ports)
         self.run_script, self.backend_addr, self.log, self.data_dir = run_script, backend_addr, log, data_dir
         self.ready_timeout, self.idle_grace, self.unused_timeout = ready_timeout, idle_grace, unused_timeout
+        self.lobby_grace = lobby_grace
         self.standby, self.attempts = standby, attempts
         self.hosts = {}          # id -> Host
         self.on_stopped = []     # callbacks(host)
@@ -65,6 +70,8 @@ class HostManager:
         {'size', 'map', 'map_name'} for matchmade games, handed to FangsHost via fangshost_match.json."""
         host = await self._claim_idle(session_id)
         if host is None:
+            if not self.free_ports():
+                await self._reclaim()
             host = await self._start()
         host.session_id, host.started = session_id, time.time()
         if match:
@@ -87,6 +94,22 @@ class HostManager:
                 return None
             await asyncio.sleep(0.5)
 
+    def empty_for(self, host, now=None):
+        """Seconds an assigned server has been without players (None if it has players or isn't assigned).
+        A new server gets 90 s for its players to arrive."""
+        now = now or time.time()
+        if host.session_id is None or not host.ready.is_set() or host.status.get('players', 0):
+            return None
+        return now - (host.empty_since or now) if host.had_players else now - host.started - 90
+
+    async def _reclaim(self):
+        """Every slot is taken: stop the server that has been empty the longest, if any."""
+        now = time.time()
+        empty = [(t, h) for h in self.hosts.values() if (t := self.empty_for(h, now)) is not None and t > 0]
+        if empty:
+            t, host = max(empty, key=lambda e: e[0])
+            await self.stop(host, f'slot needed, empty for {t:.0f} s')
+
     def replenish(self):
         """Top up the idle standby servers (in the background)."""
         if self._closing:
@@ -98,7 +121,8 @@ class HostManager:
 
     async def _boot_standby(self):
         try:
-            await self._start(standby=True)
+            if self.free_ports():                      # a lobby may have taken the slot meanwhile
+                await self._start(standby=True)
         except Exception as e:  # noqa: BLE001 - logged; the next replenish tries again
             self.log({'host': 'standby', 'event': 'start failed', 'error': str(e)})
         finally:
@@ -171,8 +195,9 @@ class HostManager:
             elif host.empty_since is None:
                 host.empty_since = time.time()
             idle = time.time() - (host.empty_since or time.time())
-            if host.had_players and idle > self.idle_grace:
-                await self.stop(host, 'match over / empty'); return
+            in_lobby = st.get('map', '').endswith('LE_Lobby_Map') and not st.get('launched')
+            if host.had_players and idle > (self.lobby_grace if in_lobby else self.idle_grace):
+                await self.stop(host, 'everyone left the lobby' if in_lobby else 'match over / empty'); return
             if host.session_id is not None and not host.had_players and time.time() - host.started > self.unused_timeout:
                 await self.stop(host, 'nobody joined'); return
         await self.stop(host, f'process exited ({host.proc.returncode})')

@@ -25,24 +25,43 @@ AUG='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local p=FindFirstOf("BP_Play
 ' p.PossibleItems:ForEach(function(_, e) total=total+1 local ok, has=pcall(function() return gi.AugmentRevDetailMap:Contains(e:get()) end)'\
 ' if ok and has then offered=offered+1 end end)'\
 ' return string.format("augments: listed=%d possible=%d offered=%d", n, total, offered)'
+# MODE=lobby (default): create a 2-slot lobby, launch alone, play. MODE=queue: press PLAY, accept, play.
+# MODE=soak: everything players do in a row - create+leave, create+play+leave, again, then PLAY+play+leave.
+cmd() { echo "$1" >> "$A"; }
+create() {   # custom lobby, 2 slots
+  cmd 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi;'\
+' pm:CreateLobbyAndJoin("'"$1"'", "Embersong", FText("LE_Arena02_Map"), 2); return "create lobby '"$1"'"'
+  sleep 75
+  cmd 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); if not (pc and pc:IsValid()) then return "NOT in a lobby" end'\
+' return "in lobby, slot " .. tostring(pc.PlayerState.ChosenSlot) .. ", owner " .. tostring(pc.PlayerState.IsLobbyOwner)'
+}
+launch() { cmd 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "launch pressed"'; sleep 12; }
+queue() {
+  cmd 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=2; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi;'\
+' pm:BndEvt__PlayBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); return "pressed PLAY"'
+  sleep 25; cmd 'lua FindFirstOf("BP_MOBAInstance_C").WB_AcceptMatchRef:BndEvt__OkBtn_K2Node_ComponentBoundEvent_2_OnButtonClickedEvent__DelegateSignature(); return "accepted"'
+  sleep 70
+}
+play() {     # hero select -> match; checks the arena, the pawn and the augments
+  cmd 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pcall(function() pc:UpdateChosenHero("Lancer") end); return "clicked Lancer"'
+  sleep 4; cmd 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"'
+  for _ in $(seq "${1:-6}"); do sleep 20; cmd "$STATUS"; done
+  cmd "$AUG"
+}
+leave() {    # what the in-game menu's Leave does
+  cmd 'lua StaticFindObject("/Script/Engine.Default__GameplayStatics"):OpenLevel(FindFirstOf("PlayerController"), FName("LE_MainMenu_Map"), true, ""); return "left to the main menu"'
+  sleep 30; cmd "$STATUS"
+}
 (
   sleep 45
-  mode=4; [[ ${MODE:-lobby} == queue ]] && mode=2   # Custom / Casual
-  echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode='$mode'; gi.WB_MainMenuRef.WB_PlayMenu.BP_MOBAInstanceRef=gi; return "ready"' >> "$A"
-  if [[ ${MODE:-lobby} == queue ]]; then
-    echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.WB_MainMenuRef.WB_PlayMenu:BndEvt__PlayBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); return "pressed PLAY"' >> "$A"
-    sleep 25; echo 'lua FindFirstOf("BP_MOBAInstance_C").WB_AcceptMatchRef:BndEvt__OkBtn_K2Node_ComponentBoundEvent_2_OnButtonClickedEvent__DelegateSignature(); return "accepted"' >> "$A"
-    sleep 70
-  else
-    echo 'lua FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu:CreateLobbyAndJoin("Remote Test", "Embersong", FText("LE_Arena02_Map"), 2); return "create 2-slot lobby"' >> "$A"
-    sleep 75; echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); return "in lobby, slot " .. tostring(pc.PlayerState.ChosenSlot) .. ", owner " .. tostring(pc.PlayerState.IsLobbyOwner)' >> "$A"
-    echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "launch pressed"' >> "$A"
-    sleep 12
-  fi
-  echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pcall(function() pc:UpdateChosenHero("Lancer") end); return "clicked Lancer"' >> "$A"
-  sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> "$A"
-  for i in 1 2 3 4 5 6; do sleep 20; echo "$STATUS" >> "$A"; done
-  echo "$AUG" >> "$A"
+  case ${MODE:-lobby} in
+    queue) queue; play ;;
+    soak)  create "Soak 1"; leave
+           create "Soak 2"; launch; play 5; leave
+           create "Soak 3"; launch; play 5; leave
+           queue; play 5; leave ;;
+    *)     create "Remote Test"; launch; play ;;
+  esac
 ) &
 driver=$!
 export WINEPREFIX=$pfx WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi,d3d11,dxgi,d3d10core=n,b"
