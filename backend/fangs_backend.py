@@ -359,6 +359,16 @@ async def fangs_update_player_settings(request):
     return web.json_response(body)
 
 
+@route('*', r'/fangsapi/[^/]+/(?:log-gameplay-tutorial-complete|sync-user-friend-stat|create-shard-selection|redeem-shards)')
+async def fangs_accept(request):   # Aug 2022 client: progression/stat bookkeeping we don't keep
+    return web.json_response({'success': True})
+
+
+@route('GET', r'/fangsapi/[^/]+/get-epoc')
+async def fangs_epoch(request):   # Aug 2022 client: server time for missions/shop (UAccelByte OnEpocParsed)
+    return web.json_response({'timestamp': int(time.time())})
+
+
 @route('GET', r'/fangsapi/[^/]+/get-shop-data')
 async def fangs_shop_data(request):
     return web.json_response({})   # {shopId: {StartTime, EndTime, Items}}; no shops (nothing to buy)
@@ -545,6 +555,39 @@ async def download(request):
     return web.FileResponse(path, headers={'Content-Disposition': f'attachment; filename="{path.name}"'})
 
 
+_manifest_cache = {}
+
+
+def launcher_files(downloads):
+    """Paths listed in <downloads>/manifest.json (cached until the file changes)."""
+    mf = Path(downloads) / 'manifest.json'
+    try:
+        mtime = mf.stat().st_mtime_ns
+    except OSError:
+        return set()
+    if _manifest_cache.get('mtime') != mtime:
+        files = {f['path'] for f in json.loads(mf.read_text()).get('files', [])}
+        _manifest_cache.update(mtime=mtime, files=files)
+    return _manifest_cache['files']
+
+
+@route('GET', r'/download/(?P<code>[^/]+)/files/(?P<path>.+)')
+async def download_file(request):
+    """Game and player files for the launcher (FangsCE.exe): only paths listed in manifest.json, from
+    <downloads>/overlay (our player files) or else the game install. Supports Range (resumable)."""
+    cfg = request.app['cfg']
+    if not cfg.downloads or not cfg.join_code or not hmac.compare_digest(request.match_info['code'], cfg.join_code):
+        return err(404, 404, 'not found')
+    rel = request.match_info['path']
+    if rel not in launcher_files(cfg.downloads):
+        return err(404, 404, 'not found')
+    for root in (Path(cfg.downloads) / 'overlay', Path(cfg.game_dir)):
+        path = (root / rel).resolve()
+        if path.is_relative_to(root.resolve()) and path.is_file():
+            return web.FileResponse(path)
+    return err(404, 404, 'not found')
+
+
 # ---------------------------------------------------------------- Telemetry (accept and drop)
 
 @route('POST', r'/game-telemetry/.*')
@@ -585,6 +628,65 @@ async def handle_create_ds(app, ws, fields):
                                       region='local', customAttribute=''))
 
 
+# ---------------------------------------------------------------- Zeuz-style custom lobbies (Aug 2022 client)
+# That client creates/lists custom lobbies at a hard-coded Improbable "Zeuz" URL. FangsBoot puts it in LAN
+# mode (which skips those calls) and makes them here instead:
+#   POST /zeuz/sessions {"session_config": "max_players,6,lobby_name,..,map_name,..,map_level,.."}
+#        -> {"id", "address", "ports": [{"port"}]} of a game server for the lobby (the client then joins it)
+#   GET  /zeuz/sessions.txt -> one joinable lobby per line, tab separated (parsed by FangsBoot):
+#        id, address:port, lobby name, owner, map name, map level, players, max players
+
+def zeuz_user(request):
+    auth = request.headers.get('Authorization', '')
+    token = auth.split('accelbyte/', 1)[1] if 'accelbyte/' in auth else auth.removeprefix('Bearer ')
+    return request.app['store'].tokens.get(token, {}).get('user_id')
+
+
+@route('POST', r'/zeuz/sessions')
+async def zeuz_create(request):
+    app, uid = request.app, zeuz_user(request)
+    user = app['store'].user_by_id(uid or '')
+    if not user:
+        return err(401, 20001, 'unauthorized')
+    body = await request.json()
+    parts = str(body.get('session_config', '')).split(',')
+    conf = {k: v for k, v in zip(parts[0::2], parts[1::2])}
+    conf['lobby_owner'] = user['display_name']           # trust the login, not the client
+    for sid, old in list(app['zeuz'].items()):            # one custom lobby per player
+        if old['user_id'] == uid:
+            app['zeuz'].pop(sid)
+            asyncio.create_task(app['hosts'].stop(old['host'], 'owner created a new lobby'))
+    sid = uuid.uuid4().hex
+    try:
+        host = await app['hosts'].allocate(sid)
+    except RuntimeError as e:
+        app['log']({'zeuz': 'create failed', 'error': str(e)})
+        return err(503, 503, str(e))
+    app['zeuz'][sid] = {'user_id': uid, 'config': conf, 'host': host, 'created': time.time()}
+    app['log']({'zeuz': 'lobby', 'session': sid, 'host': host.id, 'config': conf})
+    return web.json_response({'id': sid, 'address': app['cfg'].public_ip, 'ports': [{'port': host.port}]})
+
+
+@route('GET', r'/zeuz/sessions\.txt')
+async def zeuz_list(request):
+    app = request.app
+    if not zeuz_user(request):
+        return err(401, 20001, 'unauthorized')
+    lines = []
+    for sid, s in app['zeuz'].items():
+        st, conf = s['host'].status, s['config']
+        if not st.get('map', '').endswith('LE_Lobby_Map'):      # gone to the arena (or gone)
+            continue
+        players, max_players = int(st.get('players', 0)), int(conf.get('max_players', '8') or 8)
+        if players >= max_players:
+            continue
+        clean = lambda v: str(v).replace('\t', ' ').replace('\n', ' ')
+        lines.append('\t'.join(clean(v) for v in (
+            sid, f"{app['cfg'].public_ip}:{s['host'].port}", conf.get('lobby_name', ''), conf.get('lobby_owner', ''),
+            conf.get('map_name', ''), conf.get('map_level', ''), players, max_players)))
+    return web.Response(text='\n'.join(lines), content_type='text/plain')
+
+
 async def lobby_ws(request):
     ws = web.WebSocketResponse(protocols=('wss',), heartbeat=30)
     await ws.prepare(request)
@@ -621,8 +723,12 @@ async def dispatch(request, handler):
     if request.path.rstrip('/') == '/matchmaker':
         request.app['log'](entry)
         return await request.app['matchmaker'].handle(request)
+    path = request.path
+    if path.startswith('/fangsapi') and not path.startswith('/fangsapi/'):
+        # Aug 2022 client: some Blueprints join FANGSApiBaseURL and the route without separator or stage
+        path = '/fangsapi/prod/' + path[len('/fangsapi'):]
     for method, rx, fn in ROUTES:
-        m = rx.match(request.path)
+        m = rx.match(path)
         if m and method in ('*', request.method):
             resp = await fn(_Req(request, m.groupdict()))
             break
@@ -661,6 +767,8 @@ def main():
     ap.add_argument('--host-ports', default='7777-7786', help='UDP port range for game hosts')
     ap.add_argument('--run-host', default=str(Path(__file__).parent.parent / 'server' / 'run-host.sh'))
     ap.add_argument('--data', default=str(Path(__file__).parent / 'data' / 'store.json'))
+    ap.add_argument('--host-standby', type=int, default=1,
+                    help='game servers kept booted and idle so lobbies/matches start at once (each ~3 GB RAM)')
     ap.add_argument('--match-size', type=int, default=8, help='players per matchmade game (Play -> Casual)')
     ap.add_argument('--match-wait', type=float, default=15,
                     help='seconds the first queued player waits before a match starts with whoever is queued')
@@ -680,12 +788,15 @@ def main():
     lo, hi = map(int, a.host_ports.split('-'))
     app['hosts'] = HostManager(game_dir=a.game_dir, inst_root=a.instances, ports=range(lo, hi + 1),
                                run_script=a.run_host, backend_addr=f'127.0.0.1:{a.port}', log=log,
-                               data_dir=str(Path(a.data).resolve().parent))
+                               data_dir=str(Path(a.data).resolve().parent), standby=a.host_standby)
 
     app['matchmaker'] = Matchmaker(app, size=a.match_size, wait=a.match_wait)
 
+    app['zeuz'] = {}
+
     def host_stopped(host):  # drop the custom lobby whose game server went away
         app['sessions'].pop(host.session_id, None)
+        app['zeuz'].pop(host.session_id, None)
     app['hosts'].on_stopped.append(host_stopped)
     if Path(a.seed).exists():  # seed (re)defines the global game records on every start
         app['store'].data['game_records'].update(json.loads(Path(a.seed).read_text()))
@@ -695,6 +806,7 @@ def main():
         loop = asyncio.get_running_loop()
         app['udp'], _ = await loop.create_datagram_endpoint(_UdpEcho, local_addr=(a.host, a.qos_port))
         app['matchmaking'] = asyncio.create_task(app['matchmaker'].run())
+        app['hosts'].replenish()   # boot the standby game server(s)
 
     async def stop_udp(app):
         app['udp'].close()

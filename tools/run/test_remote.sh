@@ -32,7 +32,7 @@ STATUS='lua local gs=FindFirstOf("GameStateBase"); local p=FindFirstOf("BP_Playe
     echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "launch pressed"' >> "$A"
     sleep 12
   fi
-  echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pc:UpdateChosenHero("Lancer"); return "clicked Lancer"' >> "$A"
+  echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pcall(function() pc:UpdateChosenHero("Lancer") end); return "clicked Lancer"' >> "$A"
   sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> "$A"
   for i in 1 2 3 4 5 6; do sleep 20; echo "$STATUS" >> "$A"; done
 ) &

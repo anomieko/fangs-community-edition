@@ -1,0 +1,577 @@
+// FangsCE.exe - the Fangs: Community Edition launcher.
+//
+// Installs the game from the community server, keeps it up to date (only files that changed are
+// downloaded, downloads resume and every file is checked against its SHA-256), then starts it logged in
+// to the server. The server address and the community join code are baked in at build time:
+//
+//	go build -ldflags "-X main.server=<host:port> -X main.joinCode=<code>" -o FangsCE.exe
+//
+// Server side: <server>/download/<join code>/manifest.json lists the files (player/build-manifest.py),
+// <server>/download/<join code>/files/<path> serves them, <server>/download/<join code>/FangsCE.exe is the
+// current launcher (it replaces itself when that changes).
+package main
+
+import (
+	"bufio"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
+	"time"
+)
+
+var (
+	server   = "127.0.0.1:8080" // set with -ldflags -X
+	joinCode = ""
+	version  = "dev"
+)
+
+const (
+	reset  = "\033[0m"
+	bold   = "\033[1m"
+	dim    = "\033[2m"
+	red    = "\033[91m"
+	green  = "\033[92m"
+	yellow = "\033[93m"
+	teal   = "\033[96m"
+	purple = "\033[95m"
+)
+
+type manifestFile struct {
+	Path   string `json:"path"`
+	Size   int64  `json:"size"`
+	SHA256 string `json:"sha256"`
+}
+
+type manifest struct {
+	Build    string         `json:"build"`
+	Exe      string         `json:"exe"`
+	EngineIni string        `json:"engine_ini"`
+	Launcher *manifestFile  `json:"launcher"`
+	Files    []manifestFile `json:"files"`
+}
+
+type installedFile struct {
+	Size    int64  `json:"size"`
+	SHA256  string `json:"sha256"`
+	ModTime int64  `json:"mtime"`
+}
+
+type settings struct {
+	InstallDir string `json:"install_dir"`
+	Name       string `json:"name"`
+	Secret     string `json:"secret"`
+}
+
+var stdin = bufio.NewReader(os.Stdin)
+
+func main() {
+	enableTerminalColors()
+	fmt.Print("\033]0;Fangs: Community Edition\007")
+	banner()
+	if err := run(); err != nil {
+		fmt.Printf("\n  %s%s%s\n", red, err, reset)
+		pause()
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	self, _ := os.Executable()
+	_ = os.Remove(self + ".old") // left behind by a self-update
+	base := fmt.Sprintf("http://%s/download/%s/", server, url.PathEscape(joinCode))
+
+	cfgPath := settingsPath()
+	st, err := loadSettings(cfgPath)
+	if err != nil {
+		st, err = firstRun(cfgPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		fmt.Printf("  Welcome back, %s%s%s!\n\n", bold, st.Name, reset)
+	}
+
+	fmt.Printf("  %sChecking for updates...%s\n", dim, reset)
+	m, err := fetchManifest(base + "manifest.json")
+	if err != nil {
+		if gameInstalled(st) {
+			fmt.Printf("  %sCan't reach the server (%v) - starting the version you have.%s\n", yellow, err, reset)
+			return launch(st, nil)
+		}
+		return fmt.Errorf("can't reach the server to download the game: %v", err)
+	}
+	if m.Launcher != nil && selfUpdate(base, self, m.Launcher) {
+		return nil // the new launcher has taken over
+	}
+	if err := syncFiles(base, st.InstallDir, m); err != nil {
+		return err
+	}
+	return launch(st, m)
+}
+
+// ---------------------------------------------------------------- UI
+
+func banner() {
+	fmt.Println()
+	fmt.Println(teal + bold + `   ███████  █████  ███    ██  ██████  ███████` + reset)
+	fmt.Println(teal + bold + `   ██      ██   ██ ████   ██ ██       ██` + reset)
+	fmt.Println(teal + bold + `   █████   ███████ ██ ██  ██ ██   ███ ███████` + reset)
+	fmt.Println(teal + bold + `   ██      ██   ██ ██  ██ ██ ██    ██      ██` + reset)
+	fmt.Println(teal + bold + `   ██      ██   ██ ██   ████  ██████  ███████` + reset)
+	fmt.Println(purple + bold + `            C O M M U N I T Y   E D I T I O N` + reset)
+	fmt.Printf("%s   unofficial fan project - free, non-commercial - launcher %s%s\n\n", dim, version, reset)
+}
+
+func pause() {
+	fmt.Printf("\n  %sPress Enter to close.%s", dim, reset)
+	_, _ = stdin.ReadString('\n')
+}
+
+func ask(prompt, def string) string {
+	if def != "" {
+		fmt.Printf("  %s %s[%s]%s: ", prompt, dim, def, reset)
+	} else {
+		fmt.Printf("  %s: ", prompt)
+	}
+	line, _ := stdin.ReadString('\n')
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return def
+	}
+	return line
+}
+
+var nameRx = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
+
+func firstRun(cfgPath string) (settings, error) {
+	fmt.Printf("  %sWelcome to Fangs: Community Edition!%s\n\n", bold, reset)
+	fmt.Println("  FANGS is back - kept alive by the people who made and loved it.")
+	fmt.Println("  This launcher installs the game, keeps it updated and starts it for you.")
+	fmt.Printf("  %sNot affiliated with or endorsed by the owners of FANGS. Free, no purchases, no data sold.%s\n\n", dim, reset)
+
+	dir := ask("Where should the game go?", defaultInstallDir())
+	dir = filepath.Clean(dir)
+	var name string
+	for {
+		name = ask("Pick your player name (3-16 letters, numbers or _)", "")
+		if nameRx.MatchString(name) {
+			break
+		}
+		fmt.Printf("  %sThat name doesn't work - 3 to 16 characters, letters, numbers and _ only.%s\n", yellow, reset)
+	}
+	secret := make([]byte, 16)
+	if _, err := rand.Read(secret); err != nil {
+		return settings{}, err
+	}
+	st := settings{InstallDir: dir, Name: name, Secret: hex.EncodeToString(secret)}
+	if err := saveSettings(cfgPath, st); err != nil {
+		return settings{}, err
+	}
+	fmt.Printf("\n  Nice to meet you, %s%s%s! Your name is tied to this PC (%s).\n\n", bold, name, reset, cfgPath)
+	return st, nil
+}
+
+// ---------------------------------------------------------------- settings
+
+func settingsPath() string {
+	dir, err := os.UserConfigDir() // %APPDATA% on Windows
+	if err != nil {
+		dir = "."
+	}
+	return filepath.Join(dir, "FangsCE", "launcher.json")
+}
+
+func defaultInstallDir() string {
+	if runtime.GOOS == "windows" {
+		if d := os.Getenv("LOCALAPPDATA"); d != "" {
+			return filepath.Join(d, "Fangs Community Edition")
+		}
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, "Fangs Community Edition")
+}
+
+func loadSettings(path string) (settings, error) {
+	var st settings
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return st, err
+	}
+	if err := json.Unmarshal(b, &st); err != nil {
+		return st, err
+	}
+	if st.InstallDir == "" || !nameRx.MatchString(st.Name) || st.Secret == "" {
+		return st, errors.New("incomplete settings")
+	}
+	return st, nil
+}
+
+func saveSettings(path string, st settings) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	b, _ := json.MarshalIndent(st, "", "  ")
+	return writeFileAtomic(path, b)
+}
+
+func writeFileAtomic(path string, b []byte) error {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+// ---------------------------------------------------------------- manifest / sync
+
+var shortClient = &http.Client{Timeout: 20 * time.Second}
+var longClient = &http.Client{} // big downloads: no overall timeout
+
+func fetchManifest(u string) (*manifest, error) {
+	resp, err := shortClient.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server answered %s", resp.Status)
+	}
+	var m manifest
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return nil, fmt.Errorf("bad file list: %v", err)
+	}
+	if m.Exe == "" || len(m.Files) == 0 {
+		return nil, errors.New("empty file list")
+	}
+	for _, f := range append([]manifestFile{{Path: m.Exe}}, m.Files...) {
+		if !safeRel(f.Path) {
+			return nil, fmt.Errorf("refusing unsafe path in file list: %q", f.Path)
+		}
+	}
+	return &m, nil
+}
+
+// safeRel: relative, forward slashes, no "..", no drive letters.
+func safeRel(p string) bool {
+	if p == "" || strings.HasPrefix(p, "/") || strings.Contains(p, "\\") || strings.Contains(p, ":") {
+		return false
+	}
+	for _, seg := range strings.Split(p, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return false
+		}
+	}
+	return true
+}
+
+func statePath(installDir string) string {
+	return filepath.Join(installDir, ".fangsce", "installed.json")
+}
+
+func loadState(installDir string) map[string]installedFile {
+	st := map[string]installedFile{}
+	if b, err := os.ReadFile(statePath(installDir)); err == nil {
+		_ = json.Unmarshal(b, &st)
+	}
+	return st
+}
+
+func saveState(installDir string, st map[string]installedFile) {
+	p := statePath(installDir)
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
+	b, _ := json.Marshal(st)
+	_ = writeFileAtomic(p, b)
+}
+
+func syncFiles(base, installDir string, m *manifest) error {
+	state := loadState(installDir)
+	var todo []manifestFile
+	var total int64
+	wanted := map[string]bool{}
+	checking := 0
+	for _, f := range m.Files {
+		wanted[f.Path] = true
+		dst := filepath.Join(installDir, filepath.FromSlash(f.Path))
+		info, err := os.Stat(dst)
+		if err == nil && info.Size() == f.Size {
+			if s, ok := state[f.Path]; ok && s.SHA256 == f.SHA256 && s.Size == f.Size && s.ModTime == info.ModTime().UnixNano() {
+				continue // unchanged since we installed it
+			}
+			checking++
+			fmt.Printf("\r  %sVerifying installed files... %d%s", dim, checking, reset)
+			if sum, err := hashFile(dst); err == nil && sum == f.SHA256 {
+				state[f.Path] = installedFile{Size: f.Size, SHA256: f.SHA256, ModTime: info.ModTime().UnixNano()}
+				continue
+			}
+		}
+		todo = append(todo, f)
+		total += f.Size
+	}
+	if checking > 0 {
+		fmt.Println()
+	}
+	// files we installed earlier that are no longer part of the game
+	for p := range state {
+		if !wanted[p] {
+			_ = os.Remove(filepath.Join(installDir, filepath.FromSlash(p)))
+			delete(state, p)
+		}
+	}
+	saveState(installDir, state)
+
+	if len(todo) == 0 {
+		fmt.Printf("  %sUp to date%s (%s).\n", green, reset, m.Build)
+		return nil
+	}
+	if len(state) == 0 {
+		fmt.Printf("  Installing FANGS (%s): %s to download into\n  %s\n\n", m.Build, human(total), installDir)
+	} else {
+		fmt.Printf("  Update available: %d file(s), %s.\n\n", len(todo), human(total))
+	}
+	p := &progress{total: total, start: time.Now()}
+	for _, f := range todo {
+		dst := filepath.Join(installDir, filepath.FromSlash(f.Path))
+		if err := download(base+"files/"+escapePath(f.Path), dst, f, p); err != nil {
+			fmt.Println()
+			return fmt.Errorf("downloading %s failed: %v\n  Run the launcher again to resume.", f.Path, err)
+		}
+		info, err := os.Stat(dst)
+		if err != nil {
+			return err
+		}
+		state[f.Path] = installedFile{Size: f.Size, SHA256: f.SHA256, ModTime: info.ModTime().UnixNano()}
+		saveState(installDir, state)
+	}
+	p.draw(true)
+	fmt.Printf("\n  %sDone!%s\n", green, reset)
+	return nil
+}
+
+func escapePath(p string) string {
+	segs := strings.Split(p, "/")
+	for i, s := range segs {
+		segs[i] = url.PathEscape(s)
+	}
+	return strings.Join(segs, "/")
+}
+
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// download fetches u into dst via dst.part, resuming a partial download, and checks the SHA-256.
+func download(u, dst string, f manifestFile, p *progress) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	part := dst + ".part"
+	h := sha256.New()
+	var have int64
+	if info, err := os.Stat(part); err == nil && info.Size() < f.Size {
+		if pf, err := os.Open(part); err == nil {
+			have, _ = io.Copy(h, pf)
+			pf.Close()
+		}
+	} else {
+		_ = os.Remove(part)
+	}
+	req, _ := http.NewRequest("GET", u, nil)
+	if have > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", have))
+	}
+	resp, err := longClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	flags := os.O_CREATE | os.O_WRONLY
+	switch {
+	case have > 0 && resp.StatusCode == http.StatusPartialContent:
+		flags |= os.O_APPEND
+		p.done += have
+	case resp.StatusCode == http.StatusOK:
+		flags |= os.O_TRUNC
+		h.Reset()
+		have = 0
+	default:
+		return fmt.Errorf("server answered %s", resp.Status)
+	}
+	out, err := os.OpenFile(part, flags, 0o644)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, 1<<20)
+	for {
+		n, rerr := resp.Body.Read(buf)
+		if n > 0 {
+			if _, err := out.Write(buf[:n]); err != nil {
+				out.Close()
+				return err
+			}
+			h.Write(buf[:n])
+			p.done += int64(n)
+			p.file = f.Path
+			p.draw(false)
+		}
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			out.Close()
+			return rerr
+		}
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	if got := hex.EncodeToString(h.Sum(nil)); got != f.SHA256 {
+		_ = os.Remove(part)
+		return fmt.Errorf("file check failed (got %s..., want %s...)", got[:12], f.SHA256[:12])
+	}
+	_ = os.Remove(dst)
+	return os.Rename(part, dst)
+}
+
+type progress struct {
+	total, done int64
+	start, last time.Time
+	file        string
+}
+
+func (p *progress) draw(force bool) {
+	now := time.Now()
+	if !force && now.Sub(p.last) < 250*time.Millisecond {
+		return
+	}
+	p.last = now
+	frac := 0.0
+	if p.total > 0 {
+		frac = float64(p.done) / float64(p.total)
+	}
+	const width = 28
+	n := int(frac * width)
+	if n > width {
+		n = width
+	}
+	speed := float64(p.done) / now.Sub(p.start).Seconds()
+	name := p.file
+	if len(name) > 32 {
+		name = "..." + name[len(name)-29:]
+	}
+	fmt.Printf("\r  %s[%s%s]%s %5.1f%%  %s / %s  %s/s  %s%-32s%s ", teal, strings.Repeat("█", n), strings.Repeat("·", width-n), reset,
+		frac*100, human(p.done), human(p.total), human(int64(speed)), dim, name, reset)
+}
+
+func human(n int64) string {
+	f := float64(n)
+	for _, u := range []string{"B", "KB", "MB", "GB"} {
+		if f < 1024 || u == "GB" {
+			if u == "B" {
+				return fmt.Sprintf("%d %s", n, u)
+			}
+			return fmt.Sprintf("%.1f %s", f, u)
+		}
+		f /= 1024
+	}
+	return ""
+}
+
+// ---------------------------------------------------------------- self-update
+
+func selfUpdate(base, self string, want *manifestFile) bool {
+	if sum, err := hashFile(self); err != nil || sum == want.SHA256 {
+		return false
+	}
+	fmt.Printf("  Updating the launcher...\n")
+	tmp := self + ".new"
+	p := &progress{total: want.Size, start: time.Now()}
+	if err := download(base+"FangsCE.exe", tmp, *want, p); err != nil {
+		fmt.Printf("\n  %sLauncher update failed (%v) - continuing with this one.%s\n", yellow, err, reset)
+		return false
+	}
+	fmt.Println()
+	// a running exe can be renamed on Windows, not overwritten
+	if err := os.Rename(self, self+".old"); err != nil {
+		fmt.Printf("  %sLauncher update failed (%v) - continuing with this one.%s\n", yellow, err, reset)
+		return false
+	}
+	if err := os.Rename(tmp, self); err != nil {
+		_ = os.Rename(self+".old", self)
+		return false
+	}
+	_ = os.Chmod(self, 0o755) // (non-Windows test builds)
+	cmd := exec.Command(self, os.Args[1:]...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if err := cmd.Start(); err != nil {
+		return false
+	}
+	_ = cmd.Wait() // keep the console attached until the new launcher is done
+	return true
+}
+
+// ---------------------------------------------------------------- launch
+
+func gameInstalled(st settings) bool {
+	_, err := os.Stat(filepath.Join(st.InstallDir, "MOBA", "Binaries", "Win64", "MOBA-Win64-Shipping.exe"))
+	return err == nil
+}
+
+func launch(st settings, m *manifest) error {
+	exeRel, iniRel := "MOBA/Binaries/Win64/MOBA-Win64-Shipping.exe", "FangsCE/Engine.ini"
+	if m != nil {
+		exeRel = m.Exe
+		if m.EngineIni != "" {
+			iniRel = m.EngineIni
+		}
+	}
+	exe := filepath.Join(st.InstallDir, filepath.FromSlash(exeRel))
+	// connection settings: Shipping builds read %LOCALAPPDATA%\MOBA\Saved, developer builds the game folder
+	if ini, err := os.ReadFile(filepath.Join(st.InstallDir, filepath.FromSlash(iniRel))); err == nil {
+		dirs := []string{filepath.Join(st.InstallDir, "MOBA", "Saved", "Config", "WindowsNoEditor")}
+		if d := os.Getenv("LOCALAPPDATA"); d != "" {
+			dirs = append(dirs, filepath.Join(d, "MOBA", "Saved", "Config", "WindowsNoEditor"))
+		}
+		for _, d := range dirs {
+			if err := os.MkdirAll(d, 0o755); err == nil {
+				_ = os.WriteFile(filepath.Join(d, "Engine.ini"), ini, 0o644)
+			}
+		}
+	}
+	if os.Getenv("FANGSCE_NO_LAUNCH") != "" { // tests
+		fmt.Printf("\n  (not starting the game: FANGSCE_NO_LAUNCH)\n")
+		return nil
+	}
+	pass := st.Secret
+	if joinCode != "" {
+		pass = joinCode + ":" + st.Secret
+	}
+	cmd := exec.Command(exe, "-TestUser="+st.Name, "-TestPass="+pass)
+	cmd.Dir = filepath.Dir(exe)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("couldn't start the game: %v", err)
+	}
+	fmt.Printf("\n  %sStarting FANGS as %s - have fun!%s\n", green, st.Name, reset)
+	time.Sleep(3 * time.Second)
+	return nil
+}

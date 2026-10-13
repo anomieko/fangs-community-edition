@@ -21,10 +21,19 @@ LoopAsync(500, function()
         local gi = FindFirstOf("BP_MOBAInstance_C")
         if not gi or not gi:IsValid() then return end
         if not logoDone then
-            local logo = gi.WB_LogoRef
-            if logo and logo:IsValid() and logo:IsInViewport() and logo.bCanSkip then
-                logo:EndMovie(); logoDone = true; log("skipped logo movie")
-            end
+            pcall(function()
+                local logo = gi.WB_LogoRef   -- Feb 2023 build
+                if logo and logo:IsValid() and logo:IsInViewport() and logo.bCanSkip then
+                    logo:EndMovie(); logoDone = true; log("skipped logo movie")
+                end
+            end)
+            pcall(function()               -- Aug 2022 build: no WB_LogoRef, WB_Logo_C:End()
+                for _, w in ipairs(FindAllOf("WB_Logo_C") or {}) do
+                    if not logoDone and w:IsValid() and w:IsInViewport() and w.bCanSkip then
+                        w:End(); logoDone = true; log("skipped logo")
+                    end
+                end
+            end)
         end
         if not loginDone then
             local menu = nil
@@ -63,8 +72,8 @@ local function everyonePickedASide(gs)
     return n > 0 and picked
 end
 local function offerLaunch(menu)
-    local gi, pc = menu.GameInstance, menu.BP_LobbyPlayerControllerRef
-    if not (gi:IsValid() and gi.MapGameMode == 4 and pc:IsValid()) then return end   -- custom lobbies only
+    local gi, pc = FindFirstOf("BP_MOBAInstance_C"), menu.BP_LobbyPlayerControllerRef
+    if not (gi and gi:IsValid() and gi.MapGameMode == 4 and pc:IsValid()) then return end   -- custom lobbies only
     local ps = pc.PlayerState
     if not (ps:IsValid() and ps.IsLobbyOwner) then return end
     local sw = menu.LobbyStatusSwitch
@@ -87,7 +96,7 @@ LoopAsync(1000, function()
     return launchHooked
 end)
 
--- In-match HUD (WB_Round): replace the "EARLY DEVELOPMENT" tag (an image, EarlyDevTag, top left) with a
+-- In-match HUD (WB_Round; WB_HUD in the Aug 2022 build): replace the "EARLY DEVELOPMENT" tag (an image, EarlyDevTag) with a
 -- "COMMUNITY EDITION" label in the same place, using the font of one of the HUD's own texts.
 local TAG_TEXT = "COMMUNITY EDITION"
 local function child(round, class, name)   -- widget of round's WidgetTree (GetWidgetFromName isn't a UFunction here)
@@ -122,7 +131,9 @@ end
 local retagged = {}   -- HUD full name -> true when done, or number of attempts so far
 LoopAsync(1000, function()
     ExecuteInGameThread(function()
-        for _, round in ipairs(FindAllOf("WB_Round_C") or {}) do
+        local huds = FindAllOf("WB_Round_C") or {}             -- Feb 2023 build
+        for _, h in ipairs(FindAllOf("WB_HUD_C") or {}) do huds[#huds + 1] = h end   -- Aug 2022 build
+        for _, round in ipairs(huds) do
             local key = round:IsValid() and round:GetFullName() or nil
             if key and not key:find("Default__", 1, true) and retagged[key] ~= true then
                 local ok, done = pcall(retag, round)
@@ -156,3 +167,144 @@ LoopAsync(1000, function()
     end)
     return battleHooked
 end)
+
+-- ---------------------------------------------------------------------------------------------
+-- Aug 2022 build (alpha7): custom lobbies. The client creates and lists them at a hard-coded Improbable
+-- "Zeuz" URL (long gone). Keep the game in LAN mode, which skips those calls, and make them to our
+-- backend instead (POST /zeuz/sessions, GET /zeuz/sessions.txt); the results go back into the game's own
+-- lobby code. The PLAY button's "previous game" check also asks Zeuz: answer it at once so PLAY goes on.
+local function gameVersion()
+    local f = io.open("../../Content/Data/version.txt", "r")
+    if not f then return "" end
+    local v = f:read("l") or ""; f:close()
+    return v
+end
+
+if gameVersion():find("^alpha7") then
+    local PLAY_MENU = "/Game/UI/MainMenu/WB_PlayMenu.WB_PlayMenu_C"
+
+    local function backendBase()   -- from the connection settings the launcher writes (AccelByte BaseUrl)
+        for _, dir in ipairs({ (os.getenv("LOCALAPPDATA") or "") .. "\\MOBA\\Saved\\Config\\WindowsNoEditor",
+                               "..\\..\\Saved\\Config\\WindowsNoEditor" }) do
+            local f = io.open(dir .. "\\Engine.ini", "r")
+            if f then
+                local text = f:read("a"); f:close()
+                local base = text:match('BaseUrl="(http[^"]-)"')
+                if base then return base end
+            end
+        end
+    end
+
+    local pending = nil   -- the one lobby request in flight: {req, kind = "create"|"list", pm, started}
+    local function request(kind, pm, verb, path, body)
+        local base = backendBase()
+        if not base then return log("lobby: no backend address (Engine.ini)") end
+        local vr = FindFirstOf("VaRestSubsystem")
+        local req = vr:ConstructVaRestRequestExt(verb, 2)   -- verb 0 GET / 1 POST, content type 2 = JSON
+        req:SetHeader("Authorization", "Bearer accelbyte/" .. FindFirstOf("AccelByte"):GetUserClientToken():ToString())
+        if body then
+            local obj = vr:ConstructVaRestJsonObject()
+            for k, v in pairs(body) do obj:SetStringField(k, v) end
+            req:SetRequestObject(obj)
+        end
+        req:ProcessURL(base .. path)
+        pending = { req = req, kind = kind, pm = pm, started = os.time() }
+        log("lobby: " .. kind .. " request sent")
+    end
+
+    local function showLobbies(pm, text)
+        pm:ResetLobbyList()
+        local cls = StaticFindObject("/Game/UI/MainMenu/WB_GameSession.WB_GameSession_C")
+        local wbl = StaticFindObject("/Script/UMG.Default__WidgetBlueprintLibrary")
+        local n = 0
+        for line in text:gmatch("[^\n]+") do
+            local id, addr, name, owner, mapName, mapLevel, players, maxp =
+                line:match("^(.-)\t(.-)\t(.-)\t(.-)\t(.-)\t(.-)\t(.-)\t(.-)$")
+            if id then   -- the same fields the game's own list code sets (WB_PlayMenu UpdateUIServers)
+                local w = wbl:Create(pm, cls, nil)
+                w.LobbyName = FText(name); w.OwnerName = FText(owner)
+                w.MapName = mapLevel; w.ServerLevel = mapName
+                w.Capacity = tonumber(players) or 0; w.MaxPlayers = tonumber(maxp) or 8
+                w.PayloadId = id; w.ServerId = id; w.ServerAddress = addr
+                pm.LobbyList:AddChild(w)
+                n = n + 1
+            end
+        end
+        pm:FinishedSearching()
+        log("lobby: " .. n .. " lobbies listed")
+    end
+
+    local function finishRequest()
+        local p = pending
+        local status = p.req:GetStatus()      -- 0 not started, 1 processing, 2/3 failed, 4 succeeded
+        if status < 2 then
+            if os.time() - p.started > 150 then status = 2 else return end
+        end
+        pending = nil
+        local code = p.req:GetResponseCode()
+        if status == 4 and code == 200 then
+            if p.kind == "create" then
+                p.pm:OnComplete_8D51ACCE4F51DE2218C3C9BCE91C5034(p.req)   -- the game's own "lobby reserved" handler
+                log("lobby: created, joining")
+            else
+                showLobbies(p.pm, p.req:GetResponseContentAsString(true):ToString())
+            end
+        else
+            log("lobby: " .. p.kind .. " request failed (status " .. status .. ", HTTP " .. code .. ")")
+            p.pm:FinishedSearching()
+        end
+    end
+
+    LoopAsync(200, function()
+        ExecuteInGameThread(function()
+            local gi = FindFirstOf("BP_MOBAInstance_C")
+            if not (gi and gi:IsValid()) then return end
+            if not gi.UseLAN then gi.UseLAN = true end
+            if pending then
+                local ok, e = pcall(finishRequest)
+                if not ok then pending = nil; log("lobby: " .. tostring(e)) end
+            end
+        end)
+        return false
+    end)
+
+    local function onCreate(ctx)
+        local pm = ctx:get()
+        local cfg = table.concat({ "max_players", tostring(pm.PlayerSize), "lobby_name", pm.LobbyName:ToString(),
+            "player_count", "1", "map_name", pm.LobbyMap:ToString(), "map_level", pm.FindMapLevel:ToString() }, ",")
+        request("create", pm, 1, "/zeuz/sessions", { session_config = cfg })
+    end
+    local function onFind(ctx) request("list", ctx:get(), 0, "/zeuz/sessions.txt") end
+    local function onPreviousGameCheck(ctx)   -- PLAY: the reconnect check listed Zeuz sessions; there are none
+        local pm = ctx:get()
+        if pm.CheckingReconnect then pm:CheckingPreviousGame(true); log("lobby: no previous game") end
+    end
+
+    local hooked = {}
+    local wanted = {
+        CreateLobbyAndJoin = onCreate,
+        FindLobbies = onFind,
+        BndEvt__FindLobbyBtn_K2Node_ComponentBoundEvent_18_OnButtonClickedEvent__DelegateSignature = onFind,
+        BndEvt__SearchInput_K2Node_ComponentBoundEvent_10_OnEditableTextBoxCommittedEvent__DelegateSignature = onFind,
+        ZeuzIMSGetServerList = onPreviousGameCheck,
+    }
+    LoopAsync(1000, function()
+        ExecuteInGameThread(function()
+            for fn, cb in pairs(wanted) do
+                local path = PLAY_MENU .. ":" .. fn
+                if not hooked[fn] and StaticFindObject(path) then
+                    local ok, err = pcall(RegisterHook, path, function(ctx, ...)   -- runs after the event body
+                        local s, e = pcall(cb, ctx, ...)
+                        if not s then log("lobby (" .. fn .. "): " .. tostring(e)) end
+                    end)
+                    hooked[fn] = true
+                    if not ok then log("lobby hook failed " .. fn .. ": " .. tostring(err)) end
+                end
+            end
+        end)
+        local n = 0
+        for _ in pairs(hooked) do n = n + 1 end
+        if n == 5 then log("custom lobbies via our backend (Aug 2022 build)") end
+        return n == 5
+    end)
+end

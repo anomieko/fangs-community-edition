@@ -19,13 +19,13 @@ HOST_STATUS='lua local gm=FindFirstOf("BP_GM_Lobby_GameMode_C"); if not (gm and 
 ' gs.Level:ToString(), gm.EntryTime, gm.EntryTimeOutTime, ps and ps.ChosenHero:ToString() or "-", tostring(ps and ps.IsLockedIn))'
 (
   sleep 45
-  printf '%s\n' 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi;'\
+  printf '%s\n' 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi; gi.MapGameMode=2;'\
 ' pm:BndEvt__PlayBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); return "pressed PLAY (mode " .. gi.MapGameMode .. ")"' >> $A
   sleep 12; echo "$STATUS" >> $A
   echo 'lua local d=FindFirstOf("BP_MOBAInstance_C").WB_AcceptMatchRef; d:BndEvt__OkBtn_K2Node_ComponentBoundEvent_2_OnButtonClickedEvent__DelegateSignature(); return "accepted"' >> $A
   sleep 60; echo "$STATUS" >> $A
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=pc.WB_LobbyHeroSelectRef; local gi=FindFirstOf("BP_MOBAInstance_C");'\
-' gi.WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pc:UpdateChosenHero("Lancer"); return "hero select open=" .. tostring(h:IsValid() and h:IsInViewport()) .. ", slot " .. tostring(pc.PlayerState.ChosenSlot)' >> $A
+' gi.WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pcall(function() pc:UpdateChosenHero("Lancer") end); return "hero select open=" .. tostring(h:IsValid() and h:IsInViewport()) .. ", slot " .. tostring(pc.PlayerState.ChosenSlot)' >> $A
   sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> $A
   echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); local L=StaticFindObject("/Script/BlueprintJson.Default__BlueprintJsonLibrary");'\
 ' return "host season data: " .. L:Conv_JsonObjectToString(gi.CloudSeasonDataBP):ToString():sub(1, 400)' >> $H

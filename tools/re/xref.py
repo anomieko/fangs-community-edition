@@ -25,8 +25,9 @@ class Exe:
         self.text_va, self.text_off, self.text_size = text[1], text[3], text[4]
         self._funcs = None
         self._refs = None
+        st = os.stat(path)   # several builds share the exe name: key the cache by size + mtime too
         self.cache = os.path.join(os.path.dirname(__file__), '..', '..', 'work', 're',
-                                  os.path.basename(path) + '.xrefs.pickle')
+                                  f'{os.path.basename(path)}.{st.st_size}.{int(st.st_mtime)}.xrefs.pickle')
 
     def off2va(self, off):
         for _, va, vs, ro, rs in self.secs:
