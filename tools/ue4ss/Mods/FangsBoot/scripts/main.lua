@@ -81,3 +81,54 @@ LoopAsync(1000, function()
     end)
     return launchHooked
 end)
+
+-- In-match HUD (WB_Round): replace the "EARLY DEVELOPMENT" tag (an image, EarlyDevTag, top left) with a
+-- "COMMUNITY EDITION" label in the same place, using the font of one of the HUD's own texts.
+local TAG_TEXT = "COMMUNITY EDITION"
+local function child(round, class, name)   -- widget of round's WidgetTree (GetWidgetFromName isn't a UFunction here)
+    local tag = round:GetFName():ToString() .. ".WidgetTree." .. (name or "")
+    for _, w in ipairs(FindAllOf(class) or {}) do
+        local full = w:IsValid() and w:GetFullName() or ""
+        if (name and full:sub(-#tag) == tag) or (not name and full:find(tag, 1, true)) then return w end
+    end
+end
+local function retag(round)
+    if child(round, "TextBlock", "CommunityEditionTag") then return true end
+    local img = child(round, "Image", "EarlyDevTag")
+    if not (img and img:IsValid()) then return nil end              -- not there (yet)
+    local panel = img:GetParent()
+    if not (panel and panel:IsValid()) then return false end
+    local tb = StaticConstructObject(StaticFindObject("/Script/UMG.TextBlock"), round.WidgetTree, FName("CommunityEditionTag"))
+    local ref = child(round, "TextBlock")
+    if ref then tb:SetFont(ref.Font) end
+    tb.Font.Size = 26
+    tb:SetText(FText(TAG_TEXT))
+    tb:SetShadowOffset({ X = 2.0, Y = 2.0 })
+    tb:SetShadowColorAndOpacity({ R = 0.0, G = 0.0, B = 0.0, A = 0.6 })
+    tb:SetRenderOpacity(0.8)
+    tb:SetVisibility(4)                                              -- SelfHitTestInvisible, like the image
+    local slot = panel:AddChildToCanvas(tb)
+    slot:SetAutoSize(true)
+    slot:SetPosition({ X = 24.0, Y = 32.0 })
+    slot:SetZOrder(10)
+    img:SetVisibility(1)                                             -- Collapsed
+    return true
+end
+local retagged = {}   -- HUD full name -> true when done, or number of attempts so far
+LoopAsync(1000, function()
+    ExecuteInGameThread(function()
+        for _, round in ipairs(FindAllOf("WB_Round_C") or {}) do
+            local key = round:IsValid() and round:GetFullName() or nil
+            if key and not key:find("Default__", 1, true) and retagged[key] ~= true then
+                local ok, done = pcall(retag, round)
+                if not ok then retagged[key] = true; log("retag failed: " .. tostring(done))
+                elseif done then retagged[key] = true; log("HUD tag: " .. TAG_TEXT)
+                else
+                    retagged[key] = (retagged[key] or 0) + 1
+                    if retagged[key] >= 15 then retagged[key] = true; log("HUD tag: EarlyDevTag not found") end
+                end
+            end
+        end
+    end)
+    return false
+end)
