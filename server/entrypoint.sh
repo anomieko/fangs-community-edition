@@ -15,7 +15,10 @@ sleep 1
 # (Re)create the shared Wine prefix when it's missing or was made by another Wine version.
 if [[ ! -f $WINEPREFIX/system.reg || "$(cat "$WINEPREFIX/.wine-version" 2>/dev/null)" != "$(wine --version)" ]]; then
   echo "initialising Wine prefix ($(wine --version))..."
-  rm -rf "${WINEPREFIX:?}"; wineboot -i >/dev/null 2>&1 || true; wineserver -w || true
+  # no Mono/Gecko (the game needs neither; WineHQ builds would otherwise wait on an install prompt)
+  rm -rf "${WINEPREFIX:?}"
+  WINEARCH=win64 WINEDLLOVERRIDES="mscoree,mshtml=" timeout 300 wineboot -i >/dev/null 2>&1 || true
+  timeout 60 wineserver -w || wineserver -k || true
   wine --version > "$WINEPREFIX/.wine-version"
 fi
 python3 backend/seed/make_seed.py "$PUBLIC_HOST:$BACKEND_PORT" /data/backend/seed.json >/dev/null
