@@ -38,7 +38,7 @@ class HostManager:
     and restarts a server that dies while booting (a few % of starts under Wine die early)."""
 
     def __init__(self, *, game_dir, inst_root, ports, run_script, backend_addr, log, data_dir,
-                 ready_timeout=180, idle_grace=180, unused_timeout=600, standby=1, attempts=3):
+                 ready_timeout=180, idle_grace=180, unused_timeout=180, standby=1, attempts=3):
         self.game_dir, self.inst_root, self.ports = game_dir, Path(inst_root), list(ports)
         self.run_script, self.backend_addr, self.log, self.data_dir = run_script, backend_addr, log, data_dir
         self.ready_timeout, self.idle_grace, self.unused_timeout = ready_timeout, idle_grace, unused_timeout

@@ -15,7 +15,7 @@ HOST_STATUS='lua local gm=FindFirstOf("BP_GM_Lobby_GameMode_C"); if not (gm and 
 ' return "host map: " .. FindFirstOf("GameStateBase"):GetFullName():match("Maps/([%w_]+)") end'\
 ' local gs=FindFirstOf("GS_Lobby_GameState_C"); local ps=nil; gs.PlayerArray:ForEach(function(_, e) ps = ps or e:get() end)'\
 ' return string.format("host lobby state=%d mode=%d max=%d pcs=%d matchsize=%d step=%d level=%s entry=%.0f/%.0f | %s locked=%s",'\
-' gm.LobbyState, gm.MapGameMode, gm.MaxPlayers, gm.PlayerControllersRP:GetArrayNum(), gs.MatchSize, gs.GS_HeroSelectStep,'\
+' gm.LobbyState, FindFirstOf("BP_MOBAInstance_C").MapGameMode, gm.MaxPlayers, gm.PlayerControllersRP:GetArrayNum(), gs.MatchSize, gs.GS_HeroSelectStep,'\
 ' gs.Level:ToString(), gm.EntryTime, gm.EntryTimeOutTime, ps and ps.ChosenHero:ToString() or "-", tostring(ps and ps.IsLockedIn))'
 (
   sleep 45
@@ -29,7 +29,7 @@ HOST_STATUS='lua local gm=FindFirstOf("BP_GM_Lobby_GameMode_C"); if not (gm and 
   sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> $A
   echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); local L=StaticFindObject("/Script/BlueprintJson.Default__BlueprintJsonLibrary");'\
 ' return "host season data: " .. L:Conv_JsonObjectToString(gi.CloudSeasonDataBP):ToString():sub(1, 400)' >> $H
-  for i in 1 2 3 4; do sleep 20; echo "$HOST_STATUS" >> $H; done
+  for i in $(seq 1 ${WATCH:-4}); do sleep 20; echo "$HOST_STATUS" >> $H; done
   echo 'shot showui' >> $A
   sleep 10; echo "$STATUS" >> $A
   echo 'lua local p=FindFirstOf("BP_PlayerChar_C"); return "pawn: " .. (p and p:IsValid() and p:GetFName():ToString() or "none")' >> $A

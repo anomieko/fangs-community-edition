@@ -271,7 +271,7 @@ local function setLobbyMap(gs)   -- the lobby's own random pick (GetRandomMap fr
     log("lobby: map " .. matchMap .. " (" .. matchMapName .. ")")
 end
 do
-    local firstJoin, size = nil, nil
+    local firstJoin, size, lastKick = nil, nil, 0
     LoopAsync(500, function()
         ExecuteInGameThread(function()
             if not matchSize then readMatchFile() end
@@ -287,6 +287,13 @@ do
             end
             if gm.MaxPlayers ~= size or gs.MatchSize ~= size then setLobbySize(gm, gs, size) end
             if matchMap and gs.Level:ToString() ~= matchMap then setLobbyMap(gs) end
+            -- Aug 2022 clients ask for hero select once, right on joining - before the lobby has its real
+            -- size - and never again. Start it from here once everyone is in (retried until it takes).
+            if gm.LobbyState == 0 and present >= size and gm.MaxPlayers == size and os.time() - lastKick >= 3 then
+                if lastKick == 0 then log("lobby: all " .. present .. " matched players are in - starting hero select") end
+                lastKick = os.time()
+                gm:ShowHeroSelectionMenu()
+            end
         end)
         return false
     end)
