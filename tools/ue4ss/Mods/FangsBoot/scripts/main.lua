@@ -137,3 +137,22 @@ LoopAsync(1000, function()
     end)
     return false
 end)
+
+-- Custom lobbies: "Battle" is 4v4 (8 players). This build's create-lobby screen makes it 6 (3v3).
+local SELECT_GAME_MODE = "/Game/UI/MainMenu/WB_CreateLobby.WB_CreateLobby_C:SelectGameMode"
+local BATTLE_PLAYERS = 8
+local battleHooked = false
+LoopAsync(1000, function()
+    ExecuteInGameThread(function()
+        if battleHooked or not StaticFindObject(SELECT_GAME_MODE) then return end
+        local ok, err = pcall(RegisterHook, SELECT_GAME_MODE, function(ctx, selection)   -- runs after the body
+            local s, e = pcall(function()
+                if selection:get():ToString():lower() == "battle" then ctx:get().PlayerCount = BATTLE_PLAYERS end
+            end)
+            if not s then log("battle size: " .. tostring(e)) end
+        end)
+        battleHooked = true
+        log(ok and ("custom lobbies: Battle is " .. BATTLE_PLAYERS .. " players") or ("create-lobby hook failed: " .. tostring(err)))
+    end)
+    return battleHooked
+end)
