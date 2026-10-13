@@ -9,12 +9,18 @@
 // Server side: <server>/download/<join code>/manifest.json lists the files (player/build-manifest.py),
 // <server>/download/<join code>/files/<path> serves them, <server>/download/<join code>/FangsCE.exe is the
 // current launcher (it replaces itself when that changes).
+//
+// With main.pubKey set (server/deploy.sh does), the file list must carry a valid Ed25519 signature
+// (manifest.json.sig) from the server owner's key, which never leaves their machine: neither a taken-over
+// server nor someone on the network path can make the launcher install anything.
 package main
 
 import (
 	"bufio"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -35,6 +41,7 @@ var (
 	server   = "127.0.0.1:8080" // set with -ldflags -X
 	joinCode = ""
 	version  = "dev"
+	pubKey   = "" // base64 Ed25519 public key; when set, unsigned file lists are refused
 )
 
 const (
@@ -239,7 +246,7 @@ func writeFileAtomic(path string, b []byte) error {
 var shortClient = &http.Client{Timeout: 20 * time.Second}
 var longClient = &http.Client{} // big downloads: no overall timeout
 
-func fetchManifest(u string) (*manifest, error) {
+func fetchSmall(u string) ([]byte, error) {
 	resp, err := shortClient.Get(u)
 	if err != nil {
 		return nil, err
@@ -248,8 +255,21 @@ func fetchManifest(u string) (*manifest, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("server answered %s", resp.Status)
 	}
+	return io.ReadAll(io.LimitReader(resp.Body, 64<<20))
+}
+
+func fetchManifest(u string) (*manifest, error) {
+	data, err := fetchSmall(u)
+	if err != nil {
+		return nil, err
+	}
+	if pubKey != "" {
+		if err := verifySignature(data, u+".sig"); err != nil {
+			return nil, err
+		}
+	}
 	var m manifest
-	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("bad file list: %v", err)
 	}
 	if m.Exe == "" || len(m.Files) == 0 {
@@ -261,6 +281,23 @@ func fetchManifest(u string) (*manifest, error) {
 		}
 	}
 	return &m, nil
+}
+
+// verifySignature: the file list must be signed with the server owner's key (see the top of this file).
+func verifySignature(data []byte, sigURL string) error {
+	pub, err := base64.StdEncoding.DecodeString(pubKey)
+	if err != nil || len(pub) != ed25519.PublicKeySize {
+		return errors.New("this launcher has a broken signing key built in")
+	}
+	sigText, err := fetchSmall(sigURL)
+	if err != nil {
+		return fmt.Errorf("the update has no signature (%v) - not installing anything", err)
+	}
+	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(sigText)))
+	if err != nil || !ed25519.Verify(pub, data, sig) {
+		return errors.New("the update is NOT signed by the server owner - not installing anything. Tell them!")
+	}
+	return nil
 }
 
 // safeRel: relative, forward slashes, no "..", no drive letters.
