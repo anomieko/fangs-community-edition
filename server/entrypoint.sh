@@ -12,8 +12,11 @@ mkdir -p -m 1777 /tmp/.X11-unix 2>/dev/null || true
 Xvfb :99 -screen 0 640x480x24 -nolisten tcp > /data/xvfb.log 2>&1 &
 export DISPLAY=:99 FANGS_HOST_DISPLAY=:99
 sleep 1
-if [[ ! -f $WINEPREFIX/system.reg ]]; then
-  echo "initialising Wine prefix..."; wineboot -i >/dev/null 2>&1 || true; wineserver -w || true
+# (Re)create the shared Wine prefix when it's missing or was made by another Wine version.
+if [[ ! -f $WINEPREFIX/system.reg || "$(cat "$WINEPREFIX/.wine-version" 2>/dev/null)" != "$(wine --version)" ]]; then
+  echo "initialising Wine prefix ($(wine --version))..."
+  rm -rf "${WINEPREFIX:?}"; wineboot -i >/dev/null 2>&1 || true; wineserver -w || true
+  wine --version > "$WINEPREFIX/.wine-version"
 fi
 python3 backend/seed/make_seed.py "$PUBLIC_HOST:$BACKEND_PORT" /data/backend/seed.json >/dev/null
 [[ -n ${FANGS_JOIN_CODE:-} ]] || echo "WARNING: FANGS_JOIN_CODE not set - anyone can log in" >&2
