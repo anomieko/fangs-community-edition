@@ -20,6 +20,7 @@ class Host:
         self.ready = asyncio.Event()
         self.had_players = False
         self.empty_since = None
+        self.perf_logged = 0.0
 
     @property
     def log_path(self):
@@ -190,6 +191,10 @@ class HostManager:
                 continue
             st = host.status
             players = st.get('players', 0)
+            if players and time.time() - host.perf_logged >= 30:   # how busy servers are doing (frame times)
+                host.perf_logged = time.time()
+                self.log({'host': host.id, 'perf': {k: st.get(k) for k in
+                          ('map', 'players', 'fps_cap', 'fps', 'hitch_ms')}})
             if players:
                 host.had_players, host.empty_since = True, None
             elif host.empty_since is None:

@@ -13,9 +13,15 @@ end
 -- Runs fn on the game thread every `ms` milliseconds until it returns true. (LoopAsync + ExecuteInGameThread
 -- ran Lua on two threads at once, which now and then crashed the game inside UE4SS's Lua VM: exit code 3.)
 local function every(ms, fn)
-    local handle
+    local handle, failures = nil, 0
     handle = LoopInGameThreadWithDelay(ms, function()
-        if fn() == true and handle and IsValidDelayedActionHandle(handle) then CancelDelayedAction(handle) end
+        local ok, done = pcall(fn)   -- an error must not end the loop (objects vanish during map changes)
+        if not ok then
+            failures = failures + 1
+            if failures <= 3 then log("loop error (" .. ms .. " ms loop): " .. tostring(done)) end
+        elseif done == true and handle and IsValidDelayedActionHandle(handle) then
+            CancelDelayedAction(handle)
+        end
     end)
     return handle
 end
