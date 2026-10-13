@@ -46,11 +46,16 @@ class HostManager:
         self.hosts = {}          # id -> Host
         self.on_stopped = []     # callbacks(host)
         self._booting = 0        # standby servers being started
+        self._releasing = set()  # ports of stopped servers whose process hasn't exited yet
         self._closing = False
 
     def free_ports(self):
-        used = {h.port for h in self.hosts.values()}
+        used = {h.port for h in self.hosts.values()} | self._releasing
         return [p for p in self.ports if p not in used]
+
+    def is_live(self, host):
+        # Host ids are per port and get reused, so compare objects, not ids.
+        return self.hosts.get(host.id) is host
 
     def _idle(self):
         return [h for h in self.hosts.values() if h.session_id is None and h.ready.is_set()]
@@ -58,17 +63,29 @@ class HostManager:
     async def allocate(self, session_id, match=None):
         """A ready game server for `session_id` (a standby one if available, else a new one). `match`:
         {'size', 'map', 'map_name'} for matchmade games, handed to FangsHost via fangshost_match.json."""
-        idle = self._idle()
-        if idle:
-            host = idle[0]
-            self.log({'host': host.id, 'event': 'assigned (standby)', 'session': session_id})
-        else:
+        host = await self._claim_idle(session_id)
+        if host is None:
             host = await self._start()
         host.session_id, host.started = session_id, time.time()
         if match:
             (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_match.json').write_text(json.dumps(match))
         self.replenish()
         return host
+
+    async def _claim_idle(self, session_id):
+        """An idle booted server, waiting for a standby that is still booting rather than starting
+        another one next to it."""
+        deadline = time.time() + self.ready_timeout
+        while True:
+            idle = self._idle()
+            if idle:
+                host = idle[0]
+                host.session_id = session_id          # claim it before anything else can
+                self.log({'host': host.id, 'event': 'assigned (standby)', 'session': session_id})
+                return host
+            if not self._booting or time.time() > deadline:
+                return None
+            await asyncio.sleep(0.5)
 
     def replenish(self):
         """Top up the idle standby servers (in the background)."""
@@ -88,11 +105,11 @@ class HostManager:
             self._booting -= 1
 
     async def _start(self, standby=False):
-        ports = self.free_ports()
-        if not ports:
-            raise RuntimeError('no free game server slots')
-        port = ports[0]
         for attempt in range(1, self.attempts + 1):
+            ports = self.free_ports()
+            if not ports:
+                raise RuntimeError('no free game server slots')
+            port = ports[0]
             host = await self._spawn(port)
             try:
                 await asyncio.wait_for(self._ready_or_exit(host), self.ready_timeout)
@@ -104,8 +121,6 @@ class HostManager:
                         self.log({'host': host.id, 'event': 'standby ready', 'port': port})
                     return host
                 await self.stop(host, f'died while starting (attempt {attempt})')
-            if not self.free_ports() or port not in self.free_ports():
-                break
         raise RuntimeError('game server failed to start')
 
     async def _ready_or_exit(self, host):
@@ -134,6 +149,8 @@ class HostManager:
         needle = READY_LINE.format(port=host.port)
         while host.proc.returncode is None:
             await asyncio.sleep(2)
+            if not self.is_live(host):
+                return                                   # stopped elsewhere
             if not host.ready.is_set():
                 # Ready = listening on the lobby map (Development builds log the listen line; Shipping builds
                 # barely log, FangsHost's heartbeat reports the map) and FangsHost reports the lobby config loaded.
@@ -160,18 +177,29 @@ class HostManager:
         await self.stop(host, f'process exited ({host.proc.returncode})')
 
     async def stop(self, host, reason):
-        if self.hosts.pop(host.id, None) is None:
+        if not self.is_live(host):
             return
+        del self.hosts[host.id]
         self.log({'host': host.id, 'event': 'stopping', 'reason': reason})
-        if host.proc and host.proc.returncode is None:
-            try:
-                os.killpg(host.proc.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                await asyncio.wait_for(host.proc.wait(), 15)
-            except asyncio.TimeoutError:
-                os.killpg(host.proc.pid, signal.SIGKILL)
+        # Port and instance dir stay taken until the process is gone: a new server there would fail
+        # to bind the port (or share files with the dying one).
+        self._releasing.add(host.port)
+        try:
+            if host.proc and host.proc.returncode is None:
+                try:
+                    os.killpg(host.proc.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                try:
+                    await asyncio.wait_for(host.proc.wait(), 15)
+                except asyncio.TimeoutError:
+                    try:
+                        os.killpg(host.proc.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    await host.proc.wait()
+        finally:
+            self._releasing.discard(host.port)
         for cb in self.on_stopped:
             cb(host)
         self.replenish()
