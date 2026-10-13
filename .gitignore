@@ -1,0 +1,11 @@
+# original game installs — huge and proprietary; hashes are tracked instead
+/clients/*/
+# extracted / generated data
+/work/
+# third-party tool checkouts and builds
+/third_party/
+bin/
+obj/
+__pycache__/
+/backend/.venv/
+/backend/data/

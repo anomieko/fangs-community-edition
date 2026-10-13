@@ -1,0 +1,29 @@
+; Redirects the game's AccelByte SDK to our backend. Copied to MOBA/Saved/Config/WindowsNoEditor/Engine.ini
+; with @BACKEND@ replaced by host:port (e.g. 127.0.0.1:8080).
+[/Script/AccelByteUe4Sdk.AccelByteSettings]
+BaseUrl="http://@BACKEND@"
+IamServerUrl="http://@BACKEND@/iam"
+PlatformServerUrl="http://@BACKEND@/platform"
+LobbyServerUrl="ws://@BACKEND@/lobby/"
+CloudStorageServerUrl="http://@BACKEND@/binary-store"
+BasicServerUrl="http://@BACKEND@/basic"
+GameProfileServerUrl="http://@BACKEND@/soc-profile"
+StatisticServerUrl="http://@BACKEND@/social"
+QosManagerServerUrl="http://@BACKEND@/qosm"
+LeaderboardServerUrl="http://@BACKEND@/leaderboard"
+CloudSaveServerUrl="http://@BACKEND@/cloudsave"
+GameTelemetryServerUrl="http://@BACKEND@/game-telemetry"
+AgreementServerUrl="http://@BACKEND@/agreement"
+SessionBrowserServerUrl="http://@BACKEND@/sessionbrowser"
+
+[/Script/AccelByteUe4Sdk.AccelByteServerSettings]
+BaseUrl="http://@BACKEND@"
+IamServerUrl="http://@BACKEND@/iam"
+DSMControllerServerUrl="http://@BACKEND@/dsmcontroller"
+StatisticServerUrl="http://@BACKEND@/social"
+PlatformServerUrl="http://@BACKEND@/platform"
+QosManagerServerUrl="http://@BACKEND@/qosm"
+GameTelemetryServerUrl="http://@BACKEND@/game-telemetry"
+LobbyServerUrl="http://@BACKEND@/lobby/"
+CloudSaveServerUrl="http://@BACKEND@/cloudsave"
+SessionBrowserServerUrl="http://@BACKEND@/sessionbrowser"

@@ -1,0 +1,173 @@
+{
+ "FANGSConfig": {
+  "NoServerMessage": "FANGS revival server",
+  "main_v0_0_444": {
+   "Servers": [
+    {
+     "Name": "Local",
+     "Alias": "local",
+     "Region": "local",
+     "MatchMaker": "http://127.0.0.1:8080/matchmaker",
+     "CasualMatchMaker": "http://127.0.0.1:8080/matchmaker",
+     "MatchMakerLink": "http://127.0.0.1:8080/matchmaker",
+     "MatchMakerABLink": "ws://127.0.0.1:8080/matchmaker",
+     "MatchMakerABRanked": "ranked",
+     "MatchMakerABCasual": "casual",
+     "MatchMakerABBeginner": "beginner",
+     "Allocation": "local",
+     "ZeuzIMSProject": "fangs-local",
+     "SessionManagerUrl": "http://127.0.0.1:8080/zeuz",
+     "ABArmadaDeploymentName": "local",
+     "FANGSApiBaseURL": "http://127.0.0.1:8080/fangsapi",
+     "CreatePlayerURL": "create-player",
+     "VivoxTokenURL": "vivox-token",
+     "UpdatePlayerInfoURL": "update-player-info",
+     "UpdateRegionURL": "update-region",
+     "UpdatePlayerSettingsURL": "update-player-settings",
+     "UpdateLoadoutsURL": "update-loadouts"
+    }
+   ],
+   "UnlockAllHeroes": true,
+   "UnlockAllSkins": true,
+   "EnableAllMounts": true,
+   "AvailableGameModes": [
+    "Custom",
+    "Casual",
+    "Training",
+    "Tutorial",
+    "Bots"
+   ],
+   "AvailableCustomModes": [
+    "Battle",
+    "Duel",
+    "2vs2",
+    "4vs4",
+    "5vs5",
+    "6vs6",
+    "Trio",
+    "Solo",
+    "AI"
+   ],
+   "AvailableMaps": [
+    {
+     "Name": "The Garden of Vermilia",
+     "Map": "LE_Arena02_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Dragon Arena",
+     "Map": "LE_Arena06_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Arena",
+     "Map": "LE_Arena01_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Payload",
+     "Map": "LE_Payload03_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Payload II",
+     "Map": "LE_Payload04_Map",
+     "Custom": true
+    }
+   ]
+  },
+  "0.0.444": {
+   "Servers": [
+    {
+     "Name": "Local",
+     "Alias": "local",
+     "Region": "local",
+     "MatchMaker": "http://127.0.0.1:8080/matchmaker",
+     "CasualMatchMaker": "http://127.0.0.1:8080/matchmaker",
+     "MatchMakerLink": "http://127.0.0.1:8080/matchmaker",
+     "MatchMakerABLink": "ws://127.0.0.1:8080/matchmaker",
+     "MatchMakerABRanked": "ranked",
+     "MatchMakerABCasual": "casual",
+     "MatchMakerABBeginner": "beginner",
+     "Allocation": "local",
+     "ZeuzIMSProject": "fangs-local",
+     "SessionManagerUrl": "http://127.0.0.1:8080/zeuz",
+     "ABArmadaDeploymentName": "local",
+     "FANGSApiBaseURL": "http://127.0.0.1:8080/fangsapi",
+     "CreatePlayerURL": "create-player",
+     "VivoxTokenURL": "vivox-token",
+     "UpdatePlayerInfoURL": "update-player-info",
+     "UpdateRegionURL": "update-region",
+     "UpdatePlayerSettingsURL": "update-player-settings",
+     "UpdateLoadoutsURL": "update-loadouts"
+    }
+   ],
+   "UnlockAllHeroes": true,
+   "UnlockAllSkins": true,
+   "EnableAllMounts": true,
+   "AvailableGameModes": [
+    "Custom",
+    "Casual",
+    "Training",
+    "Tutorial",
+    "Bots"
+   ],
+   "AvailableCustomModes": [
+    "Battle",
+    "Duel",
+    "2vs2",
+    "4vs4",
+    "5vs5",
+    "6vs6",
+    "Trio",
+    "Solo",
+    "AI"
+   ],
+   "AvailableMaps": [
+    {
+     "Name": "The Garden of Vermilia",
+     "Map": "LE_Arena02_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Dragon Arena",
+     "Map": "LE_Arena06_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Arena",
+     "Map": "LE_Arena01_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Payload",
+     "Map": "LE_Payload03_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Payload II",
+     "Map": "LE_Payload04_Map",
+     "Custom": true
+    }
+   ]
+  }
+ },
+ "season": {},
+ "HeroLevelRewards": {},
+ "Mission": {},
+ "Justice": {
+  "justiceSchema": "1.1",
+  "subsystemEnabled": false,
+  "pollTimeSeconds": 600,
+  "resetTimeHours": 24,
+  "afkPenaltyEnabled": false,
+  "crashPenaltyEnabled": false,
+  "dodgePenaltyEnabled": false,
+  "leavingPenaltyEnabled": false,
+  "partyPenaltyEnabled": false,
+  "afkPenaltyTiers": [],
+  "crashPenaltyTiers": [],
+  "dodgePenaltyTiers": [],
+  "leavingPenaltyTiers": []
+ }
+}

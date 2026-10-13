@@ -1,0 +1,9 @@
+FangsCtl : 1
+FangsBoot : 1
+FangsHost : 1
+CheatManagerEnablerMod : 1
+ConsoleCommandsMod : 1
+ConsoleEnablerMod : 1
+BPML_GenericFunctions : 1
+BPModLoaderMod : 1
+Keybinds : 1
