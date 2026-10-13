@@ -204,6 +204,7 @@ async def users_me(request):
 # GameplayTutorialComplete (WB_MainMenu): 0 forced tutorial, 1 starter-hero pick, 2 menu hints, 3 done.
 # Everything is unlocked, so players start past all of it.
 TUTORIAL_DONE = 3
+PROFILE_IDENTITY = {'Username', 'AccountType', 'Version', 'UserId', 'GameplayTutorialComplete'}   # not player-settable
 
 
 def default_player_record(store, uid, key):
@@ -327,8 +328,18 @@ async def fangs_update_player_info(request):
     body = await request.json()
     recs = store.data['player_records'].setdefault(uid, {})
     info = recs.get('PROFILE_INFO_KEY') or default_player_record(store, uid, 'PROFILE_INFO_KEY')
-    if body.get('cosmeticType'):
-        info.setdefault('Cosmetics', {})[body['cosmeticType']] = body.get('cosmeticId', '')
+    # cosmeticType is a path into the profile: "Hero" (the lobby re-reads it as the pick), "Cosmetics.Title", ...
+    path = str(body.get('cosmeticType', '')).split('.')
+    if not all(re.fullmatch(r'[A-Za-z0-9_]{1,32}', k) for k in path) or len(path) > 3 or path[0] in PROFILE_IDENTITY:
+        return err(400, 20002, 'invalid cosmeticType')
+    node = info
+    for k in path[:-1]:
+        if not isinstance(node.get(k), dict):
+            node[k] = {}
+        node = node[k]
+    node[path[-1]] = str(body.get('cosmeticId', ''))
+    for k in ('Hero', 'Cosmetics.Title'):   # misfiled by earlier versions of this handler
+        info.get('Cosmetics', {}).pop(k, None)
     recs['PROFILE_INFO_KEY'] = info
     store.save()
     return web.json_response(info)

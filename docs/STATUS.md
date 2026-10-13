@@ -11,6 +11,8 @@ and is kept as a reference; the stack runs on both.
 - Server: hardened Debian 13 VPS + Docker image (`server/`, `docs/SERVER.md`).
 - Players: Windows launcher + full-client zip (`player/`), served by the server behind the join code.
 - Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
+- First real (rendered) playtest: main menu, Play panel, custom lobby, launch, hero pick, solo match.
+  Lobby owners launch whenever they want (no need to fill every slot).
 
 ## History
 
@@ -44,11 +46,20 @@ for a small Linux VPS.**
 - Headless *clients* (tests only): `-nullrhi` crashes in the main menu; use gamescope headless + DXVK
   (`GPU=1`), and remove the .mp4s (`NOMOVIES=1`) — Wine's media decoding hangs. Real players unaffected.
 - `FindFirstOf("WB_…")` can return a widget-tree template; use live refs (`gi.WB_MainMenuRef…`).
+- The Play panel only shows when the inventory owns a Hero: a catalog item (`title` = DT_Heroes row,
+  `categoryPath` `/Hero`) plus an entitlement whose `name` equals that title. `UnlockAllHeroes` alone
+  only affects the lobby hero select.
+- Display names must look like `name#1234`: the client uses the part before `#` as the player name
+  (lobby owner check, top bar). Untagged names read as empty -> nobody owns their lobby.
+- `update-player-info` `cosmeticType` is a path into PROFILE_INFO_KEY (`Hero`, `Cosmetics.Title`);
+  the lobby server re-reads `Hero` from the profile as the player's pick.
+- UE4SS (this build): a hook on a Blueprint function runs once, after the function body; changing a
+  Blueprint function's out parameters from a hook has no effect on the caller.
 
 ## Next
 
 1. Package the server (Docker: wine + xvfb + python + mods; game files as a volume) and measure
    per-host CPU/RAM to size the VPS.
 2. Player package for Windows/Linux: UE4SS + FangsBoot + Engine.ini + launcher asking for a name.
-3. Real play test with rendering clients (team members), then polish: unlock cosmetics/entitlements,
-   hero list (`AvailableHeroes`), match end → return to menu → host teardown, augments/items.
+3. Play tests with friends on the VPS, then polish: cosmetics (skins etc. in the catalog), match end →
+   return to menu → host teardown, augments/items.

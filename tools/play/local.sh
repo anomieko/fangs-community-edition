@@ -17,7 +17,11 @@ mkdir -p "$REPO/work/play" "$REPO/work/logs"
 backend_up() { [[ -f $PIDFILE ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
 
 if [[ ${1:-} == stop ]]; then
-  if backend_up; then kill "$(cat "$PIDFILE")"; echo "local backend stopped (game servers stop with it)"; fi
+  if backend_up; then
+    pid=$(cat "$PIDFILE"); kill "$pid"
+    for _ in $(seq 30); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done   # it stops its game servers first
+    echo "local backend stopped (game servers stop with it)"
+  fi
   rm -f "$PIDFILE"; exit 0
 fi
 name=${1:?usage: local.sh <name> | stop}
