@@ -2,7 +2,8 @@
 # Game files are NOT part of the image; mount your FANGS install at /game (read-only).
 FROM debian:trixie-slim
 
-ARG UE4SS_URL=https://github.com/UE4SS-RE/RE-UE4SS/releases/download/experimental-latest/UE4SS_v3.0.1-1170-g9e7fed53.zip
+# UE4SS v3.0.1-1170-g9e7fed53 (experimental build; the "experimental-latest" release it came from is a
+# moving target, so the zip is shipped with the build: deploy.sh puts it at server/ue4ss.zip)
 ARG UE4SS_SHA256=c07a0ece72ccb381a3ca97b602071fe919eb6def052f4ff183ffc524d8b18933
 
 RUN apt-get update \
@@ -11,8 +12,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/fangs
-RUN curl -fsSL -o /tmp/ue4ss.zip "$UE4SS_URL" \
- && echo "$UE4SS_SHA256  /tmp/ue4ss.zip" | sha256sum -c - \
+COPY server/ue4ss.zip /tmp/ue4ss.zip
+RUN echo "$UE4SS_SHA256  /tmp/ue4ss.zip" | sha256sum -c - \
  && mkdir -p third_party/ue4ss/dist && unzip -q /tmp/ue4ss.zip -d third_party/ue4ss/dist && rm /tmp/ue4ss.zip
 
 COPY backend/fangs_backend.py backend/hosts.py backend/

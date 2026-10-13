@@ -10,3 +10,5 @@ __pycache__/
 /backend/.venv/
 /backend/data/
 /dist/
+# UE4SS zip copied in by server/deploy.sh for the Docker build
+/server/ue4ss.zip
