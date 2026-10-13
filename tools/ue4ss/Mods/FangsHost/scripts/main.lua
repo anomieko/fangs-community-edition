@@ -31,16 +31,22 @@ local function localControllers()
     return out
 end
 
-local started = false
+local started, removedAt = false, nil
 LoopAsync(500, function()
     ExecuteInGameThread(function()
         if started then return end
         local gs = FindFirstOf("GameStateBase")
-        if not (gs and gs:IsValid() and #localControllers() > 0) then return end
-        started = true
+        if not (gs and gs:IsValid()) then return end
         local statics, locals = StaticFindObject("/Script/Engine.Default__GameplayStatics"), localControllers()
-        for _, pc in ipairs(locals) do statics:RemovePlayer(pc, true) end
-        log("removed the local player (" .. #locals .. "); opening " .. lobbyMap .. " as listen server")
+        if not removedAt then   -- 1. remove the local player
+            if #locals == 0 then return end
+            for _, pc in ipairs(locals) do statics:RemovePlayer(pc, true) end
+            removedAt = os.time(); log("removed the local player (" .. #locals .. ")")
+            return
+        end
+        if os.time() - removedAt < 2 then return end   -- 2. a moment later (same frame crashed some VPS starts)
+        started = true
+        log("opening " .. lobbyMap .. " as listen server")
         statics:OpenLevel(gs, FName(lobbyMap), true, "listen")
     end)
     return started
@@ -100,14 +106,19 @@ local function configureServerSdk()
     local ss = StaticFindObject("/Script/AccelByteUe4Sdk.Default__AccelByteBlueprintsServerSettings")
     if not (ss and ss:IsValid()) then return log("AccelByteBlueprintsServerSettings not found") end
     local base = "http://" .. backend
-    ss:SetClientId("fangs-host"); ss:SetClientSecret("fangs-host")
-    ss:SetNamespace("fangs"); ss:SetPublisherNamespace("hiddenleaf")
-    ss:SetIamServerUrl(base .. "/iam"); ss:SetCloudSaveServerUrl(base .. "/cloudsave")
-    ss:SetPlatformServerUrl(base .. "/platform"); ss:SetStatisticServerUrl(base .. "/social")
-    ss:SetSessionBrowserServerUrl(base .. "/sessionbrowser"); ss:SetDSMControllerServerUrl(base .. "/dsmcontroller")
-    ss:SetQosManagerServerUrl(base .. "/qosm"); ss:SetGameTelemetryServerUrl(base .. "/game-telemetry")
-    ss:SetLobbyServerUrl(base .. "/lobby/"); ss:SetAchievementServerUrl(base .. "/achievement")
-    ss:SetMatchmakingServerUrl(base .. "/matchmaking"); ss:SetSeasonPassServerUrl(base .. "/seasonpass")
+    local settings = {   -- setter -> value; called one by one (the set differs a little between builds)
+        SetClientId = "fangs-host", SetClientSecret = "fangs-host", SetNamespace = "fangs", SetPublisherNamespace = "hiddenleaf",
+        SetIamServerUrl = base .. "/iam", SetCloudSaveServerUrl = base .. "/cloudsave", SetPlatformServerUrl = base .. "/platform",
+        SetStatisticServerUrl = base .. "/social", SetSessionBrowserServerUrl = base .. "/sessionbrowser",
+        SetDSMControllerServerUrl = base .. "/dsmcontroller", SetQosManagerServerUrl = base .. "/qosm",
+        SetGameTelemetryServerUrl = base .. "/game-telemetry", SetLobbyServerUrl = base .. "/lobby/",
+        SetAchievementServerUrl = base .. "/achievement", SetMatchmakingServerUrl = base .. "/matchmaking",
+        SetSeasonPassServerUrl = base .. "/seasonpass",
+    }
+    for setter, value in pairs(settings) do
+        local ok = pcall(function() ss[setter](ss, value) end)
+        if not ok then log("server SDK: " .. setter .. " not available") end
+    end
     log("server SDK pointed at " .. base)
 end
 
@@ -215,9 +226,15 @@ local function setLobbySize(gm, gs, n)
     if gi and gi:IsValid() then gi.MapPlayerCount = n end
 end
 
+local function gameMode()   -- ENUM_MapGameMode of this server's lobby (the game instance has it in every build)
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    return gi and gi:IsValid() and gi.MapGameMode or -1
+end
+
 local function startWithPresentPlayers(ctx)
     local gm, gs = FindFirstOf("BP_GM_Lobby_GameMode_C"), FindFirstOf("GS_Lobby_GameState_C")
     if not (gm and gm:IsValid() and gs and gs:IsValid()) then return end
+    if gameMode() ~= 4 then return end   -- custom lobbies only (Aug 2022 matchmade clients call this on join)
     local n = gm.PlayerControllersRP:GetArrayNum()
     if n < 1 or n >= gm.MaxPlayers then return end
     log(string.format("lobby: owner launched with %d of %d players", n, gm.MaxPlayers))
@@ -231,8 +248,17 @@ end
 -- it (clients then start hero select by themselves); if not everyone shows up, start with those present.
 local matchSize = tonumber(cl:match("-FangsMatchSize=(%d+)"))
 local matchMap = cl:match("-FangsMatchMap=(%S+)")
-local matchMapName = (cl:match("-FangsMatchMapName=(%S+)") or matchMap or ""):gsub("%%(%x%x)", function(h) return string.char(tonumber(h, 16)) end)
+local matchMapName = matchMap
 local NO_SHOW_SECS = 45
+local function readMatchFile()   -- written by the backend when it hands a standby server to a match
+    local f = io.open("fangshost_match.json", "r")
+    if not f then return end
+    local text = f:read("a"); f:close()
+    matchSize = tonumber(text:match('"size"%s*:%s*(%d+)'))
+    matchMap = text:match('"map"%s*:%s*"([^"]+)"')
+    matchMapName = text:match('"map_name"%s*:%s*"([^"]*)"') or matchMap
+    if matchSize then log("matchmade game for " .. matchSize .. " players" .. (matchMap and (" on " .. matchMap) or "")) end
+end
 local function setLobbyMap(gs)   -- the lobby's own random pick (GetRandomMap from CasualMaps) comes up empty
     local push = StaticFindObject("/Script/NetCore.Default__NetPushModelHelpers")
     gs:FlushNetDormancy()
@@ -244,13 +270,16 @@ local function setLobbyMap(gs)   -- the lobby's own random pick (GetRandomMap fr
     if gi and gi:IsValid() then gi.MapGameLevel = matchMap; gi.MapName = matchMapName end
     log("lobby: map " .. matchMap .. " (" .. matchMapName .. ")")
 end
-if matchSize then
-    local firstJoin, size = nil, matchSize
+do
+    local firstJoin, size = nil, nil
     LoopAsync(500, function()
         ExecuteInGameThread(function()
+            if not matchSize then readMatchFile() end
+            if not matchSize then return end
+            size = size or matchSize
             local gm, gs = FindFirstOf("BP_GM_Lobby_GameMode_C"), FindFirstOf("GS_Lobby_GameState_C")
             if not (gm and gm:IsValid() and gs and gs:IsValid()) then return end
-            if gm.MapGameMode ~= 2 and gm.MapGameMode ~= 3 then return end
+            if gameMode() ~= 2 and gameMode() ~= 3 then return end
             local present = gm.PlayerControllersRP:GetArrayNum()
             if present > 0 and not firstJoin then firstJoin = os.time() end
             if gm.LobbyState == 0 and firstJoin and present > 0 and present < size and os.time() - firstJoin > NO_SHOW_SECS then
@@ -261,7 +290,6 @@ if matchSize then
         end)
         return false
     end)
-    log("matchmade game for " .. matchSize .. " players")
 end
 
 -- Lobby -> arena: LaunchGame runs "servertravel" through GetPlayerController(0). Here that can be the

@@ -47,7 +47,19 @@ ssh_ "set -e; cd $remote/repo/server
       for i in \$(seq 1 60); do compose logs fangs 2>&1 | grep -q 'fangs backend on' && break; sleep 3; done
       compose logs --tail 3 fangs"
 
-echo "==> player update package (players' launchers fetch it on their next start)"
+echo "==> launcher FangsCE.exe (server address and join code baked in)"
+go=$REPO/work/toolchains/go/bin/go; [[ -x $go ]] || go=$(command -v go || true)
+if [[ -n $go ]]; then
+  exe=$(mktemp -d)/FangsCE.exe
+  (cd "$REPO/launcher" && GOOS=windows GOARCH=amd64 GOCACHE=$REPO/work/toolchains/gocache "$go" build -trimpath \
+     -ldflags "-s -w -X main.server=$public:8080 -X main.joinCode=$code -X main.version=$(git -C "$REPO" rev-parse --short HEAD)" -o "$exe" .)
+  ssh_ "sudo mkdir -p $remote/repo/server/downloads"
+  rsync_ "$exe" "$target:$remote/repo/server/downloads/FangsCE.exe"; rm -rf "$(dirname "$exe")"
+else
+  echo "   (no Go toolchain: launcher not rebuilt)"
+fi
+
+echo "==> player update packages (launchers fetch them on their next start)"
 ssh_ "cd $remote/repo/server && sudo ./build-client.sh update"
 
 echo "==> smoke test"

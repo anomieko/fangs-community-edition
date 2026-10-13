@@ -6,8 +6,9 @@
 # Usage: CLIENT_DIR=clients/<build> tools/run/test_launch.sh
 set -u
 cd "$(dirname "$0")/../.."
-rm -rf work/run/launch-hosts work/run/launch-store.json
-A=work/run/launch/MOBA/Binaries/Win64/fangsctl_cmd.txt
+R=${RUN:-launch}   # instance name: run several of these side by side with different RUN values
+rm -rf work/run/$R-hosts work/run/$R-store.json
+A=work/run/$R/MOBA/Binaries/Win64/fangsctl_cmd.txt
 STATUS='lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local ps=pc.PlayerState;'\
 ' local gs=FindFirstOf("GS_Lobby_GameState_C"); local m=pc.WB_LobbyMenuRef;'\
 ' return string.format("slot=%s owner=%s matchsize=%d players=%d launch-panel=%s", tostring(ps.ChosenSlot),'\
@@ -24,7 +25,7 @@ WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:I
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); if pc.PlayerState.ChosenSlot < 0 then pc:SelectTeamSlotOnServer(0) return "picked slot 0" end return "already had a slot"' >> $A
   sleep 4; echo "$STATUS" >> $A
   echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "launch pressed"' >> $A
-  sleep 12; echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=pc.WB_LobbyHeroSelectRef; local gi=FindFirstOf("BP_MOBAInstance_C"); gi.WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pc:UpdateChosenHero("Lancer"); return "hero select open=" .. tostring(h:IsValid() and h:IsInViewport()) .. ", clicked Lancer"' >> $A
+  sleep 12; echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=pc.WB_LobbyHeroSelectRef; local gi=FindFirstOf("BP_MOBAInstance_C"); gi.WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pcall(function() pc:UpdateChosenHero("Lancer") end); return "hero select open=" .. tostring(h:IsValid() and h:IsInViewport()) .. ", clicked Lancer"' >> $A
   sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> $A
   sleep 70; echo "$WHERE" >> $A
   echo 'lua local p=FindFirstOf("BP_PlayerChar_C"); return "pawn: " .. (p and p:IsValid() and p:GetFullName() or "none")' >> $A
@@ -36,9 +37,9 @@ WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:I
   echo 'shot showui' >> $A   # -> <prefix>/.../MOBA/Saved/Screenshots
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
-  BACKEND_ARGS="--data $PWD/work/run/launch-store.json --instances $PWD/work/run/launch-hosts" \
+  BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts" \
   tools/run/headless.sh "${DURATION:-235}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
-  -- launch:0:"-TestUser=owner -TestPass=x" 2>&1 | grep -v Segmentation
+  -- $R:0:"-TestUser=owner -TestPass=x" 2>&1 | grep -v Segmentation
 wait
-grep -hE 'fangsctl\]|fangsboot\] (lobby|HUD|retag)' work/run/launch/MOBA/Binaries/Win64/ue4ss/UE4SS.log | cut -c30-260
-grep -hE 'fangshost\] lobby' work/run/launch-hosts/host-*/MOBA/Binaries/Win64/ue4ss/UE4SS.log 2>/dev/null | cut -c30-200
+grep -hE 'fangsctl\]|fangsboot\] (lobby|HUD|retag)' work/run/$R/MOBA/Binaries/Win64/ue4ss/UE4SS.log | cut -c30-260
+grep -hE 'fangshost\] lobby' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/ue4ss/UE4SS.log 2>/dev/null | cut -c30-200

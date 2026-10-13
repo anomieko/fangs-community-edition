@@ -224,6 +224,112 @@
      "Map": "LE_Arena06_Map"
     }
    ]
+  },
+  "alpha7.0.7.51": {
+   "Servers": [
+    {
+     "Name": "Local",
+     "Alias": "local",
+     "Region": "local",
+     "MatchMaker": "http://127.0.0.1:8080/matchmaker",
+     "CasualMatchMaker": "http://127.0.0.1:8080/matchmaker",
+     "MatchMakerLink": "http://127.0.0.1:8080/matchmaker",
+     "MatchMakerABLink": "ws://127.0.0.1:8080/matchmaker",
+     "MatchMakerABRanked": "ranked",
+     "MatchMakerABCasual": "casual",
+     "MatchMakerABBeginner": "beginner",
+     "Allocation": "local",
+     "ZeuzIMSProject": "fangs-local",
+     "SessionManagerUrl": "http://127.0.0.1:8080/zeuz",
+     "ABArmadaDeploymentName": "local",
+     "FANGSApiBaseURL": "http://127.0.0.1:8080/fangsapi",
+     "CreatePlayerURL": "create-player",
+     "VivoxTokenURL": "vivox-token",
+     "UpdatePlayerInfoURL": "update-player-info",
+     "UpdateRegionURL": "update-region",
+     "UpdatePlayerSettingsURL": "update-player-settings",
+     "UpdateLoadoutsURL": "update-loadouts"
+    }
+   ],
+   "AvailableHeroes": [
+    "Berserker",
+    "ShieldGirl",
+    "Lancer",
+    "Gunslinger",
+    "Backstab",
+    "FireMage",
+    "IceMage",
+    "LightningArcher",
+    "DemonGirl",
+    "WoodenSword",
+    "BookMage",
+    "Sidekick",
+    "BattleMonk",
+    "CatSupp",
+    "BigBoi"
+   ],
+   "UnlockAllHeroes": true,
+   "UnlockAllSkins": true,
+   "EnableAllMounts": true,
+   "AvailableGameModes": [
+    "Custom",
+    "Casual",
+    "Training",
+    "Tutorial",
+    "Bots"
+   ],
+   "AvailableCustomModes": [
+    "Battle",
+    "Duel",
+    "2vs2",
+    "4vs4",
+    "5vs5",
+    "6vs6",
+    "Trio",
+    "Solo"
+   ],
+   "AvailableMaps": [
+    {
+     "Name": "Embersong",
+     "Map": "LE_Arena02_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Stormheart",
+     "Map": "LE_Arena06_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Arena",
+     "Map": "LE_Arena01_Map",
+     "Custom": true
+    },
+    {
+     "Name": "Crownwatch",
+     "Map": "LE_Payload03_Map",
+     "Custom": true
+    }
+   ],
+   "CasualMaps": [
+    {
+     "Name": "Embersong",
+     "Map": "LE_Arena02_Map"
+    },
+    {
+     "Name": "Stormheart",
+     "Map": "LE_Arena06_Map"
+    }
+   ],
+   "RankedMaps": [
+    {
+     "Name": "Embersong",
+     "Map": "LE_Arena02_Map"
+    },
+    {
+     "Name": "Stormheart",
+     "Map": "LE_Arena06_Map"
+    }
+   ]
   }
  },
  "season": {},

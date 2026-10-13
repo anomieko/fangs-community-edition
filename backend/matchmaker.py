@@ -13,10 +13,10 @@ Authorization "Bearer secret-token:accelbyte/<access token>"):
             ServerAssignmentResponse  msg.assignment = "<ip>:<port>", msg.token = JWT
 The client then joins the game server like a custom lobby. The lobby server seats each player from the
 token: payload (standard base64, not base64url) assign.extensions.team.ticketToTeamIndex[sub] -> team.
-The game server is told the match size and a random map from FANGSConfig CasualMaps (-FangsMatchSize,
--FangsMatchMap, see FangsHost); the lobby is otherwise hard-wired to 8 players and gets no map.
+The game server is told the match size and a random map from FANGSConfig CasualMaps (fangshost_match.json,
+see FangsHost); the lobby is otherwise hard-wired to 8 players and gets no map.
 """
-import asyncio, base64, json, random, time, urllib.parse, uuid
+import asyncio, base64, json, random, time, uuid
 
 from aiohttp import web, WSMsgType
 
@@ -170,11 +170,10 @@ class Matchmaker:
                                                      'expiresInMillis': STARTING_EXPIRY_MS})
         self.log('starting', match=m.id, players=m.players)
         try:
-            args = [f'-FangsMatchSize={len(m.players)}']
+            match = {'size': len(m.players)}
             if (game_map := self.pick_map()):
-                args += [f"-FangsMatchMap={game_map['Map']}",
-                         f"-FangsMatchMapName={urllib.parse.quote(game_map.get('Name', game_map['Map']))}"]
-            host = await self.app['hosts'].allocate(m.id, extra_args=args)
+                match.update(map=game_map['Map'], map_name=game_map.get('Name', game_map['Map']))
+            host = await self.app['hosts'].allocate(m.id, match=match)
         except Exception as e:  # noqa: BLE001 - tell the players instead of leaving them waiting
             self.log('start failed', match=m.id, error=str(e))
             self.matches.pop(m.id, None)

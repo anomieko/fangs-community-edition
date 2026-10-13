@@ -14,7 +14,7 @@ CHECK='lua local function n(a) if type(a) == "table" then return #a end return a
 BATTLE='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi; pm:CreateSessionDialog();'\
 ' local cl=pm.WB_CreateLobbyRef; local out={}'\
 ' for _, m in ipairs({"Battle", "Duel", "4vs4"}) do cl:SelectGameMode(m); out[#out+1]=m .. "=" .. cl.PlayerCount end return "custom lobby sizes: " .. table.concat(out, " ")'
-( sleep 70; echo "$CHECK" >> $A; sleep 20; echo "$CHECK" >> $A; echo "$BATTLE" >> $A ) &
+( sleep 70; echo "$CHECK" >> $A; sleep 20; echo "$CHECK" >> $A; echo "$BATTLE" >> $A; echo 'shot showui' >> $A ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 BACKEND_ARGS="--data $PWD/work/run/menu-store.json" \
   tools/run/headless.sh "${DURATION:-110}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
   -- menu:0:"-TestUser=menu -TestPass=x" 2>&1 | grep -v Segmentation

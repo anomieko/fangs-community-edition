@@ -37,12 +37,18 @@ version_data = {
     'CasualMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
     'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
 }
+# Aug 2022 build: no LE_Payload04_Map in its pak, no "AI" custom mode in its create-lobby screen
+alpha7_data = {**version_data,
+               'AvailableCustomModes': [m for m in version_data['AvailableCustomModes'] if m != 'AI'],
+               'AvailableMaps': [m for m in version_data['AvailableMaps'] if m['Map'] != 'LE_Payload04_Map']}
 records = {
     # Keyed by the client's MOBA/Content/Data/version.txt. Known builds:
     #   main_v0_0_444            Closed Playtest, Dec 2023 (app 1831080)
     #   Playtest021523v1_v0_0_02 FANGS build 10554626, 15 Feb 2023 (app 1717990)
+    #   alpha7.0.7.51            Closed Playtest Alpha 7 hotfix, build 9396481, 26 Aug 2022 (app 1831080)
     'FANGSConfig': {'NoServerMessage': 'Fangs: Community Edition server',
-                    **{v: version_data for v in ('main_v0_0_444', 'Playtest021523v1_v0_0_02')}},
+                    **{v: version_data for v in ('main_v0_0_444', 'Playtest021523v1_v0_0_02')},
+                    'alpha7.0.7.51': alpha7_data},
     'season': {}, 'HeroLevelRewards': {}, 'Mission': {},
     'Justice': {'justiceSchema': '1.1', 'subsystemEnabled': False, 'pollTimeSeconds': 600, 'resetTimeHours': 24,
                 'afkPenaltyEnabled': False, 'crashPenaltyEnabled': False, 'dodgePenaltyEnabled': False,
