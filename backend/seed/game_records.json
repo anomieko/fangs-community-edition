@@ -1,6 +1,6 @@
 {
  "FANGSConfig": {
-  "NoServerMessage": "FANGS revival server",
+  "NoServerMessage": "Fangs: Community Edition server",
   "main_v0_0_444": {
    "Servers": [
     {
@@ -76,7 +76,7 @@
     }
    ]
   },
-  "0.0.444": {
+  "Playtest021523v1_v0_0_02": {
    "Servers": [
     {
      "Name": "Local",

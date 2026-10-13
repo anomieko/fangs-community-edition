@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
-"""Minimal UE4 pak v11 (4.26) index reader. Usage: paklist.py <pak> <out.tsv>"""
+"""Minimal UE4 pak v11 (4.26) index reader. Usage: paklist.py <pak> <out.tsv> [aes-key-hex | @keyfile]
+Encrypted indexes/files need the AES-256 key (tools/pak/findkey*.py); keys are never committed."""
 import struct, sys
+
+
+def load_key(arg):
+    if not arg:
+        return None
+    if arg.startswith('@'):
+        arg = open(arg[1:]).read().strip()
+    return bytes.fromhex(arg[2:] if arg.lower().startswith('0x') else arg)
+
+
+def decrypt(key, data):
+    if key is None:
+        return data
+    from Crypto.Cipher import AES
+    return AES.new(key, AES.MODE_ECB).decrypt(data[:len(data) // 16 * 16])
 
 FOOTER = 16 + 1 + 4 + 4 + 8 + 8 + 20 + 5 * 32
 
@@ -45,7 +61,8 @@ def decode_entry(b, off):
     return offset, size, usize, method, enc
 
 
-def main(pak, out):
+def main(pak, out, key=None):
+    key = load_key(key)
     with open(pak, 'rb') as f:
         f.seek(-FOOTER, 2)
         ft = R(f.read(FOOTER))
@@ -54,7 +71,9 @@ def main(pak, out):
         methods = [ft.raw(32).split(b'\0')[0].decode() for _ in range(5)]
         assert magic == 0x5A6F12E1, hex(magic)
         print(f'version={ver} encrypted_index={enc_idx} key_guid={guid.hex()} methods={methods}')
-        f.seek(ioff); r = R(f.read(isz))
+        if enc_idx and key is None:
+            sys.exit('pak index is encrypted: pass the AES key')
+        f.seek(ioff); r = R(decrypt(key if enc_idx else None, f.read(isz)))
         mount = r.fstr(); n = r.i32(); r.raw(8)
         if r.u32():
             r.raw(8 + 8 + 20)
@@ -63,7 +82,7 @@ def main(pak, out):
         fdi_off = r.i64(); fdi_sz = r.i64(); r.raw(20)
         enc_entries = r.raw(r.i32())
         print(f'mount={mount} entries={n}')
-        f.seek(fdi_off); d = R(f.read(fdi_sz))
+        f.seek(fdi_off); d = R(decrypt(key if enc_idx else None, f.read(fdi_sz)))
 
     totals = {'enc': 0, 'comp': 0}
     with open(out, 'w') as o:

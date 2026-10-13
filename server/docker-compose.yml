@@ -1,0 +1,30 @@
+# Fangs: Community Edition server. Usage:
+#   GAME_DIR=/path/to/FANGS PUBLIC_HOST=<server ip or dns name> FANGS_JOIN_CODE=<code> docker compose up -d --build
+# Open in the firewall: TCP 8080, UDP 11032, UDP 7777+ (one port per simultaneous game server).
+services:
+  fangs:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: fangs-ce-server
+    network_mode: host          # game servers use a range of UDP ports
+    restart: unless-stopped
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST to the address players connect to}
+      FANGS_JOIN_CODE: ${FANGS_JOIN_CODE:-}
+      HOST_PORTS: ${HOST_PORTS:-7777-7778}   # ~3 GB RAM per running game server
+    volumes:
+      - ${GAME_DIR:?set GAME_DIR to the FANGS install}:/game:ro
+      - fangs-data:/data
+      - ${DOWNLOADS_DIR:-./downloads}:/downloads:ro
+    # hardening
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/fangs
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 4096
+    mem_limit: ${MEM_LIMIT:-7g}
+volumes:
+  fangs-data:

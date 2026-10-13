@@ -1,0 +1,8 @@
+clients/
+work/
+third_party/
+backend/data/
+backend/.venv/
+**/bin/
+**/obj/
+.git/

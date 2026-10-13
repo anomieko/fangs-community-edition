@@ -1,4 +1,18 @@
-# Status — FANGS revival (playtest client `main_v0_0_444`)
+# Status — Fangs: Community Edition
+
+**Target build: FANGS 15 Feb 2023 (build 10554626)** — see `docs/clients/fangs-2023-02-15-b10554626.md`.
+The Dec 2023 Closed Playtest (`main_v0_0_444`, a Development build) was used to work everything out
+and is kept as a reference; the stack runs on both.
+
+## Where things are (2026-10-13)
+
+- Full flow verified on the target build (2 players and solo, headless): login → custom lobby →
+  game server → join → hero pick → start → match.
+- Server: hardened Debian 13 VPS + Docker image (`server/`, `docs/SERVER.md`).
+- Players: Windows launcher + full-client zip (`player/`), served by the server behind the join code.
+- Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
+
+## History
 
 **2026-10-13: a full custom-lobby match runs end-to-end on our stack.** Automated test
 `tools/run/test_lobby.sh`: alice logs in → creates a custom lobby → backend starts a game host →

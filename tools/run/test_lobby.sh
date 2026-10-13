@@ -17,12 +17,16 @@ A=work/run/alice/MOBA/Binaries/Win64/fangsctl_cmd.txt; B=work/run/bob/MOBA/Binar
   sleep 10
   echo 'lua local n=0; for _,w in ipairs(FindAllOf("WB_GameSession_C") or {}) do if w:GetFullName():find("/Engine/Transient", 1, true) then w:BndEvt__SelectSessionBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); n=n+1; break end end; return "clicked "..n' >> $B
   sleep 25
-  PICK='lua local pc=require("UEHelpers").GetPlayerController(); pc:UpdateChosenHero("%s"); return "picked %s"'
+  WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:IsValid() and gs:GetFullName() or "none")'
+  echo "$WHERE" >> $A; echo "$WHERE" >> $B
+  PICK='lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); pc:UpdateChosenHero("%s"); return "picked %s"'
   printf "$PICK\n" FireMage FireMage >> $A
   printf "$PICK\n" LightningArcher LightningArcher >> $B
   sleep 10
-  echo 'lua local pc=require("UEHelpers").GetPlayerController(); pc:StartMatch(); return "start"' >> $A
+  echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); pc:StartMatch(); return "start"' >> $A
+  sleep 60
+  echo "$WHERE" >> $A; echo "$WHERE" >> $B
 ) &
-UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 tools/run/headless.sh "${DURATION:-200}" clients/playtest-main_v0_0_444 \
+UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 tools/run/headless.sh "${DURATION:-200}" "${CLIENT_DIR:-clients/playtest-main_v0_0_444}" \
   -- alice:0:"-TestUser=alice -TestPass=x" -- bob:3:"-TestUser=bob -TestPass=x" 2>&1 | grep -v Segmentation
 wait
