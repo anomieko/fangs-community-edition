@@ -32,6 +32,8 @@ rm -f "$inst/MOBA/Saved/Logs/MOBA.log"
 
 cd "$bin"
 export WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi=n,b"
-exec xvfb-run -a -s '-screen 0 640x480x24' wine "$exe" /Game/Environment/Maps/LE_Loading_Map \
+# FANGS_HOST_DISPLAY: shared X display (the server container's); otherwise a private Xvfb per game server
+if [[ -n ${FANGS_HOST_DISPLAY:-} ]]; then export DISPLAY=$FANGS_HOST_DISPLAY; x=(); else x=(xvfb-run -a -e "$inst/xvfb.log" -s '-screen 0 640x480x24'); fi
+exec "${x[@]}" wine "$exe" /Game/Environment/Maps/LE_Loading_Map \
   -FangsHost -port="$port" ${FANGS_BACKEND:+-FangsBackend=$FANGS_BACKEND} -nullrhi -nosound -unattended -nosplash -log \
   -ExecCmds="t.MaxFPS ${FANGS_TICKRATE:-60}" "$@"

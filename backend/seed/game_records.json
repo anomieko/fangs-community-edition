@@ -67,12 +67,12 @@
    ],
    "AvailableMaps": [
     {
-     "Name": "The Garden of Vermilia",
+     "Name": "Embersong",
      "Map": "LE_Arena02_Map",
      "Custom": true
     },
     {
-     "Name": "Dragon Arena",
+     "Name": "Stormheart",
      "Map": "LE_Arena06_Map",
      "Custom": true
     },
@@ -82,7 +82,7 @@
      "Custom": true
     },
     {
-     "Name": "Payload",
+     "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
      "Custom": true
     },
@@ -94,21 +94,21 @@
    ],
    "CasualMaps": [
     {
-     "Name": "The Garden of Vermilia",
+     "Name": "Embersong",
      "Map": "LE_Arena02_Map"
     },
     {
-     "Name": "Dragon Arena",
+     "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
     }
    ],
    "RankedMaps": [
     {
-     "Name": "The Garden of Vermilia",
+     "Name": "Embersong",
      "Map": "LE_Arena02_Map"
     },
     {
-     "Name": "Dragon Arena",
+     "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
     }
    ]
@@ -179,12 +179,12 @@
    ],
    "AvailableMaps": [
     {
-     "Name": "The Garden of Vermilia",
+     "Name": "Embersong",
      "Map": "LE_Arena02_Map",
      "Custom": true
     },
     {
-     "Name": "Dragon Arena",
+     "Name": "Stormheart",
      "Map": "LE_Arena06_Map",
      "Custom": true
     },
@@ -194,7 +194,7 @@
      "Custom": true
     },
     {
-     "Name": "Payload",
+     "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
      "Custom": true
     },
@@ -206,21 +206,21 @@
    ],
    "CasualMaps": [
     {
-     "Name": "The Garden of Vermilia",
+     "Name": "Embersong",
      "Map": "LE_Arena02_Map"
     },
     {
-     "Name": "Dragon Arena",
+     "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
     }
    ],
    "RankedMaps": [
     {
-     "Name": "The Garden of Vermilia",
+     "Name": "Embersong",
      "Map": "LE_Arena02_Map"
     },
     {
-     "Name": "Dragon Arena",
+     "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
     }
    ]

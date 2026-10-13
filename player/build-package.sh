@@ -11,6 +11,10 @@ rm -rf "$stage" "$out"; mkdir -p "$stage/FangsCE"
 sed "s/@BACKEND@/$server/g" "$REPO/tools/run/config/Engine.ini.template" > "$stage/FangsCE/Engine.ini"
 [[ -n ${FANGS_JOIN_CODE:-} ]] && printf '%s' "$FANGS_JOIN_CODE" > "$stage/FangsCE/joincode.txt"
 cp "$REPO/player/windows/FangsCE.bat" "$stage/"
+cp "$REPO/player/windows/launch.cmd" "$stage/FangsCE/"
+printf 'http://%s/download/%s/' "$server" "${FANGS_JOIN_CODE:-}" > "$stage/FangsCE/update-url.txt"   # auto-update
+"$REPO/player/build-update.sh" "$server" "$stage/update" > /dev/null
+cp "$stage/update/FangsCE-Update.txt" "$stage/FangsCE/version.txt"; rm -rf "$stage/update"
 sed -e "s/@SERVER@/$server/" -e "s/@BUILD@/$build/" "$REPO/player/windows/README.txt" > "$stage/FangsCE-README.txt"
 python3 - "$stage" "$out" <<'PY'
 import os, sys, zipfile
@@ -20,7 +24,7 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         for f in files:
             p = os.path.join(root, f); rel = os.path.relpath(p, stage)
             data = open(p, 'rb').read()
-            if f.endswith(('.bat', '.txt', '.ini')) and not rel.startswith('MOBA'):
+            if f.endswith(('.bat', '.cmd', '.txt', '.ini')) and not rel.startswith('MOBA') and f not in ('update-url.txt', 'version.txt'):
                 data = data.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')   # Windows line endings
             z.writestr(rel, data)
 PY

@@ -1,54 +1,40 @@
 @echo off
-setlocal EnableDelayedExpansion
+rem Fangs: Community Edition launcher. Fetches player-file updates from the server (never game files),
+rem then starts the game via FangsCE\launch.cmd. Uses curl.exe and tar.exe, built into Windows 10/11.
+rem This file is never replaced by an update (Windows reads a running .bat as it goes).
 title Fangs: Community Edition
 cd /d "%~dp0"
 
-set "EXE=MOBA\Binaries\Win64\MOBA-Win64-Shipping.exe"
-if not exist "%EXE%" set "EXE=MOBA\Binaries\Win64\MOBA.exe"
-if not exist "%EXE%" (
-  echo This launcher must be inside your FANGS game folder - the folder that contains "MOBA".
-  pause
-  exit /b 1
-)
+if not exist "FangsCE\update-url.txt" goto launch
+where /q curl.exe || goto launch
+where /q tar.exe || goto launch
+set "URL=" & set "LATEST=" & set "CURRENT="
+set /p URL=<"FangsCE\update-url.txt"
+echo   Checking for updates...
+curl.exe -s -f -m 15 -o "FangsCE\latest.txt" "%URL%FangsCE-Update.txt" || goto offline
+set /p LATEST=<"FangsCE\latest.txt"
+if exist "FangsCE\version.txt" set /p CURRENT=<"FangsCE\version.txt"
+if "%LATEST%"=="%CURRENT%" goto launch
+echo   Downloading update %LATEST% ...
+curl.exe -s -f -m 900 -o "FangsCE\update.zip" "%URL%FangsCE-Update.zip" || goto updatefailed
+tar -xf "FangsCE\update.zip" || goto updatefailed
+copy /y "FangsCE\latest.txt" "FangsCE\version.txt" >nul
+del "FangsCE\update.zip" 2>nul
+echo   Updated.
+goto launch
 
-set "ACCOUNT=FangsCE\account.txt"
-if exist "%ACCOUNT%" goto launch
+:offline
+echo   Could not reach the server - is it up? Starting anyway.
+goto launch
 
-echo.
-echo   Welcome to Fangs: Community Edition!
-echo   Unofficial fan project - not affiliated with the owners of FANGS.
-echo.
-:askname
-set "NAME="
-set /p "NAME=  Choose your player name (letters/numbers, 3-16 characters): "
-if "!NAME:~2,1!"=="" (echo   At least 3 characters please. & goto askname)
-if not "!NAME:~16!"=="" (echo   Max 16 characters. & goto askname)
-rem strip every allowed character - anything left over is not allowed (replacement is case-insensitive)
-set "CHK=!NAME!"
-for %%C in (A B C D E F G H I J K L M N O P Q R S T U V W X Y Z 0 1 2 3 4 5 6 7 8 9 _) do set "CHK=!CHK:%%C=!"
-if not "!CHK!"=="" (echo   Only letters, numbers and _ please. & goto askname)
-rem Per-install secret: the server ties your name to it on first login.
-set "SECRET=!RANDOM!!RANDOM!!RANDOM!!RANDOM!!RANDOM!!RANDOM!!RANDOM!!RANDOM!"
-(echo !NAME!& echo !SECRET!) > "%ACCOUNT%"
-echo   Saved. Your name is tied to this install - keep FangsCE\account.txt to keep it.
+:updatefailed
+del "FangsCE\update.zip" 2>nul
+echo   Update failed - starting the version you have.
 
 :launch
-set "NAME="
-set "SECRET="
-for /f "usebackq delims=" %%L in ("%ACCOUNT%") do (
-  if not defined NAME (set "NAME=%%L") else if not defined SECRET (set "SECRET=%%L")
+if exist "FangsCE\launch.cmd" (
+  call "FangsCE\launch.cmd"
+) else (
+  echo   FangsCE\launch.cmd is missing - please re-download the client.
+  pause
 )
-rem Re-apply the server connection settings every launch. Release (Shipping) builds read them from
-rem %LOCALAPPDATA%\MOBA\Saved, developer builds from the game folder - write both.
-for %%D in ("MOBA\Saved\Config\WindowsNoEditor" "%LOCALAPPDATA%\MOBA\Saved\Config\WindowsNoEditor") do (
-  if not exist "%%~D" mkdir "%%~D"
-  copy /y "FangsCE\Engine.ini" "%%~D\Engine.ini" >nul
-)
-set "PASS=!SECRET!"
-if exist "FangsCE\joincode.txt" (
-  set /p CODE=<"FangsCE\joincode.txt"
-  set "PASS=!CODE!:!SECRET!"
-)
-echo   Starting FANGS as !NAME! ...
-start "" "%EXE%" -TestUser=!NAME! -TestPass=!PASS!
-endlocal

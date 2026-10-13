@@ -47,7 +47,10 @@ ssh_ "set -e; cd $remote/repo/server
       for i in \$(seq 1 60); do compose logs fangs 2>&1 | grep -q 'fangs backend on' && break; sleep 3; done
       compose logs --tail 3 fangs"
 
+echo "==> player update package (players' launchers fetch it on their next start)"
+ssh_ "cd $remote/repo/server && sudo ./build-client.sh update"
+
 echo "==> smoke test"
 py=python3; [[ -x $REPO/backend/.venv/bin/python ]] && py=$REPO/backend/.venv/bin/python
 "$py" "$REPO/tools/run/smoke_server.py" "$public:8080" --join-code "$code"
-echo "==> server is up at $public:8080 — build the player package with: player/build-package.sh $public:8080"
+echo "==> server is up at $public:8080 (full client zip: ssh $target 'cd $remote/repo/server && sudo ./build-client.sh')"

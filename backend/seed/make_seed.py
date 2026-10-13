@@ -20,9 +20,10 @@ server = {
     'UpdateRegionURL': 'update-region', 'UpdatePlayerSettingsURL': 'update-player-settings',
     'UpdateLoadoutsURL': 'update-loadouts',
 }
-# Maps present in the playtest pak; names for unlocalized ones are ours.
-maps = [('The Garden of Vermilia', 'LE_Arena02_Map'), ('Dragon Arena', 'LE_Arena06_Map'),
-        ('Arena', 'LE_Arena01_Map'), ('Payload', 'LE_Payload03_Map'), ('Payload II', 'LE_Payload04_Map')]
+# Arena maps in the Feb 2023 pak. Names as the game's own FANGS_LOC_EN (map_*_title); the client
+# localizes known maps itself, the names here show for matchmade games and unlocalized maps.
+maps = [('Embersong', 'LE_Arena02_Map'), ('Stormheart', 'LE_Arena06_Map'), ('Arena', 'LE_Arena01_Map'),
+        ('Crownwatch', 'LE_Payload03_Map'), ('Payload II', 'LE_Payload04_Map')]
 # DT_Heroes rows of the released heroes (the remaining rows are unfinished: no names, no owner class).
 heroes = ['Berserker', 'ShieldGirl', 'Lancer', 'Gunslinger', 'Backstab', 'FireMage', 'IceMage', 'LightningArcher',
           'DemonGirl', 'WoodenSword', 'BookMage', 'Sidekick', 'BattleMonk', 'CatSupp', 'BigBoi']

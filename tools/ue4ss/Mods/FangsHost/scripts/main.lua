@@ -14,9 +14,9 @@ local ok, cl = pcall(function() return UEHelpers.GetKismetSystemLibrary():GetCom
 if not (ok and cl:find("-FangsHost", 1, true)) then return end
 local lobbyMap = cl:match("-FangsLobbyMap=(%S+)") or "/Game/Environment/Maps/LE_Lobby_Map"
 
--- A dedicated server has no local player. Remove the controller(s) that own the local player (not just
--- any PlayerController: a missed one joins the lobby as a ghost that takes a slot and never picks a hero),
--- then open the lobby map as listen server.
+-- A dedicated server has no local player. Remove the controller(s) owned by the local player (not just any
+-- PlayerController: a missed one joins the lobby as a ghost that takes a slot and blocks the match even
+-- after it is removed there), then open the lobby map as listen server.
 local LocalPlayerClass = nil
 local function isLocal(pc)   -- owned by a LocalPlayer (IsLocalController() is also true for joining remote players)
     LocalPlayerClass = LocalPlayerClass or StaticFindObject("/Script/Engine.LocalPlayer")
@@ -36,20 +36,20 @@ LoopAsync(500, function()
     ExecuteInGameThread(function()
         if started then return end
         local gs = FindFirstOf("GameStateBase")
-        local locals = localControllers()
-        if not (gs and gs:IsValid() and #locals > 0) then return end
+        if not (gs and gs:IsValid() and #localControllers() > 0) then return end
         started = true
-        local statics = StaticFindObject("/Script/Engine.Default__GameplayStatics")
+        local statics, locals = StaticFindObject("/Script/Engine.Default__GameplayStatics"), localControllers()
         for _, pc in ipairs(locals) do statics:RemovePlayer(pc, true) end
-        log("removed local player (" .. #locals .. "); opening " .. lobbyMap .. " as listen server")
+        log("removed the local player (" .. #locals .. "); opening " .. lobbyMap .. " as listen server")
         statics:OpenLevel(gs, FName(lobbyMap), true, "listen")
     end)
     return started
 end)
 log("loaded (host mode)")
 
--- Safety net: if a local player still turns up in a loaded lobby/arena, remove it. Never during a level
--- change: removing the local player while the lobby map loads leaves the server stuck between levels.
+-- Safety net: a local player that still shows up on a loaded lobby/arena is removed (never during a level
+-- change, which can leave the server stuck between levels).
+local removedLocal = {}   -- a destroyed controller stays findable until garbage collection
 LoopAsync(1000, function()
     ExecuteInGameThread(function()
         if not started then return end
@@ -57,8 +57,12 @@ LoopAsync(1000, function()
         local map = gs and gs:IsValid() and gs:GetFullName():match("Maps/([%w_]+)") or ""
         if map == "" or map == "LE_Loading_Map" or map == "LE_MainMenu_Map" then return end
         for _, pc in ipairs(localControllers()) do
-            StaticFindObject("/Script/Engine.Default__GameplayStatics"):RemovePlayer(pc, true)
-            log("removed a local player that was still there: " .. pc:GetFName():ToString() .. " on " .. map)
+            local name = pc:GetFullName()
+            if not removedLocal[name] then
+                removedLocal[name] = true
+                StaticFindObject("/Script/Engine.Default__GameplayStatics"):RemovePlayer(pc, true)
+                log("removed a local player that was still there: " .. pc:GetFName():ToString() .. " on " .. map)
+            end
         end
     end)
     return false
@@ -260,8 +264,29 @@ if matchSize then
     log("matchmade game for " .. matchSize .. " players")
 end
 
+-- Lobby -> arena: LaunchGame runs "servertravel" through GetPlayerController(0). Here that can be the
+-- removed local player's controller (still around until garbage collection); the command then goes
+-- nowhere and everyone hangs on "Waiting for players". Travel through a connected player instead.
+local LOBBY_GM = "/Game/BluePrints/Lobby/BP_GM_Lobby_GameMode.BP_GM_Lobby_GameMode_C"
+local function ensureTravel(ctx)
+    local gm = ctx:get()
+    local first = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gm, 0)
+    if first and first:IsValid() and not isLocal(first) then return end   -- the game's own travel went through
+    local gs = FindFirstOf("GS_Lobby_GameState_C")
+    local level = gs and gs:IsValid() and gs.Level:ToString() or ""
+    local remote = nil
+    gm.PlayerControllersRP:ForEach(function(_, e)
+        local pc = e:get()
+        if not remote and pc:IsValid() and not isLocal(pc) then remote = pc end
+    end)
+    if level == "" or not remote then return log("lobby: can't start the match (level '" .. level .. "')") end
+    UEHelpers.GetKismetSystemLibrary():ExecuteConsoleCommand(gm, "servertravel /Game/Environment/Maps/" .. level, remote)
+    log("lobby: travelling to " .. level)
+end
+
 local function installLaunchHook()
     return hook(LOBBY_PC .. ":StartHeroSelectionTimer", startWithPresentPlayers)
+        and hook(LOBBY_GM .. ":LaunchGame", ensureTravel)
 end
 
 local shimDone = false
