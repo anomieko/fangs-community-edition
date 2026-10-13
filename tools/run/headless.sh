@@ -37,10 +37,14 @@ if [[ ${GPU:-0} == 1 ]]; then
   export DXVK_FILTER_DEVICE_NAME="NVIDIA" DXVK_CONFIG="dxgi.syncInterval = 0" DXVK_LOG_LEVEL=warn
   export WINEPREFIX=$REPO/work/wine/prefix-gpu WINEDLLOVERRIDES="dwmapi,d3d11,dxgi,d3d10core=n,b"
 fi
+nsfile=$(mktemp)
 {
   echo 'ip link set lo up; mount -t tmpfs tmpfs /tmp/.X11-unix; pgids=()'
+  echo "readlink /proc/self/ns/net > '$nsfile'"   # the cleanup below only touches processes in this namespace
   if [[ ${RUN_BACKEND:-0} == 1 ]]; then
-    echo "'$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} --game-dir '$client' ${BACKEND_ARGS:-} > '$REPO/work/logs/backend.stdout' 2>&1 &"
+    # game hosts get their own prefix (never share a wineserver with game hosts of a local play session)
+    hostpfx=$REPO/work/run/hosts.prefix; rm -rf "$hostpfx"; cp -a --reflink=auto "$WINEPREFIX" "$hostpfx"
+    echo "WINEPREFIX='$hostpfx' '$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} --game-dir '$client' ${BACKEND_ARGS:-} > '$REPO/work/logs/backend.stdout' 2>&1 &"
     echo "sleep 1"
   fi
   for s in "${specs[@]}"; do
@@ -71,15 +75,19 @@ fi
     # own session/process group per instance so everything it spawns (gamescope, wine) is killed at the end
     echo "setsid bash -c \"sleep $delay; cd '$dir/MOBA/Binaries/Win64' && export WINEPREFIX='$pfx' && exec $launcher wine $exe $margs $rflags -nosound -unattended -nosplash -log\" > '$REPO/work/logs/$name.stdout' 2>&1 & pgids+=(\$!)"
   done
-  echo "sleep $secs; for pg in \${pgids[@]}; do kill -TERM -- -\$pg 2>/dev/null; done; wineserver -k; sleep 3"
+  echo "sleep $secs; for pg in \${pgids[@]}; do kill -TERM -- -\$pg 2>/dev/null; done; sleep 3"
   echo "for pg in \${pgids[@]}; do kill -KILL -- -\$pg 2>/dev/null; done; kill \$(jobs -p) 2>/dev/null; wait"
 } > "$script"
 mkdir -p "$REPO/work/logs"
 env -u WAYLAND_DISPLAY -u DISPLAY unshare -rnm bash "$script" || true
-# sweep: any Wine process still using one of our prefixes (never touches the user's own Wine/Proton games)
-for pid in $(pgrep -u "$(id -u)" -f 'wine|\.exe' 2>/dev/null); do
-  tr '\0' '\n' < /proc/$pid/environ 2>/dev/null | grep -q "^WINEPREFIX=$REPO/work/" && kill -9 "$pid" 2>/dev/null
-done
+# sweep: whatever is still running in the test's network namespace (game hosts, wineservers). Matching by
+# namespace never touches anything else, e.g. a local play session (tools/play/local.sh) running meanwhile.
+ns=$(cat "$nsfile" 2>/dev/null); rm -f "$nsfile"
+if [[ $ns == net:* ]]; then
+  for pid in $(pgrep -u "$(id -u)" 2>/dev/null); do
+    [[ $(readlink /proc/$pid/ns/net 2>/dev/null) == "$ns" ]] && kill -9 "$pid" 2>/dev/null
+  done
+fi
 for s in "${specs[@]}"; do
   name=${s%%:*}
   cp "$REPO/work/run/$name/MOBA/Saved/Logs/MOBA.log" "$REPO/work/logs/$name.log" 2>/dev/null && echo "log: work/logs/$name.log"
