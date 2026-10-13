@@ -5,12 +5,13 @@
 #   SERVER=<host:port> JOIN_CODE=<code> tools/play/local.sh <name>   play on a remote Fangs CE server
 #   tools/play/local.sh stop                        stop the local backend and its game servers
 #
-# Each name gets its own game copy (work/play/<name>, reflink/hard-link view of the install) and its own
-# Wine prefix. Intro/background movies are removed from that copy: Wine's video decoding hangs on them.
-# Env: CLIENT_DIR (default clients/fangs-2023-02-15-b10554626), PLAY_HEADLESS=1 (off-screen, for tests).
+# Each name gets its own game copy per build (work/play/<name>.<build>, reflink/hard-link view of the install)
+# and its own Wine prefix. Intro/background movies are removed from that copy: Wine's video decoding hangs on them.
+# Env: CLIENT_DIR (default clients/fangs-2022-08-26-b9396481), PLAY_HEADLESS=1 (off-screen, for tests).
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
-CLIENT_DIR=$(realpath "${CLIENT_DIR:-$REPO/clients/fangs-2023-02-15-b10554626}")
+CLIENT_DIR=$(realpath "${CLIENT_DIR:-$REPO/clients/fangs-2022-08-26-b9396481}")
+build=$(basename "$CLIENT_DIR")
 DXVK=${DXVK:-$(ls -d "$HOME"/.local/share/Steam/steamapps/common/Proton*/files/lib/wine/dxvk/x86_64-windows 2>/dev/null | tail -1)}
 PIDFILE=$REPO/work/play/backend.pid
 mkdir -p "$REPO/work/play" "$REPO/work/logs"
@@ -45,7 +46,7 @@ fi
 
 # game copy + player files
 exe=; for e in MOBA-Win64-Shipping.exe MOBA.exe; do [[ -f "$CLIENT_DIR/MOBA/Binaries/Win64/$e" ]] && { exe=$e; break; }; done
-inst=$REPO/work/play/$name
+inst=$REPO/work/play/$name.$build   # one game copy (and Wine prefix) per player name and build
 if [[ ! -e $inst/MOBA/Binaries/Win64/$exe ]]; then
   cp -a --reflink=auto "$CLIENT_DIR" "$inst" 2>/dev/null || cp -al "$CLIENT_DIR" "$inst"
   find "$inst/MOBA/Content/Movies" -name '*.mp4' -delete 2>/dev/null || true
@@ -53,7 +54,7 @@ fi
 "$REPO/player/install-player-files.sh" "$inst" "$backend" >/dev/null
 
 # own Wine prefix with DXVK (D3D11 -> Vulkan on your GPU)
-export WINEPREFIX=$REPO/work/play/$name.prefix WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi,d3d11,dxgi,d3d10core=n,b"
+export WINEPREFIX=$inst.prefix WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi,d3d11,dxgi,d3d10core=n,b"
 if [[ ! -f $WINEPREFIX/system.reg ]]; then
   echo "creating Wine prefix for $name..."; wineboot -i >/dev/null 2>&1 || true
   [[ -n $DXVK ]] && cp "$DXVK"/{d3d11,dxgi,d3d10core}.dll "$WINEPREFIX/drive_c/windows/system32/"
