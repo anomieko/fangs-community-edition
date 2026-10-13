@@ -14,40 +14,51 @@ local ok, cl = pcall(function() return UEHelpers.GetKismetSystemLibrary():GetCom
 if not (ok and cl:find("-FangsHost", 1, true)) then return end
 local lobbyMap = cl:match("-FangsLobbyMap=(%S+)") or "/Game/Environment/Maps/LE_Lobby_Map"
 
-local started = false
-LoopAsync(500, function()
-    ExecuteInGameThread(function()
-        if started then return end
-        local pc = FindFirstOf("PlayerController")
-        local gs = FindFirstOf("GameStateBase")
-        if not (pc and pc:IsValid() and gs and gs:IsValid()) then return end
-        started = true
-        local statics = StaticFindObject("/Script/Engine.Default__GameplayStatics")
-        statics:RemovePlayer(pc, true)
-        log("removed local player; opening " .. lobbyMap .. " as listen server")
-        statics:OpenLevel(gs, FName(lobbyMap), true, "listen")
-    end)
-    return started
-end)
-log("loaded (host mode)")
-
--- A dedicated server has no local player. The removal above doesn't always hit the controller that owns
--- the local player, which then joins the lobby as a ghost (no profile, takes a slot, never picks a hero,
--- so the lobby gets closed). Keep removing local player controllers, also after every map load.
+-- A dedicated server has no local player. Remove the controller(s) that own the local player (not just
+-- any PlayerController: a missed one joins the lobby as a ghost that takes a slot and never picks a hero),
+-- then open the lobby map as listen server.
 local LocalPlayerClass = nil
 local function isLocal(pc)   -- owned by a LocalPlayer (IsLocalController() is also true for joining remote players)
     LocalPlayerClass = LocalPlayerClass or StaticFindObject("/Script/Engine.LocalPlayer")
     local ok, v = pcall(function() local p = pc.Player; return p:IsValid() and p:IsA(LocalPlayerClass) end)
     return ok and v
 end
+local function localControllers()
+    local out = {}
+    for _, pc in ipairs(FindAllOf("PlayerController") or {}) do
+        if pc:IsValid() and not pc:GetFullName():find("Default__", 1, true) and isLocal(pc) then out[#out + 1] = pc end
+    end
+    return out
+end
+
+local started = false
 LoopAsync(500, function()
     ExecuteInGameThread(function()
+        if started then return end
+        local gs = FindFirstOf("GameStateBase")
+        local locals = localControllers()
+        if not (gs and gs:IsValid() and #locals > 0) then return end
+        started = true
+        local statics = StaticFindObject("/Script/Engine.Default__GameplayStatics")
+        for _, pc in ipairs(locals) do statics:RemovePlayer(pc, true) end
+        log("removed local player (" .. #locals .. "); opening " .. lobbyMap .. " as listen server")
+        statics:OpenLevel(gs, FName(lobbyMap), true, "listen")
+    end)
+    return started
+end)
+log("loaded (host mode)")
+
+-- Safety net: if a local player still turns up in a loaded lobby/arena, remove it. Never during a level
+-- change: removing the local player while the lobby map loads leaves the server stuck between levels.
+LoopAsync(1000, function()
+    ExecuteInGameThread(function()
         if not started then return end
-        for _, pc in ipairs(FindAllOf("PlayerController") or {}) do
-            if pc:IsValid() and not pc:GetFullName():find("Default__", 1, true) and isLocal(pc) then
-                StaticFindObject("/Script/Engine.Default__GameplayStatics"):RemovePlayer(pc, true)
-                log("removed a local player that was still there: " .. pc:GetFName():ToString())
-            end
+        local gs = FindFirstOf("GameStateBase")
+        local map = gs and gs:IsValid() and gs:GetFullName():match("Maps/([%w_]+)") or ""
+        if map == "" or map == "LE_Loading_Map" or map == "LE_MainMenu_Map" then return end
+        for _, pc in ipairs(localControllers()) do
+            StaticFindObject("/Script/Engine.Default__GameplayStatics"):RemovePlayer(pc, true)
+            log("removed a local player that was still there: " .. pc:GetFName():ToString() .. " on " .. map)
         end
     end)
     return false
