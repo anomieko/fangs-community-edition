@@ -708,7 +708,7 @@ async def zeuz_list(request):
         if not st.get('map', '').endswith('LE_Lobby_Map'):      # gone to the arena (or gone)
             continue
         players, max_players = int(st.get('players', 0)), int(conf.get('max_players', '8') or 8)
-        if players >= max_players:
+        if players >= max_players or (s['host'].had_players and not players):   # full, or abandoned
             continue
         clean = lambda v: str(v).replace('\t', ' ').replace('\n', ' ')
         lines.append('\t'.join(clean(v) for v in (
