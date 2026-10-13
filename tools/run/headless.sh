@@ -7,7 +7,8 @@
 # Env: UE4SS=1 installs UE4SS + tools/ue4ss mods (FangsCtl: append commands to
 #      work/run/<name>/MOBA/Binaries/Win64/fangsctl_cmd.txt).
 #      BACKEND=<host:port> points the AccelByte SDK at our backend (user-level Engine.ini).
-#      RUN_BACKEND=1 also starts backend/fangs_backend.py inside the namespace on BACKEND's port.
+#      RUN_BACKEND=1 also starts backend/fangs_backend.py inside the namespace on BACKEND's port
+#      (extra backend options in BACKEND_ARGS, e.g. "--data work/run/test-store.json").
 #      RENDER=1 uses software rendering (wined3d + llvmpipe) instead of -nullrhi; the main menu needs it.
 #      GPU=1 renders on the real GPU, off-screen: gamescope --backend headless + DXVK prefix (work/wine/prefix-gpu).
 #      NOMOVIES=1 deletes the .mp4s from each instance copy (media playback crashes -nullrhi clients).
@@ -39,7 +40,7 @@ fi
 {
   echo 'ip link set lo up; mount -t tmpfs tmpfs /tmp/.X11-unix; pgids=()'
   if [[ ${RUN_BACKEND:-0} == 1 ]]; then
-    echo "'$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} --game-dir '$client' > '$REPO/work/logs/backend.stdout' 2>&1 &"
+    echo "'$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} --game-dir '$client' ${BACKEND_ARGS:-} > '$REPO/work/logs/backend.stdout' 2>&1 &"
     echo "sleep 1"
   fi
   for s in "${specs[@]}"; do
