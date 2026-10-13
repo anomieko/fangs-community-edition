@@ -1,18 +1,20 @@
 # Status — Fangs: Community Edition
 
-**Target build: FANGS 15 Feb 2023 (build 10554626)** — see `docs/clients/fangs-2023-02-15-b10554626.md`.
-The Dec 2023 Closed Playtest (`main_v0_0_444`, a Development build) was used to work everything out
-and is kept as a reference; the stack runs on both.
+**Target build: FANGS Closed Playtest Alpha 7 hotfix, 26 Aug 2022 (build 9396481, `alpha7.0.7.51`)** —
+see `docs/clients/fangs-2022-08-26-b9396481.md`. The 15 Feb 2023 build (10554626) was the first target
+and still runs on the same stack; the Dec 2023 Closed Playtest (`main_v0_0_444`) is kept as a reference.
 
 ## Where things are (2026-10-13)
 
-- Full flow verified on the target build (2 players and solo, headless): login → custom lobby →
-  game server → join → hero pick → start → match.
-- Server: hardened Debian 13 VPS + Docker image (`server/`, `docs/SERVER.md`).
-- Players: Windows launcher + full-client zip (`player/`), served by the server behind the join code.
+- Aug 2022 build, verified headless: custom lobbies (create → instant standby server → launch any time →
+  hero pick → match) and PLAY/Casual matchmaking (matched → server-started hero select → match).
+  Augments come from the backend's `AvailableAugments` (generated per build from its own data).
+- Feb 2023 build: full flow verified (2 players and solo, headless, and on the VPS).
+- Server: hardened Debian 13 VPS + Docker image (`server/`, `docs/SERVER.md`); one standby game server
+  is kept booted so lobbies start instantly; failed server starts are retried.
+- Players: Windows launcher `FangsCE.exe` (`launcher/`): asks for install dir and name, downloads and
+  verifies the game from the server (resumable, only changed files), updates itself, starts the game.
 - Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
-- First real (rendered) playtest: main menu, Play panel, custom lobby, launch, hero pick, solo match.
-  Lobby owners launch whenever they want (no need to fill every slot).
 
 ## History
 
@@ -59,8 +61,7 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
 
 ## Next
 
-1. Package the server (Docker: wine + xvfb + python + mods; game files as a volume) and measure
-   per-host CPU/RAM to size the VPS.
-2. Player package for Windows/Linux: UE4SS + FangsBoot + Engine.ini + launcher asking for a name.
-3. Play tests with friends on the VPS, then polish: cosmetics (skins etc. in the catalog), match end →
-   return to menu → host teardown, augments/items.
+1. Play tests with friends on the VPS.
+2. Match end → return to menu → host teardown (untested); root cause of the occasional server crash at
+   start (covered by retries).
+3. Cosmetics (skins etc. in the catalog); TLS/domain for the server.

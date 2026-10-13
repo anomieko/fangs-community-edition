@@ -34,6 +34,7 @@ ue4ss_zip=$REPO/third_party/ue4ss/dl/UE4SS_v3.0.1-1170-g9e7fed53.zip   # see ser
 cp "$ue4ss_zip" "$REPO/server/ue4ss.zip"
 rsync_ -a --delete --relative \
   "$REPO/./backend/fangs_backend.py" "$REPO/./backend/hosts.py" "$REPO/./backend/matchmaker.py" "$REPO/./backend/seed/make_seed.py" \
+  "$REPO/./backend/seed/augments-alpha7.json" "$REPO/./backend/seed/augments-feb2023.json" \
   "$REPO/./server/" "$REPO/./tools/ue4ss/" "$REPO/./tools/run/config/" "$REPO/./player/" "$REPO/./.dockerignore" \
   "$target:$remote/repo/"
 

@@ -16,6 +16,14 @@ STATUS='lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local ps=pc.
 ' (m:IsValid() and tostring(m.LobbyStatusSwitch:GetActiveWidgetIndex() == 1) or "no lobby menu"))'\
 ' .. (function() local t={} gs.PlayerArray:ForEach(function(_, e) local p=e:get() t[#t+1]=p:GetFullName():match("[^.:]+$")'\
 ' .. "(" .. p:GetPlayerName():ToString() .. ", slot " .. tostring(p.ChosenSlot) .. ")" end) return " | " .. table.concat(t, " ") end)()'
+# augments the HUD would offer: the pawn's PossibleItems that are in the backend's AvailableAugments
+# (gi.AugmentRevDetailMap); run on the client and on the host
+AUG='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local p=FindFirstOf("BP_PlayerChar_C");'\
+' if not (p and p:IsValid()) then return "augments: no pawn" end local n, total, offered = -1, 0, 0'\
+' pcall(function() local c=0 gi.AugmentRevDetailMap:ForEach(function() c=c+1 end) n=c end)'\
+' p.PossibleItems:ForEach(function(_, e) total=total+1 local ok, has=pcall(function() return gi.AugmentRevDetailMap:Contains(e:get()) end)'\
+' if ok and has then offered=offered+1 end end)'\
+' return string.format("augments: listed=%d possible=%d offered=%d (%s)", n, total, offered, p:GetFullName():match("[^.:]+$"))'
 WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:IsValid() and gs:GetFullName() or "none")'
 (
   sleep 40
@@ -29,6 +37,8 @@ WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:I
   sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> $A
   sleep 70; echo "$WHERE" >> $A
   echo 'lua local p=FindFirstOf("BP_PlayerChar_C"); return "pawn: " .. (p and p:IsValid() and p:GetFullName() or "none")' >> $A
+  echo "$AUG" >> $A
+  for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do echo "$AUG" >> $h/fangsctl_cmd.txt; done
   echo 'lua local r=FindFirstOf("WB_Round_C"); if not (r and r:IsValid()) then return "HUD: none" end'\
 ' local function child(c, n) local tag=r:GetFName():ToString() .. ".WidgetTree." .. n for _, w in ipairs(FindAllOf(c) or {}) do'\
 ' if w:IsValid() and w:GetFullName():sub(-#tag) == tag then return w end end end'\
@@ -43,3 +53,4 @@ UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
 wait
 grep -hE 'fangsctl\]|fangsboot\] (lobby|HUD|retag)' work/run/$R/MOBA/Binaries/Win64/ue4ss/UE4SS.log | cut -c30-260
 grep -hE 'fangshost\] lobby' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/ue4ss/UE4SS.log 2>/dev/null | cut -c30-200
+grep -h 'lua \(ok\|error\): augments' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | sed 's/^/host: /' | cut -c1-200
