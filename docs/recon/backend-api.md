@@ -44,10 +44,18 @@ Discovered by running the client against `backend/fangs_backend.py` (which logs 
                     "UpdatePlayerSettingsURL": "...", "UpdateLoadoutsURL": "..." } ],
      "UnlockAllHeroes": true, "UnlockAllSkins": true, "EnableAllMounts": true,
      "EnableAugmentProgress": ..., "AvailableGameModes": ..., "AvailableCustomModes": ...,
-     "AvailableMaps": ..., "AvailableSkins": ..., "AvailableHeroes": ..., "AvailableAugments": ... } }
+     "AvailableMaps": ..., "AvailableSkins": ..., "AvailableHeroes": ..., "AvailableAugments": [...] } }
 ```
 
 - Player profile `Region` must equal a server `Name`.
+- `AvailableAugments` (Feb 2023 and Aug 2022 builds): `[{"Item": <DT_MOBALoot row name>, "Owner": <hero
+  HeroName>}]`. `BP_MOBAInstance.MapAugmentDetails` maps each row to its `MOBAItem` in `AugmentDetailMap` /
+  `AugmentRevDetailMap` and adds it to the hero's preview asset (`GetPreviewHeroByName(Owner)`). The in-match
+  HUD (`Map_Contains(AugmentRevDetailMap, item)`) and the loadout screen skip every augment missing from
+  these maps, so without this key nothing is selectable. The game server reads the same key from
+  `FANGSConfig[version]` in `LE_Lobby_Map`; the client also accepts it from the `season` record.
+  `EnableAugmentProgress: true` would further limit augments to owned ones. Our lists come from each build's
+  data (`tools/re/augments.py` → `backend/seed/augments-*.json`).
 - Lambda URLs are built as `FANGSApiBaseURL + "/dev/" + <route>`; seen routes:
   `update-player-record-key` (POST `{RecordId, Key, Value}`), `get-player-missions`,
   `update-player-info` (PUT `{namespace, cosmeticType, cosmeticId, version}`), `update-player-settings`,

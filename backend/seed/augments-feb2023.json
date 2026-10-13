@@ -1,0 +1,2158 @@
+[
+{
+"Item": "MercenaryHelm",
+"Owner": "Generic"
+},
+{
+"Item": "MercenaryJavelin",
+"Owner": "Generic"
+},
+{
+"Item": "MercenaryPlate",
+"Owner": "Generic"
+},
+{
+"Item": "MercenaryRobe",
+"Owner": "Generic"
+},
+{
+"Item": "Recharge",
+"Owner": "LightningArcher"
+},
+{
+"Item": "StormBlessed",
+"Owner": "LightningArcher"
+},
+{
+"Item": "Surge",
+"Owner": "LightningArcher"
+},
+{
+"Item": "Deathstrike",
+"Owner": "LightningArcher"
+},
+{
+"Item": "OmenoftheSplinterlands",
+"Owner": "LightningArcher"
+},
+{
+"Item": "OneWithStrength",
+"Owner": "BattleMonk"
+},
+{
+"Item": "NailBomb",
+"Owner": "FireMage"
+},
+{
+"Item": "ForcefulPush",
+"Owner": "FireMage"
+},
+{
+"Item": "RegalAmulet",
+"Owner": "FireMage"
+},
+{
+"Item": "RoyalJailer",
+"Owner": "FireMage"
+},
+{
+"Item": "SiegeCage",
+"Owner": "FireMage"
+},
+{
+"Item": "DevastatorTrio",
+"Owner": "FireMage"
+},
+{
+"Item": "GrandInferno",
+"Owner": "FireMage"
+},
+{
+"Item": "HolyNova",
+"Owner": "FireMage"
+},
+{
+"Item": "SpeedWing",
+"Owner": "FireMage"
+},
+{
+"Item": "CelestialPrison",
+"Owner": "FireMage"
+},
+{
+"Item": "Lifeburst",
+"Owner": "FireMage"
+},
+{
+"Item": "WallOfIgnition",
+"Owner": "FireMage"
+},
+{
+"Item": "CircleOfPower",
+"Owner": "FireMage"
+},
+{
+"Item": "IncreasedRange",
+"Owner": "LightningArcher"
+},
+{
+"Item": "StaticTempo",
+"Owner": "LightningArcher"
+},
+{
+"Item": "VoltSurge",
+"Owner": "LightningArcher"
+},
+{
+"Item": "LightningPredator",
+"Owner": "LightningArcher"
+},
+{
+"Item": "ExecutionReset",
+"Owner": "LightningArcher"
+},
+{
+"Item": "GatheringStorm",
+"Owner": "LightningArcher"
+},
+{
+"Item": "SpaceStack",
+"Owner": "LightningArcher"
+},
+{
+"Item": "HonourTheFallen",
+"Owner": "BattleMonk"
+},
+{
+"Item": "RejuvenationOrbs",
+"Owner": "BattleMonk"
+},
+{
+"Item": "DeathBlossom",
+"Owner": "BattleMonk"
+},
+{
+"Item": "PathOfPeace",
+"Owner": "BattleMonk"
+},
+{
+"Item": "ExploitWeakness",
+"Owner": "BattleMonk"
+},
+{
+"Item": "HealingTouch",
+"Owner": "BattleMonk"
+},
+{
+"Item": "ShieldingWord",
+"Owner": "BattleMonk"
+},
+{
+"Item": "OmenOfTheWarlords",
+"Owner": "Berserker"
+},
+{
+"Item": "SkullSmash",
+"Owner": "Berserker"
+},
+{
+"Item": "MudWalls",
+"Owner": "Berserker"
+},
+{
+"Item": "RagingMomentum",
+"Owner": "Berserker"
+},
+{
+"Item": "DrivenByRage",
+"Owner": "Berserker"
+},
+{
+"Item": "BloodStrength",
+"Owner": "Berserker"
+},
+{
+"Item": "DrainingChains",
+"Owner": "Berserker"
+},
+{
+"Item": "PhoenixEmbrace",
+"Owner": "Berserker"
+},
+{
+"Item": "FinalJustice",
+"Owner": "Lancer"
+},
+{
+"Item": "HealingHit",
+"Owner": "Lancer"
+},
+{
+"Item": "TwilightSandles",
+"Owner": "LightningArcher"
+},
+{
+"Item": "SpiritDrain",
+"Owner": "BattleMonk"
+},
+{
+"Item": "BindingBlast",
+"Owner": "BattleMonk"
+},
+{
+"Item": "AncestorsGourd",
+"Owner": "BattleMonk"
+},
+{
+"Item": "SelasCrown",
+"Owner": "BattleMonk"
+},
+{
+"Item": "VermiliasTotem",
+"Owner": "BattleMonk"
+},
+{
+"Item": "HallowedGround",
+"Owner": "BattleMonk"
+},
+{
+"Item": "MastersBlindfold",
+"Owner": "BattleMonk"
+},
+{
+"Item": "BloodthirstySpear",
+"Owner": "Lancer"
+},
+{
+"Item": "DebilitatingHop",
+"Owner": "Lancer"
+},
+{
+"Item": "IntimidatingDash",
+"Owner": "Lancer"
+},
+{
+"Item": "LancerItem19",
+"Owner": "Lancer"
+},
+{
+"Item": "LancerItem23",
+"Owner": "Lancer"
+},
+{
+"Item": "LancerItem6",
+"Owner": "Lancer"
+},
+{
+"Item": "CleansingUmbra",
+"Owner": "BattleMonk"
+},
+{
+"Item": "GenericSpeed",
+"Owner": "Generic"
+},
+{
+"Item": "KionaUnbreakableLattice",
+"Owner": "IceMage"
+},
+{
+"Item": "KionaOverbearingFloes",
+"Owner": "IceMage"
+},
+{
+"Item": "RowenDourlingCaltrops",
+"Owner": "WoodenSword"
+},
+{
+"Item": "RowenLifegiversTrowl",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSword_LMB_DrainingSap",
+"Owner": "WoodenSword"
+},
+{
+"Item": "RowenSiegilsBlade",
+"Owner": "WoodenSword"
+},
+{
+"Item": "RowenTanglerootGauntlets",
+"Owner": "WoodenSword"
+},
+{
+"Item": "RowenVigourvineHilt",
+"Owner": "WoodenSword"
+},
+{
+"Item": "Ferocious",
+"Owner": "Lancer"
+},
+{
+"Item": "Dragging",
+"Owner": "Lancer"
+},
+{
+"Item": "Duelist",
+"Owner": "Lancer"
+},
+{
+"Item": "IceMageItem17",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageDeepFreeze",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageShieldingShards",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageHailTrail",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageShatteringBlock",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageIceArmor",
+"Owner": "IceMage"
+},
+{
+"Item": "BattleMonkZenLMB",
+"Owner": "BattleMonk"
+},
+{
+"Item": "FireMageDoubleRangeLMB",
+"Owner": "FireMage"
+},
+{
+"Item": "FireMageCDReduceSkill4",
+"Owner": "FireMage"
+},
+{
+"Item": "IceMageLMBCDR",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageLMBSpeed",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageEPushCaster",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageESlowTravel",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMagePArmor",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMagePSpeed",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageSpaceGroupBath",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageSpacePull",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageRMBDrain",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageRMBGlide",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageSkill4StunIceball",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageUltChill",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMageUltGround",
+"Owner": "IceMage"
+},
+{
+"Item": "BerserkerShieldOnJump",
+"Owner": "Berserker"
+},
+{
+"Item": "MaxChargeRMB",
+"Owner": "Berserker"
+},
+{
+"Item": "TremorOnJump",
+"Owner": "Berserker"
+},
+{
+"Item": "LancerDrainingDebuff",
+"Owner": "Lancer"
+},
+{
+"Item": "WoodenSwordLMBCD",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordHeadshot",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordFratricide",
+"Owner": "WoodenSword"
+},
+{
+"Item": "SwordTrap",
+"Owner": "DemonGirl"
+},
+{
+"Item": "RevealingBleed",
+"Owner": "DemonGirl"
+},
+{
+"Item": "StunningSwords",
+"Owner": "DemonGirl"
+},
+{
+"Item": "TeleportPullBack",
+"Owner": "DemonGirl"
+},
+{
+"Item": "LongerRange",
+"Owner": "DemonGirl"
+},
+{
+"Item": "CDRPullBack",
+"Owner": "DemonGirl"
+},
+{
+"Item": "AttackSpeedSwords",
+"Owner": "DemonGirl"
+},
+{
+"Item": "RapidFireReturn",
+"Owner": "DemonGirl"
+},
+{
+"Item": "WoodenSwordRegenerate",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordPlantOnKill",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordFastStrike",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordHeavyStrike",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordSpeedWall",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordThornyWall",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordCreepBlossoms",
+"Owner": "WoodenSword"
+},
+{
+"Item": "BoccatosBoots",
+"Owner": "Berserker"
+},
+{
+"Item": "Deathmender",
+"Owner": "Berserker"
+},
+{
+"Item": "ChainFlail",
+"Owner": "Berserker"
+},
+{
+"Item": "Berserker_Skill4StackingHook",
+"Owner": "Berserker"
+},
+{
+"Item": "DuelistZone",
+"Owner": "Lancer"
+},
+{
+"Item": "TankShredder",
+"Owner": "Lancer"
+},
+{
+"Item": "WarmothersGlaive",
+"Owner": "Lancer"
+},
+{
+"Item": "AegisGreaves",
+"Owner": "Lancer"
+},
+{
+"Item": "WoodenSword_Skill4_PlantHide",
+"Owner": "WoodenSword"
+},
+{
+"Item": "PlantEffectGrowth",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordDefenseAndHealPowerReduction",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordSkill2DurationAndCDReduction",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordSkill1Recast",
+"Owner": "WoodenSword"
+},
+{
+"Item": "SurgingWinds",
+"Owner": "FireMage"
+},
+{
+"Item": "Incinerate",
+"Owner": "FireMage"
+},
+{
+"Item": "PurifyingFlames",
+"Owner": "FireMage"
+},
+{
+"Item": "Inspiration",
+"Owner": "FireMage"
+},
+{
+"Item": "StormShardstring",
+"Owner": "LightningArcher"
+},
+{
+"Item": "FarseekHeadband",
+"Owner": "LightningArcher"
+},
+{
+"Item": "PeacemakersRecurve",
+"Owner": "LightningArcher"
+},
+{
+"Item": "CleansingTalisman",
+"Owner": "LightningArcher"
+},
+{
+"Item": "ZombiePlant",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordSkill3Recast",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordHealthDrop",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordSkill4DebuffExtension",
+"Owner": "WoodenSword"
+},
+{
+"Item": "WoodenSwordAllyDefenseAndHealPowerBuff",
+"Owner": "WoodenSword"
+},
+{
+"Item": "OilSlickJacket",
+"Owner": "DemonGirl"
+},
+{
+"Item": "UnstablePuzzlebox",
+"Owner": "DemonGirl"
+},
+{
+"Item": "OmenoftheDreadlands",
+"Owner": "DemonGirl"
+},
+{
+"Item": "UnwillingAngerSprite",
+"Owner": "DemonGirl"
+},
+{
+"Item": "ProjectileLamp",
+"Owner": "DemonGirl"
+},
+{
+"Item": "TetherLock",
+"Owner": "BookMage"
+},
+{
+"Item": "AllyTether",
+"Owner": "BookMage"
+},
+{
+"Item": "RecastSwap",
+"Owner": "BookMage"
+},
+{
+"Item": "FearCharmExplosion",
+"Owner": "BookMage"
+},
+{
+"Item": "BookMageFourProjectiles",
+"Owner": "BookMage"
+},
+{
+"Item": "ShieldAssist",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "LowHPShieldIncrease",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ExtraBash",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "DamagingBash",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Boomerang",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldingCleanse",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "MyOwnShield",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Vacuum",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "CDReduceReflect",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldGirl_Skill4_Knockback",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "HealingReflect",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "DashNAttack",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "SpaceMultiOpponents",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "BigShift",
+"Owner": "BookMage"
+},
+{
+"Item": "DamageVampSpace",
+"Owner": "BookMage"
+},
+{
+"Item": "ExecuteDetonate",
+"Owner": "BookMage"
+},
+{
+"Item": "HealPerHit",
+"Owner": "BookMage"
+},
+{
+"Item": "InvisEmpower",
+"Owner": "BookMage"
+},
+{
+"Item": "ShieldSpace",
+"Owner": "BookMage"
+},
+{
+"Item": "CatSupp_PassiveTotoDurationRoot",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_PassiveTotoDeathExplode",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_RMBValueAmp",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill2CDReduction",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill2PassThroughStun",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_LMBFlatHeal",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_LMBPiercingProjectile",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill4HitExtension",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill1Heal",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill2BigToto",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill1HealReduc",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_RMBDestroyMS",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill4AllyHeal",
+"Owner": "CatSupp"
+},
+{
+"Item": "AggroPassive",
+"Owner": "Berserker"
+},
+{
+"Item": "CatSupp_Skill3AllyVamp",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill2Drag",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill3SelfVamp",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_PassiveHealForHeal",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_PassiveTotoAOEHPS",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_RMBThornShield",
+"Owner": "CatSupp"
+},
+{
+"Item": "CatSupp_Skill1DoubleRange",
+"Owner": "CatSupp"
+},
+{
+"Item": "Gunslinger_Skill1CDReset",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill1ShieldDash",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill2FastShot",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill3InvisUlt",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LRMBReloadSpeedBoost",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LRMB8Bullets",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LRMBLastShot",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill4MissingHPDamage",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_PTankBust",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_PAllyHeal",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_PCCChain",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LRMBReloadHeal",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LRMBFourLessShots",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LRMBHealSHieldBuff",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LRMBMSBoostShield",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Backstab_Passive_StealthDuration",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Passive_StealthHeal",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Passive_StealthSpeed",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_LMBBleedReduction",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_LMBBleedExecute",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_LMBBleedSlow",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_RMBHeal",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_RMBHealingReduction",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_RMBPassthrough",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill1IncapacitateDuration",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill1IncapacitateTwice",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill1DashRange",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill1DashThroughWall",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill2RangeIncrease",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill2StrikeFromBehind",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill2Stun",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill3DamageIncrease",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill3DestroyShields",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill3KillReset",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill4AutoStealth",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill4CounterDurationIncrease",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill4ResetBasicCDs",
+"Owner": "Backstab"
+},
+{
+"Item": "Backstab_Skill4Flashbang",
+"Owner": "Backstab"
+},
+{
+"Item": "Gunslinger_Skill3TerrainTravel",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill1DashExtend",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill1BulletAmp",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill2MaxAmmoIncrease",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Generic_Vision_Zone",
+"Owner": "Generic"
+},
+{
+"Item": "Sidekick_LMB_SlapSpeed",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_LMB_FeatherRange",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_LMB_DropFeather",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_P_FeatherPower",
+"Owner": "Sidekick"
+},
+{
+"Item": "Generic_Channel_Blocker",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Energizer",
+"Owner": "Generic"
+},
+{
+"Item": "BookMage_Skill2_ArmorShred",
+"Owner": "BookMage"
+},
+{
+"Item": "BookMage_Passive_PassiveAS",
+"Owner": "BookMage"
+},
+{
+"Item": "Gunslinger_Skill3_ProcInvis",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill3_TakedownExtend",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Berserker_UltimateKillDuration",
+"Owner": "Berserker"
+},
+{
+"Item": "Berserker_HealLMB3",
+"Owner": "Berserker"
+},
+{
+"Item": "Berserker_CenterStun",
+"Owner": "Berserker"
+},
+{
+"Item": "Generic_Kingslayer",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Ambusher",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RelicRunner",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_MeCarry_CTF",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Bloodhunter",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ProtectThePaint",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_HuntingParty",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_FineIwillDoIt",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_FrozenTouch",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_KillThisGuyAlready",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Gatekeeping",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_SkeletonKey",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ScoutAhead",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_NaturesGrasp",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Cannoneer",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ScanSweep",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Carnivore",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_SeeHeroKillHero",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_FromMyColdDeadHands",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_BobAndWeave",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RepeatRegicide",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ShootingGallery",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_MoshPit",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_EmperorsClothes",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_SpitHotFire",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_PoisonIvy",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_EnergyDrink",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RoyalTax",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ShootTheMoon",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_FlyPhoenixFly",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_UnstoppableForce",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_BubbleBobble",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_FromMyColdDeadHands_Garden",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_MeCarry_Garden",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RelicRunner_Garden",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Revolution",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RocketFuel",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_WhosNext",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_SpeedPad",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_CommandAndConquer",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RideCannonBall",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_TrumpetingHerald",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_SuppressingFire",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_GottaCatchEmAll",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_TryOomph",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Cleanse",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_UrgeToKillRising",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_LastStand",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ProtectTheBloodline",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Prescience",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RoleGetSwole",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_LittlePush",
+"Owner": "Generic"
+},
+{
+"Item": "BattleMonk_Skill3_CCImmunity",
+"Owner": "BattleMonk"
+},
+{
+"Item": "DemonGirl_Skill4_Lifesteal",
+"Owner": "DemonGirl"
+},
+{
+"Item": "DemonGirl_TakedownLS",
+"Owner": "DemonGirl"
+},
+{
+"Item": "DemonGirl_LMB_ArmorShred",
+"Owner": "DemonGirl"
+},
+{
+"Item": "DemonGirl_TempTP2",
+"Owner": "DemonGirl"
+},
+{
+"Item": "ShieldGirl_Skill3_Reset",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldGirl_Skill3_Heal",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldGirl_Skill3_WomboCombo",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldGirl_RMB_HotStreak",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldGirl_LMB_FastStack",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldGirl_ShieldAttackHeal",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "ShieldGirl_StopAndStun",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Sidekick_LMB_EncouragingSlap",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_RMB_DoubleSlap",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_P_WallPin",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill2_SuckSlow",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_RMB_Bleed",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill3_Unkillable",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill3_AOECC",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_P_HealingFeathers",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill1_FastCharge",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill1_ShortDash",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill3_AOEDamage",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_RMB_HealExecute",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill4_ProjectileSlow",
+"Owner": "Sidekick"
+},
+{
+"Item": "Lancer_LMB_RampDamage",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_P_Snowball",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_Skill4_JavelinHero",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_R_RestoreMana",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_RMB_Recharge",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_RMB_Shield",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_Skill1_ResetP",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_Skill1_Untargetable",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_Skill4_SonicBoom",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_P_MoreStacks",
+"Owner": "Lancer"
+},
+{
+"Item": "BookMage_SpeedReveal",
+"Owner": "BookMage"
+},
+{
+"Item": "BookMage_Skill4_PiercingButterfly",
+"Owner": "BookMage"
+},
+{
+"Item": "Sidekick_Skill2_FeatherSuck",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill1_AlliesSpeedUp",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill4_ExtraProjectile",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill2_SpinningSuck",
+"Owner": "Sidekick"
+},
+{
+"Item": "BigBoi_Skill3_MaxHPFear",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill1_ForwardToss",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill4_HealPerHit",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill3_FearSpeed",
+"Owner": "BigBoi"
+},
+{
+"Item": "Generic_Prospector",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ShopLifter",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_CrystalPower",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_UnstoppablePush",
+"Owner": "Generic"
+},
+{
+"Item": "BigBoi_Skill3_EmpowerAlly",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill1_IncreasedRange",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill1_CDAlter",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_P_BrushHeal",
+"Owner": "BigBoi"
+},
+{
+"Item": "Generic_FirmGrip",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_RejuvGems",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_GemKill",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_CaughtRedHanded",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_BankRobber",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_Blockage",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_FastPush",
+"Owner": "Generic"
+},
+{
+"Item": "BigBoi_RMB_BonusFromBrush",
+"Owner": "BigBoi"
+},
+{
+"Item": "Warlock_P_IncreasedDuration",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_P_FasterTickEscalation",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_P_PermaStackingTicks",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_RMB_HealFromDoTs",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_RMB_IncreasedRange",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_RMB_FasterAmp",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill1_ApplySlow",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill1_DealDamage",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill1_ExtendDuration",
+"Owner": "Warlock"
+},
+{
+"Item": "WaterBlade_Skill3_Ult2",
+"Owner": "WaterBlade"
+},
+{
+"Item": "Generic_NahImFine",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_GemSpeed",
+"Owner": "Generic"
+},
+{
+"Item": "Warlock_LMB_AoERenew",
+"Owner": "Warlock"
+},
+{
+"Item": "Gunslinger_Skill2_ArmorShred",
+"Owner": "Gunslinger"
+},
+{
+"Item": "BigBoi_Skill2_InflictDoT",
+"Owner": "BigBoi"
+},
+{
+"Item": "Warlock_Skill3_AddRotStacks",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill3_BigShield",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill3_ExecutePrimaryTarget",
+"Owner": "Warlock"
+},
+{
+"Item": "LightningArcher_Skill3_StunUlt",
+"Owner": "LightningArcher"
+},
+{
+"Item": "Priest_Skill2_CC",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill2_Shield",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill2_Damage",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill3_Mirror",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill3_AttackSpeed",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_LMB_Slow",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_LMB_Heal",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_RMB_Lifesteal",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_RMB_Resource",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill3_Unstoppable",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_RMB_ChainDmg",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_P_Armor",
+"Owner": "Priest"
+},
+{
+"Item": "BigBoi_RMB_MissingHPShield",
+"Owner": "BigBoi"
+},
+{
+"Item": "Warlock_Skill1_GrantHaste",
+"Owner": "Warlock"
+},
+{
+"Item": "Scythe_RMB_FreeFire",
+"Owner": "Scythe"
+},
+{
+"Item": "Scythe_Skill2_MoreDamage",
+"Owner": "Scythe"
+},
+{
+"Item": "Scythe_Skill2_Heal",
+"Owner": "Scythe"
+},
+{
+"Item": "Scythe_P_FlameAura",
+"Owner": "Scythe"
+},
+{
+"Item": "Scythe_Skill4_CripplingSlash",
+"Owner": "Scythe"
+},
+{
+"Item": "BigBoi_RMB_AllyShield",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_LMB_MaxHPHit",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill4_PickUpDamage",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill1_AllyHeal",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_Skill2_DamageOnly",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_P_NearbyHealOnDamageTaken",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_P_LowHPDamageAmp",
+"Owner": "BigBoi"
+},
+{
+"Item": "Generic_RespawnBeacon",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_AntiHeal",
+"Owner": "Generic"
+},
+{
+"Item": "BigBoi_Skill4_LeaveTerrain",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_P_OutOfCombatHeal",
+"Owner": "BigBoi"
+},
+{
+"Item": "Warlock_LMB_ExtendedRange",
+"Owner": "Warlock"
+},
+{
+"Item": "Priest_Skill1_Yank",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill4_Vacuum",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_LMB_ArmorShred",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_LMB_Zoom",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_P_Unkillable",
+"Owner": "Priest"
+},
+{
+"Item": "Generic_TimeOut",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_SlowAoe",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_ToTheKing",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_FlashGround",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_TankBuster",
+"Owner": "Generic"
+},
+{
+"Item": "Generic_HealPulse",
+"Owner": "Generic"
+},
+{
+"Item": "Priest_Skill1_Shield",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill1_Stun",
+"Owner": "Priest"
+},
+{
+"Item": "BigBoi_Skill4_ArmorShred",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_LMB_MissingHPHeal",
+"Owner": "BigBoi"
+},
+{
+"Item": "BigBoi_LMB_MaxHPDamage",
+"Owner": "BigBoi"
+},
+{
+"Item": "WaterBlade_LMB_ShieldSteal",
+"Owner": "WaterBlade"
+},
+{
+"Item": "Priest_P_Regen",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill4_CDR",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_P_Snowball",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill2_FocusHeal",
+"Owner": "Priest"
+},
+{
+"Item": "Priest_Skill3_ShrinkRay",
+"Owner": "Priest"
+},
+{
+"Item": "WoodenSword_Skill3_Overgrowth",
+"Owner": "WoodenSword"
+},
+{
+"Item": "DemonGirl_RMB_AllyHeal",
+"Owner": "DemonGirl"
+},
+{
+"Item": "CatSupp_Skill4_AllyEnemyAS",
+"Owner": "CatSupp"
+},
+{
+"Item": "BookMage_LMB_CDReduce",
+"Owner": "BookMage"
+},
+{
+"Item": "BookMage_Skill4_CCStack",
+"Owner": "BookMage"
+},
+{
+"Item": "BookMage_Passive_StackShield",
+"Owner": "BookMage"
+},
+{
+"Item": "BookMage_Skill3_CharmAmp",
+"Owner": "BookMage"
+},
+{
+"Item": "Lancer_Skill2_KillReset",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_Skill2_HideInBush",
+"Owner": "Lancer"
+},
+{
+"Item": "BookMage_Skill2_Overheal",
+"Owner": "BookMage"
+},
+{
+"Item": "CatSupp_LMB_BooHitHealAmp",
+"Owner": "CatSupp"
+},
+{
+"Item": "WoodenSword_Skill3_Plants",
+"Owner": "WoodenSword"
+},
+{
+"Item": "CatSupp_Skill3_AllySpeed",
+"Owner": "CatSupp"
+},
+{
+"Item": "Lancer_P_CaptainResetter",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_Skill4_SpearResetBunnyStacks",
+"Owner": "Lancer"
+},
+{
+"Item": "Lancer_LMB_RevealAndGround",
+"Owner": "Lancer"
+},
+{
+"Item": "DemonGirl_Skill3_CDReset",
+"Owner": "DemonGirl"
+},
+{
+"Item": "Shieldgirl_LMB_CannotIgnoreMe",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Shieldgirl_RMB_ShieldSteal",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "WaterBlade_P_DamageBonus",
+"Owner": "WaterBlade"
+},
+{
+"Item": "Shieldgirl_Passive_StunDuration",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Shieldgirl_Skill2_EchoSlam",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Shieldgirl_Skill4_PrecisionReflect",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Shieldgirl_Skill2_MissingHPHeal",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Shieldgirl_Skill1_PushForever",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Shieldgirl_LMB_StackingArmor",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Shieldgirl_Passive_PermastackingCDR",
+"Owner": "ShieldGirl"
+},
+{
+"Item": "Sniper_Skill3_ExtendDuration",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_Skill3_VIPAssassin",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_Skill3_CreateSpace",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_LMB_BigCharge",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_LMB_AllyHit",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_LMB_SlowHit",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_Passive_HealBomb",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_Passive_StackingDamage",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_Skill1_GainShield",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_Skill4_SpawnPassives",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_Skill1_PassthroughWalls",
+"Owner": "Generic"
+},
+{
+"Item": "Sniper_RMB_ShieldShred",
+"Owner": "Generic"
+},
+{
+"Item": "WaterBlade_Skill1_2Catch",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_P_4EnemyCD",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill4_MissingHPHeal",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill2_StackMS",
+"Owner": "WaterBlade"
+},
+{
+"Item": "LightningArcher_RMB_SingleTarget",
+"Owner": "LightningArcher"
+},
+{
+"Item": "LightningArcher_RMB_CDR",
+"Owner": "LightningArcher"
+},
+{
+"Item": "IceMage_Skill4_RangeDamage",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMage_Skill4_GrowingBalls",
+"Owner": "IceMage"
+},
+{
+"Item": "IceMage_LMB_Projectile",
+"Owner": "IceMage"
+},
+{
+"Item": "WaterBlade_Skill3_ManaExecute",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_P_HoldRelicBonus",
+"Owner": "WaterBlade"
+},
+{
+"Item": "Warlock_P_MoreDrainTank",
+"Owner": "Warlock"
+},
+{
+"Item": "Gunslinger_P_ProcPowerCircle",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LMB_ProcShield",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LMB_OnHitLS",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_RMB_ProcInvis",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_RMB_OnHitAOEStack",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill4_HealPerHit",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill3_BonusDamage",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill3_ProcBuff",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Sidekick_RMB_Knockback",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_P_ExplodingFeathers",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_LMB_Heal",
+"Owner": "Sidekick"
+},
+{
+"Item": "Sidekick_Skill2_BottomlessPit",
+"Owner": "Sidekick"
+},
+{
+"Item": "WaterBlade_LMB_DashEmpower",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_LMB_HitMaxHPReduceCD",
+"Owner": "WaterBlade"
+},
+{
+"Item": "DemonGirl_Skill1_SpaceStim",
+"Owner": "DemonGirl"
+},
+{
+"Item": "IceMage_P_SlowTrail",
+"Owner": "IceMage"
+},
+{
+"Item": "WaterBlade_Skill4_SingleHitDefense",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill3_ForceDropRelic",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill1_PassThroughDamage",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_RMB_DamageIncrease",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill2_ManaSteal",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_LMB_RelicSpawnPower",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_P_RelicChannelTeamBuff",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill4_PhoenixEnemyHit",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill3_ResetOnLowHPHit",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_RMB_HitSlow",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill4_HitProjectile",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill2_TakedownExecute",
+"Owner": "WaterBlade"
+},
+{
+"Item": "Gunslinger_Skill2_SlowOnHit",
+"Owner": "Gunslinger"
+},
+{
+"Item": "WaterBlade_Skill2_RangeIncrease",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_RMB_ArmorShred",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_RMB_PickupCDReduce",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill1_AllyCDReduce",
+"Owner": "WaterBlade"
+},
+{
+"Item": "WaterBlade_Skill1_CatchHeal",
+"Owner": "WaterBlade"
+},
+{
+"Item": "Gunslinger_P_ProcAmmo",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill4_DestroyShield",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_Skill4_LowAmmoDamageIncrease",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_LMB_IncreasedRange",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_RMB_SelfMissingHPDamage",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Gunslinger_RMB_OnHitShield",
+"Owner": "Gunslinger"
+},
+{
+"Item": "Warlock_RMB_ShieldDestruction",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill2_ExecuteDamage",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill2_ExtendedRange",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill2_GainMana",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill2_IntenseSlow",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill4_ArmorShred",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill4_CurrentHPDamage",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill4_HealingLeach",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill4_Root",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_Skill1_RegainHP",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_LMB_Bounce",
+"Owner": "Warlock"
+},
+{
+"Item": "Warlock_P_HealShieldRenew",
+"Owner": "Generic"
+},
+{
+"Item": "Warlock_LMB_DoubleTick",
+"Owner": "Generic"
+}
+]

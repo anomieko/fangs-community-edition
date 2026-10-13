@@ -102,8 +102,10 @@ local TAG_TEXT = "COMMUNITY EDITION"
 local function child(round, class, name)   -- widget of round's WidgetTree (GetWidgetFromName isn't a UFunction here)
     local tag = round:GetFName():ToString() .. ".WidgetTree." .. (name or "")
     for _, w in ipairs(FindAllOf(class) or {}) do
-        local full = w:IsValid() and w:GetFullName() or ""
-        if (name and full:sub(-#tag) == tag) or (not name and full:find(tag, 1, true)) then return w end
+        local ok, full = pcall(function() return w:IsValid() and w:GetFullName() end)
+        if ok and type(full) == "string" and ((name and string.sub(full, -#tag) == tag) or (not name and string.find(full, tag, 1, true))) then
+            return w
+        end
     end
 end
 local function retag(round)
@@ -137,11 +139,13 @@ LoopAsync(1000, function()
             local key = round:IsValid() and round:GetFullName() or nil
             if key and not key:find("Default__", 1, true) and retagged[key] ~= true then
                 local ok, done = pcall(retag, round)
-                if not ok then retagged[key] = true; log("retag failed: " .. tostring(done))
-                elseif done then retagged[key] = true; log("HUD tag: " .. TAG_TEXT)
-                else
+                if ok and done then retagged[key] = true; log("HUD tag: " .. TAG_TEXT)
+                else                                                 -- not there yet, or failed: retry for a while
                     retagged[key] = (retagged[key] or 0) + 1
-                    if retagged[key] >= 15 then retagged[key] = true; log("HUD tag: EarlyDevTag not found") end
+                    if retagged[key] >= 15 then
+                        retagged[key] = true
+                        log(ok and "HUD tag: EarlyDevTag not found" or ("retag failed: " .. tostring(done)))
+                    end
                 end
             end
         end

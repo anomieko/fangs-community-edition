@@ -27,6 +27,10 @@ maps = [('Embersong', 'LE_Arena02_Map'), ('Stormheart', 'LE_Arena06_Map'), ('Are
 # DT_Heroes rows of the released heroes (the remaining rows are unfinished: no names, no owner class).
 heroes = ['Berserker', 'ShieldGirl', 'Lancer', 'Gunslinger', 'Backstab', 'FireMage', 'IceMage', 'LightningArcher',
           'DemonGirl', 'WoodenSword', 'BookMage', 'Sidekick', 'BattleMonk', 'CatSupp', 'BigBoi']
+def augments(name):
+    return json.loads(Path(__file__).with_name(name).read_text())
+
+
 version_data = {
     'Servers': [server], 'AvailableHeroes': heroes, 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
     'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
@@ -36,11 +40,15 @@ version_data = {
     # matchmade games: the lobby server picks one at random (GS_Lobby_GameState.GetRandomMap)
     'CasualMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
     'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
+    # The HUD and loadout screens only offer augments listed here (no EnableAugmentProgress: all unlocked).
+    # Generated per build from its DT_MOBALoot and hero preview assets by tools/re/augments.py.
+    'AvailableAugments': augments('augments-feb2023.json'),
 }
 # Aug 2022 build: no LE_Payload04_Map in its pak, no "AI" custom mode in its create-lobby screen
 alpha7_data = {**version_data,
                'AvailableCustomModes': [m for m in version_data['AvailableCustomModes'] if m != 'AI'],
-               'AvailableMaps': [m for m in version_data['AvailableMaps'] if m['Map'] != 'LE_Payload04_Map']}
+               'AvailableMaps': [m for m in version_data['AvailableMaps'] if m['Map'] != 'LE_Payload04_Map'],
+               'AvailableAugments': augments('augments-alpha7.json')}
 records = {
     # Keyed by the client's MOBA/Content/Data/version.txt. Known builds:
     #   main_v0_0_444            Closed Playtest, Dec 2023 (app 1831080)
