@@ -14,6 +14,16 @@ local function log(msg)
     if logFile then logFile:write(os.date("!%Y-%m-%d %H:%M:%S ") .. tostring(msg) .. "\n"); logFile:flush() end
 end
 
+-- Runs fn on the game thread every `ms` milliseconds until it returns true. (LoopAsync + ExecuteInGameThread
+-- ran Lua on two threads at once, which now and then crashed the game inside UE4SS's Lua VM: exit code 3.)
+local function every(ms, fn)
+    local handle
+    handle = LoopInGameThreadWithDelay(ms, function()
+        if fn() == true and handle and IsValidDelayedActionHandle(handle) then CancelDelayedAction(handle) end
+    end)
+    return handle
+end
+
 local function run(line)
     if line:sub(1, 4) == "lua " then
         local chunk, err = load(line:sub(5))
@@ -28,18 +38,17 @@ local function run(line)
     end
 end
 
-LoopAsync(500, function()
+every(500, function()
     local f = io.open(CMD_FILE, "r")
-    if not f then return false end
+    if not f then return end
     local lines = {}
     for l in f:lines() do lines[#lines + 1] = l end
     f:close()
     for i = done + 1, #lines do
         local line = lines[i]
-        if line ~= "" then ExecuteInGameThread(function() run(line) end) end
+        if line ~= "" then run(line) end
     end
     done = #lines
-    return false
 end)
 
 log("loaded")

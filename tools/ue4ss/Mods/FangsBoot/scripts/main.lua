@@ -10,46 +10,54 @@ local function log(msg)
     if logFile then logFile:write(os.date("!%Y-%m-%d %H:%M:%S ") .. tostring(msg) .. "\n"); logFile:flush() end
 end
 
+-- Runs fn on the game thread every `ms` milliseconds until it returns true. (LoopAsync + ExecuteInGameThread
+-- ran Lua on two threads at once, which now and then crashed the game inside UE4SS's Lua VM: exit code 3.)
+local function every(ms, fn)
+    local handle
+    handle = LoopInGameThreadWithDelay(ms, function()
+        if fn() == true and handle and IsValidDelayedActionHandle(handle) then CancelDelayedAction(handle) end
+    end)
+    return handle
+end
+
 local function commandLine()
     local ok, cl = pcall(function() return UEHelpers.GetKismetSystemLibrary():GetCommandLine():ToString() end)
     return ok and cl or ""
 end
 
 local logoDone, loginDone = false, false
-LoopAsync(500, function()
-    ExecuteInGameThread(function()
-        local gi = FindFirstOf("BP_MOBAInstance_C")
-        if not gi or not gi:IsValid() then return end
-        if not logoDone then
-            pcall(function()
-                local logo = gi.WB_LogoRef   -- Feb 2023 build
-                if logo and logo:IsValid() and logo:IsInViewport() and logo.bCanSkip then
-                    logo:EndMovie(); logoDone = true; log("skipped logo movie")
-                end
-            end)
-            pcall(function()               -- Aug 2022 build: no WB_LogoRef, WB_Logo_C:End()
-                for _, w in ipairs(FindAllOf("WB_Logo_C") or {}) do
-                    if not logoDone and w:IsValid() and w:IsInViewport() and w.bCanSkip then
-                        w:End(); logoDone = true; log("skipped logo")
-                    end
-                end
-            end)
-        end
-        if not loginDone then
-            local menu = nil
-            for _, w in ipairs(FindAllOf("WB_AccountMenu_C") or {}) do
-                if w:IsValid() and not w:GetFullName():find("Default__", 1, true) then menu = w end
+every(500, function()
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    if not gi or not gi:IsValid() then return end
+    if not logoDone then
+        pcall(function()
+            local logo = gi.WB_LogoRef   -- Feb 2023 build
+            if logo and logo:IsValid() and logo:IsInViewport() and logo.bCanSkip then
+                logo:EndMovie(); logoDone = true; log("skipped logo movie")
             end
-            if menu then
-                loginDone = true
-                if commandLine():find("-TestUser=", 1, true) then
-                    menu:OnEOSLoginDone(true, ""); log("faked EOS login -> username login")
-                else
-                    log("no -TestUser on command line; leaving login to the account menu")
+        end)
+        pcall(function()               -- Aug 2022 build: no WB_LogoRef, WB_Logo_C:End()
+            for _, w in ipairs(FindAllOf("WB_Logo_C") or {}) do
+                if not logoDone and w:IsValid() and w:IsInViewport() and w.bCanSkip then
+                    w:End(); logoDone = true; log("skipped logo")
                 end
             end
+        end)
+    end
+    if not loginDone then
+        local menu = nil
+        for _, w in ipairs(FindAllOf("WB_AccountMenu_C") or {}) do
+            if w:IsValid() and not w:GetFullName():find("Default__", 1, true) then menu = w end
         end
-    end)
+        if menu then
+            loginDone = true
+            if commandLine():find("-TestUser=", 1, true) then
+                menu:OnEOSLoginDone(true, ""); log("faked EOS login -> username login")
+            else
+                log("no -TestUser on command line; leaving login to the account menu")
+            end
+        end
+    end
     return logoDone and loginDone
 end)
 log("loaded")
@@ -82,17 +90,15 @@ local function offerLaunch(menu)
     if gs and gs:IsValid() and everyonePickedASide(gs) then sw:SetActiveWidgetIndex(1) end
 end
 local launchHooked = false
-LoopAsync(1000, function()
-    ExecuteInGameThread(function()
-        if launchHooked or not StaticFindObject(LOBBY_MENU_TICK) then return end
-        -- (with this UE4SS build a Blueprint-function hook runs after the function body)
-        local ok, err = pcall(RegisterHook, LOBBY_MENU_TICK, function(ctx)
-            local s, e = pcall(offerLaunch, ctx:get())
-            if not s then log("offerLaunch: " .. tostring(e)) end
-        end)
-        launchHooked = true
-        log(ok and "lobby: launch allowed before the lobby is full" or ("lobby menu hook failed: " .. tostring(err)))
+every(1000, function()
+    if launchHooked or not StaticFindObject(LOBBY_MENU_TICK) then return end
+    -- (with this UE4SS build a Blueprint-function hook runs after the function body)
+    local ok, err = pcall(RegisterHook, LOBBY_MENU_TICK, function(ctx)
+        local s, e = pcall(offerLaunch, ctx:get())
+        if not s then log("offerLaunch: " .. tostring(e)) end
     end)
+    launchHooked = true
+    log(ok and "lobby: launch allowed before the lobby is full" or ("lobby menu hook failed: " .. tostring(err)))
     return launchHooked
 end)
 
@@ -131,44 +137,39 @@ local function retag(round)
     return true
 end
 local retagged = {}   -- HUD full name -> true when done, or number of attempts so far
-LoopAsync(1000, function()
-    ExecuteInGameThread(function()
-        local huds = FindAllOf("WB_Round_C") or {}             -- Feb 2023 build
-        for _, h in ipairs(FindAllOf("WB_HUD_C") or {}) do huds[#huds + 1] = h end   -- Aug 2022 build
-        for _, round in ipairs(huds) do
-            local key = round:IsValid() and round:GetFullName() or nil
-            if key and not key:find("Default__", 1, true) and retagged[key] ~= true then
-                local ok, done = pcall(retag, round)
-                if ok and done then retagged[key] = true; log("HUD tag: " .. TAG_TEXT)
-                else                                                 -- not there yet, or failed: retry for a while
-                    retagged[key] = (retagged[key] or 0) + 1
-                    if retagged[key] >= 15 then
-                        retagged[key] = true
-                        log(ok and "HUD tag: EarlyDevTag not found" or ("retag failed: " .. tostring(done)))
-                    end
+every(1000, function()
+    local huds = FindAllOf("WB_Round_C") or {}             -- Feb 2023 build
+    for _, h in ipairs(FindAllOf("WB_HUD_C") or {}) do huds[#huds + 1] = h end   -- Aug 2022 build
+    for _, round in ipairs(huds) do
+        local key = round:IsValid() and round:GetFullName() or nil
+        if key and not key:find("Default__", 1, true) and retagged[key] ~= true then
+            local ok, done = pcall(retag, round)
+            if ok and done then retagged[key] = true; log("HUD tag: " .. TAG_TEXT)
+            else                                                 -- not there yet, or failed: retry for a while
+                retagged[key] = (retagged[key] or 0) + 1
+                if retagged[key] >= 15 then
+                    retagged[key] = true
+                    log(ok and "HUD tag: EarlyDevTag not found" or ("retag failed: " .. tostring(done)))
                 end
             end
         end
-    end)
-    return false
+    end
 end)
 
 -- Custom lobbies: "Battle" is 4v4 (8 players). This build's create-lobby screen makes it 6 (3v3).
 local SELECT_GAME_MODE = "/Game/UI/MainMenu/WB_CreateLobby.WB_CreateLobby_C:SelectGameMode"
 local BATTLE_PLAYERS = 8
 local battleHooked = false
-LoopAsync(1000, function()
-    ExecuteInGameThread(function()
-        if battleHooked or not StaticFindObject(SELECT_GAME_MODE) then return end
-        local ok, err = pcall(RegisterHook, SELECT_GAME_MODE, function(ctx, selection)   -- runs after the body
-            local s, e = pcall(function()
-                if selection:get():ToString():lower() == "battle" then ctx:get().PlayerCount = BATTLE_PLAYERS end
-            end)
-            if not s then log("battle size: " .. tostring(e)) end
+every(1000, function()
+    if battleHooked or not StaticFindObject(SELECT_GAME_MODE) then return end
+    local ok, err = pcall(RegisterHook, SELECT_GAME_MODE, function(ctx, selection)   -- runs after the body
+        local s, e = pcall(function()
+            if selection:get():ToString():lower() == "battle" then ctx:get().PlayerCount = BATTLE_PLAYERS end
         end)
-        battleHooked = true
-        log(ok and ("custom lobbies: Battle is " .. BATTLE_PLAYERS .. " players") or ("create-lobby hook failed: " .. tostring(err)))
+        if not s then log("battle size: " .. tostring(e)) end
     end)
+    battleHooked = true
+    log(ok and ("custom lobbies: Battle is " .. BATTLE_PLAYERS .. " players") or ("create-lobby hook failed: " .. tostring(err)))
     return battleHooked
 end)
 
@@ -259,17 +260,14 @@ if gameVersion():find("^alpha7") then
         end
     end
 
-    LoopAsync(200, function()
-        ExecuteInGameThread(function()
-            local gi = FindFirstOf("BP_MOBAInstance_C")
-            if not (gi and gi:IsValid()) then return end
-            if not gi.UseLAN then gi.UseLAN = true end
-            if pending then
-                local ok, e = pcall(finishRequest)
-                if not ok then pending = nil; log("lobby: " .. tostring(e)) end
-            end
-        end)
-        return false
+    every(200, function()
+        local gi = FindFirstOf("BP_MOBAInstance_C")
+        if not (gi and gi:IsValid()) then return end
+        if not gi.UseLAN then gi.UseLAN = true end
+        if pending then
+            local ok, e = pcall(finishRequest)
+            if not ok then pending = nil; log("lobby: " .. tostring(e)) end
+        end
     end)
 
     local function onCreate(ctx)
@@ -287,19 +285,17 @@ if gameVersion():find("^alpha7") then
     -- PLAY should form games: if the mode card is on Tutorial/Training (fresh installs), switch it to Casual
     -- the way the mode chooser does (saved in the player's settings; CHANGE still works). Once per start.
     local casualDone = false
-    LoopAsync(1000, function()
-        ExecuteInGameThread(function()
-            local gi = FindFirstOf("BP_MOBAInstance_C")
-            local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
-            if casualDone or not (menu and menu:IsValid() and menu:IsInViewport()) then return end
-            casualDone = true
-            if gi.MapGameMode ~= 0 and gi.MapGameMode ~= 1 then return end
-            local ok, e = pcall(function()
-                gi:ShowChoseGameMode()
-                gi.WB_ChoseGameModeRef:SetCasualMode()
-            end)
-            log(ok and "PLAY mode set to Casual" or ("couldn't set Casual: " .. tostring(e)))
+    every(1000, function()
+        local gi = FindFirstOf("BP_MOBAInstance_C")
+        local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
+        if casualDone or not (menu and menu:IsValid() and menu:IsInViewport()) then return end
+        casualDone = true
+        if gi.MapGameMode ~= 0 and gi.MapGameMode ~= 1 then return end
+        local ok, e = pcall(function()
+            gi:ShowChoseGameMode()
+            gi.WB_ChoseGameModeRef:SetCasualMode()
         end)
+        log(ok and "PLAY mode set to Casual" or ("couldn't set Casual: " .. tostring(e)))
         return casualDone
     end)
 
@@ -311,20 +307,18 @@ if gameVersion():find("^alpha7") then
         BndEvt__SearchInput_K2Node_ComponentBoundEvent_10_OnEditableTextBoxCommittedEvent__DelegateSignature = onFind,
         ZeuzIMSGetServerList = onPreviousGameCheck,
     }
-    LoopAsync(1000, function()
-        ExecuteInGameThread(function()
-            for fn, cb in pairs(wanted) do
-                local path = PLAY_MENU .. ":" .. fn
-                if not hooked[fn] and StaticFindObject(path) then
-                    local ok, err = pcall(RegisterHook, path, function(ctx, ...)   -- runs after the event body
-                        local s, e = pcall(cb, ctx, ...)
-                        if not s then log("lobby (" .. fn .. "): " .. tostring(e)) end
-                    end)
-                    hooked[fn] = true
-                    if not ok then log("lobby hook failed " .. fn .. ": " .. tostring(err)) end
-                end
+    every(1000, function()
+        for fn, cb in pairs(wanted) do
+            local path = PLAY_MENU .. ":" .. fn
+            if not hooked[fn] and StaticFindObject(path) then
+                local ok, err = pcall(RegisterHook, path, function(ctx, ...)   -- runs after the event body
+                    local s, e = pcall(cb, ctx, ...)
+                    if not s then log("lobby (" .. fn .. "): " .. tostring(e)) end
+                end)
+                hooked[fn] = true
+                if not ok then log("lobby hook failed " .. fn .. ": " .. tostring(err)) end
             end
-        end)
+        end
         local n = 0
         for _ in pairs(hooked) do n = n + 1 end
         if n == 5 then log("custom lobbies via our backend (Aug 2022 build)") end

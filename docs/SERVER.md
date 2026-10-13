@@ -6,7 +6,18 @@ work (the game is x86 Windows code running under Wine).
 ## Sizing
 
 Each running match is one headless game process: ~3 GB RAM and up to ~1 CPU core. The backend itself
-is tiny. `HOST_PORTS` sets how many matches can run at once (one UDP port each); 8 GB RAM → 2.
+is tiny. `HOST_PORTS` sets how many game servers can run at once (one UDP port each); 8 GB RAM → 2.
+One of them is normally a booted standby, so a lobby or match starts instantly.
+
+## Game server lifecycle
+
+- One standby server is kept booted; a new lobby or matchmade game takes it, and the next one boots.
+- A lobby everyone left before its match started stops after 20 s; a match everyone left stops after
+  3 minutes (time to reconnect); a server nobody joined stops after 3 minutes.
+- When all slots are busy, the server that has been empty the longest is stopped for the new game.
+- A server that dies while booting is restarted (up to 3 attempts).
+- Game servers run under Wine 11.18 from WineHQ (pinned in `server/Dockerfile`). Debian's Wine 10.0
+  crashed them on map changes.
 
 ## First-time setup
 
