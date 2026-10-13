@@ -652,16 +652,24 @@ async def zeuz_create(request):
     parts = str(body.get('session_config', '')).split(',')
     conf = {k: v for k, v in zip(parts[0::2], parts[1::2])}
     conf['lobby_owner'] = user['display_name']           # trust the login, not the client
-    for sid, old in list(app['zeuz'].items()):            # one custom lobby per player
+    sid, hosts, reuse = uuid.uuid4().hex, app['hosts'], None
+    for old_sid, old in list(app['zeuz'].items()):        # one custom lobby per player
         if old['user_id'] == uid:
-            app['zeuz'].pop(sid)
-            asyncio.create_task(app['hosts'].stop(old['host'], 'owner created a new lobby'))
-    sid = uuid.uuid4().hex
-    try:
-        host = await app['hosts'].allocate(sid)
-    except RuntimeError as e:
-        app['log']({'zeuz': 'create failed', 'error': str(e)})
-        return err(503, 503, str(e))
+            app['zeuz'].pop(old_sid)
+            # nobody ever joined its server (e.g. Create clicked twice): hand that server to the new lobby
+            if reuse is None and hosts.is_live(old['host']) and not old['host'].had_players:
+                reuse = old['host']
+            else:
+                asyncio.create_task(hosts.stop(old['host'], 'owner created a new lobby'))
+    if reuse:
+        host = reuse
+        host.session_id, host.started = sid, time.time()
+    else:
+        try:
+            host = await hosts.allocate(sid)
+        except RuntimeError as e:
+            app['log']({'zeuz': 'create failed', 'error': str(e)})
+            return err(503, 503, str(e))
     app['zeuz'][sid] = {'user_id': uid, 'config': conf, 'host': host, 'created': time.time()}
     app['log']({'zeuz': 'lobby', 'session': sid, 'host': host.id, 'config': conf})
     return web.json_response({'id': sid, 'address': app['cfg'].public_ip, 'ports': [{'port': host.port}]})
