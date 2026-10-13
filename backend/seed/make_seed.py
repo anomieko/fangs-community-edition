@@ -32,6 +32,9 @@ version_data = {
     # WB_CreateLobby.SelectGameMode: Duel=2, 2vs2=4, Battle=6, 4vs4=8, 5vs5=10, 6vs6=12, Trio=3, Solo=1, AI=bots
     'AvailableCustomModes': ['Battle', 'Duel', '2vs2', '4vs4', '5vs5', '6vs6', 'Trio', 'Solo', 'AI'],
     'AvailableMaps': [{'Name': n, 'Map': m, 'Custom': True} for n, m in maps],
+    # matchmade games: the lobby server picks one at random (GS_Lobby_GameState.GetRandomMap)
+    'CasualMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
+    'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
 }
 records = {
     # Keyed by the client's MOBA/Content/Data/version.txt. Known builds:

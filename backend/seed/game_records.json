@@ -91,6 +91,26 @@
      "Map": "LE_Payload04_Map",
      "Custom": true
     }
+   ],
+   "CasualMaps": [
+    {
+     "Name": "The Garden of Vermilia",
+     "Map": "LE_Arena02_Map"
+    },
+    {
+     "Name": "Dragon Arena",
+     "Map": "LE_Arena06_Map"
+    }
+   ],
+   "RankedMaps": [
+    {
+     "Name": "The Garden of Vermilia",
+     "Map": "LE_Arena02_Map"
+    },
+    {
+     "Name": "Dragon Arena",
+     "Map": "LE_Arena06_Map"
+    }
    ]
   },
   "Playtest021523v1_v0_0_02": {
@@ -182,6 +202,26 @@
      "Name": "Payload II",
      "Map": "LE_Payload04_Map",
      "Custom": true
+    }
+   ],
+   "CasualMaps": [
+    {
+     "Name": "The Garden of Vermilia",
+     "Map": "LE_Arena02_Map"
+    },
+    {
+     "Name": "Dragon Arena",
+     "Map": "LE_Arena06_Map"
+    }
+   ],
+   "RankedMaps": [
+    {
+     "Name": "The Garden of Vermilia",
+     "Map": "LE_Arena02_Map"
+    },
+    {
+     "Name": "Dragon Arena",
+     "Map": "LE_Arena06_Map"
     }
    ]
   }

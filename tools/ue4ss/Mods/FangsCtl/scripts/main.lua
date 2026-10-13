@@ -7,7 +7,12 @@ local UEHelpers = require("UEHelpers")
 local CMD_FILE = "fangsctl_cmd.txt"
 local done = 0
 
-local function log(msg) print("[fangsctl] " .. tostring(msg) .. "\n") end
+-- UE4SS.log is buffered (not readable live); also keep our own line-flushed log next to the exe
+local logFile = io.open("fangsctl.log", "a")
+local function log(msg)
+    print("[fangsctl] " .. tostring(msg) .. "\n")
+    if logFile then logFile:write(os.date("!%Y-%m-%d %H:%M:%S ") .. tostring(msg) .. "\n"); logFile:flush() end
+end
 
 local function run(line)
     if line:sub(1, 4) == "lua " then
