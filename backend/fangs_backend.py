@@ -359,6 +359,28 @@ async def fangs_update_player_settings(request):
     return web.json_response(body)
 
 
+@route('*', r'/fangsapi/[^/]+/(?:update-loadouts|update_augment_loadouts)')
+async def fangs_update_loadouts(request):
+    # Augment loadouts from the lobby (WB_LoadOuts -> UAccelByte::UpdateLoadouts): the client sends its whole
+    # {hero: {CurrentLoadoutIndex, Loadout1: {Name, Augments}}} object and reads it back from PROFILE_LOADOUT_KEY.
+    # The request shape isn't known for sure: a bare object, {"Loadouts": ...} or {RecordId, Key, Value}.
+    store, uid = request.app['store'], lambda_user(request)
+    if not uid:
+        return err(401, 20001, 'unauthorized')
+    body = await request.json()
+    value = next((body[k] for k in ('Value', 'Loadouts', 'loadouts') if isinstance(body, dict) and k in body), body)
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            value = None
+    if not isinstance(value, dict):
+        return err(400, 20002, 'loadouts must be an object')
+    store.data['player_records'].setdefault(uid, {})['PROFILE_LOADOUT_KEY'] = value
+    store.save()
+    return web.json_response({'success': True})
+
+
 @route('*', r'/fangsapi/[^/]+/(?:log-gameplay-tutorial-complete|sync-user-friend-stat|create-shard-selection|redeem-shards)')
 async def fangs_accept(request):   # Aug 2022 client: progression/stat bookkeeping we don't keep
     return web.json_response({'success': True})

@@ -11,9 +11,14 @@ game=$(realpath "$1"); inst=$2; port=$3; shift 3
 
 exe=; for e in MOBA-Win64-Shipping.exe MOBA.exe; do [[ -f "$game/MOBA/Binaries/Win64/$e" ]] && { exe=$e; break; }; done
 [[ -n $exe ]] || { echo "no game exe in $game/MOBA/Binaries/Win64" >&2; exit 1; }
-if [[ ! -e $inst/MOBA/Binaries/Win64/$exe ]]; then
-  mkdir -p "$(dirname "$inst")"
+# The view is rebuilt whenever the game install changes (new build deployed): across filesystems it is
+# symlinks plus a *copy* of the exe, which would otherwise stay the old build's exe.
+stamp="$exe $(stat -c '%s %Y' "$game/MOBA/Binaries/Win64/$exe") $(cat "$game/MOBA/Content/Data/version.txt" 2>/dev/null || true)"
+if [[ ! -e $inst/MOBA/Binaries/Win64/$exe || "$(cat "$inst/.game-stamp" 2>/dev/null)" != "$stamp" ]]; then
+  [[ -n $inst && $inst != / ]] || { echo "bad instance dir '$inst'" >&2; exit 1; }
+  rm -rf "$inst"; mkdir -p "$(dirname "$inst")"
   cp -al "$game" "$inst" 2>/dev/null || { rm -rf "$inst"; cp -as "$game" "$inst"; cp --remove-destination "$game/MOBA/Binaries/Win64/$exe" "$inst/MOBA/Binaries/Win64/$exe"; }
+  echo "$stamp" > "$inst/.game-stamp"
 fi
 bin=$inst/MOBA/Binaries/Win64
 rm -rf "$bin/ue4ss" "$bin/dwmapi.dll"

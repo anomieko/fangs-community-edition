@@ -19,9 +19,16 @@ mkdir -p "$cfg" && cp "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini" "$cfg
 
 STATUS='lua local gs=FindFirstOf("GameStateBase"); local p=FindFirstOf("BP_PlayerChar_C");'\
 ' return "map=" .. (gs:GetFullName():match("Maps/([%w_]+)") or "?") .. " pawn=" .. (p and p:IsValid() and p:GetFName():ToString() or "none")'
+AUG='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local p=FindFirstOf("BP_PlayerChar_C");'\
+' if not (p and p:IsValid()) then return "augments: no pawn" end local n, total, offered = -1, 0, 0'\
+' pcall(function() local c=0 gi.AugmentRevDetailMap:ForEach(function() c=c+1 end) n=c end)'\
+' p.PossibleItems:ForEach(function(_, e) total=total+1 local ok, has=pcall(function() return gi.AugmentRevDetailMap:Contains(e:get()) end)'\
+' if ok and has then offered=offered+1 end end)'\
+' return string.format("augments: listed=%d possible=%d offered=%d", n, total, offered)'
 (
   sleep 45
-  echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; gi.WB_MainMenuRef.WB_PlayMenu.BP_MOBAInstanceRef=gi; return "ready"' >> "$A"
+  mode=4; [[ ${MODE:-lobby} == queue ]] && mode=2   # Custom / Casual
+  echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode='$mode'; gi.WB_MainMenuRef.WB_PlayMenu.BP_MOBAInstanceRef=gi; return "ready"' >> "$A"
   if [[ ${MODE:-lobby} == queue ]]; then
     echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.WB_MainMenuRef.WB_PlayMenu:BndEvt__PlayBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); return "pressed PLAY"' >> "$A"
     sleep 25; echo 'lua FindFirstOf("BP_MOBAInstance_C").WB_AcceptMatchRef:BndEvt__OkBtn_K2Node_ComponentBoundEvent_2_OnButtonClickedEvent__DelegateSignature(); return "accepted"' >> "$A"
@@ -35,6 +42,7 @@ STATUS='lua local gs=FindFirstOf("GameStateBase"); local p=FindFirstOf("BP_Playe
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pcall(function() pc:UpdateChosenHero("Lancer") end); return "clicked Lancer"' >> "$A"
   sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> "$A"
   for i in 1 2 3 4 5 6; do sleep 20; echo "$STATUS" >> "$A"; done
+  echo "$AUG" >> "$A"
 ) &
 driver=$!
 export WINEPREFIX=$pfx WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi,d3d11,dxgi,d3d10core=n,b"
