@@ -280,6 +280,25 @@ if gameVersion():find("^alpha7") then
         if pm.CheckingReconnect then pm:CheckingPreviousGame(true); log("lobby: no previous game") end
     end
 
+    -- PLAY should form games: if the mode card is on Tutorial/Training (fresh installs), switch it to Casual
+    -- the way the mode chooser does (saved in the player's settings; CHANGE still works). Once per start.
+    local casualDone = false
+    LoopAsync(1000, function()
+        ExecuteInGameThread(function()
+            local gi = FindFirstOf("BP_MOBAInstance_C")
+            local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
+            if casualDone or not (menu and menu:IsValid() and menu:IsInViewport()) then return end
+            casualDone = true
+            if gi.MapGameMode ~= 0 and gi.MapGameMode ~= 1 then return end
+            local ok, e = pcall(function()
+                gi:ShowChoseGameMode()
+                gi.WB_ChoseGameModeRef:SetCasualMode()
+            end)
+            log(ok and "PLAY mode set to Casual" or ("couldn't set Casual: " .. tostring(e)))
+        end)
+        return casualDone
+    end)
+
     local hooked = {}
     local wanted = {
         CreateLobbyAndJoin = onCreate,
