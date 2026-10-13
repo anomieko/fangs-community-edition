@@ -6,10 +6,27 @@ FROM debian:trixie-slim
 # moving target, so the zip is shipped with the build: deploy.sh puts it at server/ue4ss.zip)
 ARG UE4SS_SHA256=c07a0ece72ccb381a3ca97b602071fe919eb6def052f4ff183ffc524d8b18933
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends wine wine64 xvfb xauth python3 python3-aiohttp \
-      ca-certificates curl unzip procps \
- && rm -rf /var/lib/apt/lists/*
+# Wine from WineHQ, pinned: Debian's own Wine 10.0 crashed the game servers (exit 3) on map changes and at
+# random shortly after start; 11.18 is the version the whole flow is tested with.
+ARG WINE_VERSION=11.18~trixie-1
+ARG WINEHQ_KEY_FPR=D43F640145369C51D786DDEA76F1A20FF987672F
+RUN dpkg --add-architecture i386 \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+ && install -d -m 755 /etc/apt/keyrings \
+ && curl -fsSL https://dl.winehq.org/wine-builds/winehq.key -o /tmp/winehq.key \
+ && gpg --show-keys --with-colons /tmp/winehq.key | grep -q "^fpr:::::::::$WINEHQ_KEY_FPR:" \
+ && gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key /tmp/winehq.key && rm /tmp/winehq.key \
+ && curl -fsSL https://dl.winehq.org/wine-builds/debian/dists/trixie/winehq-trixie.sources \
+      -o /etc/apt/sources.list.d/winehq-trixie.sources \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      winehq-devel=$WINE_VERSION wine-devel=$WINE_VERSION wine-devel-amd64=$WINE_VERSION wine-devel-i386:i386=$WINE_VERSION \
+      libfreetype6 libfontconfig1 libgnutls30 libdbus-1-3 libxrandr2 libxrender1 libxi6 libxcursor1 \
+      libxcomposite1 libxinerama1 libxfixes3 libxxf86vm1 \
+      xvfb xauth python3 python3-aiohttp unzip procps \
+ && apt-get purge -y gnupg && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* \
+ && wine --version
 
 WORKDIR /opt/fangs
 COPY server/ue4ss.zip /tmp/ue4ss.zip
