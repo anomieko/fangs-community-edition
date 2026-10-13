@@ -25,6 +25,20 @@ local function commandLine()
     return ok and cl or ""
 end
 
+-- Online, the game names players after their computer (Windows computer name + a random suffix), visible to
+-- everyone in the lobby and match. Use the FangsCE player name instead (re-applied after every map change,
+-- where the game sets the computer name again).
+local playerName = commandLine():match("%-TestUser=([%w_%-]+)")
+if playerName then
+    every(2000, function()
+        local gi = FindFirstOf("BP_MOBAInstance_C")
+        if not (gi and gi:IsValid()) then return end
+        local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
+        if not (pc and pc:IsValid() and pc.PlayerState and pc.PlayerState:IsValid()) then return end
+        if pc.PlayerState:GetPlayerName():ToString() ~= playerName then pc:ServerChangeName(playerName) end
+    end)
+end
+
 local logoDone, loginDone = false, false
 every(500, function()
     local gi = FindFirstOf("BP_MOBAInstance_C")

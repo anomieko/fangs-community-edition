@@ -9,6 +9,19 @@ Each running match is one headless game process: ~3 GB RAM and up to ~1 CPU core
 is tiny. `HOST_PORTS` sets how many game servers can run at once (one UDP port each); 8 GB RAM → 2.
 One of them is normally a booted standby, so a lobby or match starts instantly.
 
+## Signed updates
+
+`server/deploy.sh` builds the launcher, the player files and the file list (`manifest.json`) **on your
+machine**, signs the file list with `work/signing/fangsce-update.key` (Ed25519, created on the first deploy)
+and uploads the result. `FangsCE.exe` has the public key built in and refuses unsigned or altered file lists,
+including updates of itself. So neither someone who takes over the VPS nor someone on a player's network can
+make launchers install anything; at worst they can break downloads.
+
+- The key never goes to the server. **Back it up** (e.g. in a password manager): without it you can't ship
+  updates to existing launchers; whoever has it could.
+- The very first download of `FangsCE.exe` is plain HTTP and not covered (HTTPS would need a domain).
+- `server/build-client.sh` (full client zip, `.bat` launcher packages) is not signed; deploy doesn't use it.
+
 ## Game server lifecycle
 
 - One standby server is kept booted; a new lobby or matchmade game takes it, and the next one boots.

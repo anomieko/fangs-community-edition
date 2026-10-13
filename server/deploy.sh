@@ -48,20 +48,31 @@ ssh_ "set -e; cd $remote/repo/server
       for i in \$(seq 1 60); do compose logs fangs 2>&1 | grep -q 'fangs backend on' && break; sleep 3; done
       compose logs --tail 3 fangs"
 
-echo "==> launcher FangsCE.exe (server address and join code baked in)"
+echo "==> launcher and signed file list (built and signed here; the signing key never leaves this machine)"
 go=$REPO/work/toolchains/go/bin/go; [[ -x $go ]] || go=$(command -v go || true)
-if [[ -n $go ]]; then
-  exe=$(mktemp -d)/FangsCE.exe
-  (cd "$REPO/launcher" && GOOS=windows GOARCH=amd64 GOCACHE=$REPO/work/toolchains/gocache "$go" build -trimpath \
-     -ldflags "-s -w -X main.server=$public:8080 -X main.joinCode=$code -X main.version=$(git -C "$REPO" rev-parse --short HEAD)" -o "$exe" .)
-  ssh_ "sudo mkdir -p $remote/repo/server/downloads"
-  rsync_ "$exe" "$target:$remote/repo/server/downloads/FangsCE.exe"; rm -rf "$(dirname "$exe")"
-else
-  echo "   (no Go toolchain: launcher not rebuilt)"
+[[ -n $go ]] || { echo "need a Go toolchain (work/toolchains/go or go on PATH) for the launcher" >&2; exit 1; }
+export GOCACHE=$REPO/work/toolchains/gocache
+dist=$REPO/work/dist/$public; key=$REPO/work/signing/fangsce-update.key
+sign=$(mktemp -d)/sign; (cd "$REPO/launcher" && "$go" build -o "$sign" ./sign)
+if [[ ! -f $key ]]; then
+  mkdir -p "$(dirname "$key")"; "$sign" keygen "$key" >/dev/null
+  echo "   NEW update signing key: $key - back it up somewhere safe (password manager). Without it you can't"
+  echo "   ship updates to existing launchers; if it leaks, someone could. Never put it on the server."
 fi
-
-echo "==> player update packages (launchers fetch them on their next start)"
-ssh_ "cd $remote/repo/server && sudo ./build-client.sh update"
+pub=$("$sign" pub "$key")
+mkdir -p "$dist"; rm -rf "$dist/overlay" "$dist/FangsCE.exe"
+(cd "$REPO/launcher" && GOOS=windows GOARCH=amd64 "$go" build -trimpath -ldflags "-s -w -X main.server=$public:8080 \
+   -X main.joinCode=$code -X main.pubKey=$pub -X main.version=$(git -C "$REPO" rev-parse --short HEAD)" -o "$dist/FangsCE.exe" .)
+"$REPO/player/install-player-files.sh" "$dist/overlay" >/dev/null
+mkdir -p "$dist/overlay/FangsCE"
+sed "s/@BACKEND@/$public:8080/g" "$REPO/tools/run/config/Engine.ini.template" > "$dist/overlay/FangsCE/Engine.ini"
+python3 "$REPO/player/build-manifest.py" "$game" "$dist" "$(tr -d '\r\n' < "$game/MOBA/Content/Data/version.txt")"
+"$sign" sign "$key" "$dist/manifest.json"
+"$sign" verify "$pub" "$dist/manifest.json" | sed 's/^/   /'
+rm -rf "$(dirname "$sign")"
+# only what the launcher needs; --delete drops older packages (zips for the old .bat launcher: unsigned)
+ssh_ "sudo mkdir -p $remote/repo/server/downloads"
+rsync_ -a --delete --exclude .hashcache.json "$dist/" "$target:$remote/repo/server/downloads/"
 
 echo "==> smoke test"
 py=python3; [[ -x $REPO/backend/.venv/bin/python ]] && py=$REPO/backend/.venv/bin/python
