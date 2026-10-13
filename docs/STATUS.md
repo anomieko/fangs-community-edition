@@ -21,8 +21,9 @@ and is kept as a reference; the stack runs on both.
 bob finds it in the lobby browser and joins → both pick heroes → owner starts → server travels to
 the arena → heroes spawn → rounds run (PreRound → ObjectiveSelect → KingSelect → round start).
 
-Scope agreed with the team: **custom lobbies only (no matchmaking), everything unlocked, one package
-for a small Linux VPS.**
+Scope agreed with the team: **everything unlocked, one package for a small Linux VPS.** First custom
+lobbies only; then (same day) simple best-effort matchmaking for PLAY, because lobbies alone felt
+convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a match).
 
 ## Pieces
 

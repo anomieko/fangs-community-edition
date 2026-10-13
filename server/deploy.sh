@@ -20,7 +20,7 @@ rsync_() { rsync --rsync-path="sudo rsync" "$@"; }
 
 echo "==> preparing $target"
 ssh_ 'set -e; export DEBIAN_FRONTEND=noninteractive
-      command -v docker >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq docker.io docker-compose rsync >/dev/null; }
+      command -v docker >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq docker.io docker-cli docker-compose rsync >/dev/null; }
       command -v rsync >/dev/null || sudo apt-get install -y -qq rsync >/dev/null; sudo systemctl enable --now docker >/dev/null 2>&1 || true
       sudo mkdir -p '"$remote"'/game '"$remote"'/repo'
 
@@ -33,7 +33,7 @@ ue4ss_zip=$REPO/third_party/ue4ss/dl/UE4SS_v3.0.1-1170-g9e7fed53.zip   # see ser
 [[ -f $ue4ss_zip ]] || { echo "missing $ue4ss_zip (UE4SS v3.0.1-1170-g9e7fed53)" >&2; exit 1; }
 cp "$ue4ss_zip" "$REPO/server/ue4ss.zip"
 rsync_ -a --delete --relative \
-  "$REPO/./backend/fangs_backend.py" "$REPO/./backend/hosts.py" "$REPO/./backend/seed/make_seed.py" \
+  "$REPO/./backend/fangs_backend.py" "$REPO/./backend/hosts.py" "$REPO/./backend/matchmaker.py" "$REPO/./backend/seed/make_seed.py" \
   "$REPO/./server/" "$REPO/./tools/ue4ss/" "$REPO/./tools/run/config/" "$REPO/./player/" "$REPO/./.dockerignore" \
   "$target:$remote/repo/"
 

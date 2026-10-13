@@ -55,7 +55,10 @@ Everything else is dropped by the firewall (`/etc/nftables.conf`, table `inet fa
 - **Container**: runs as an unprivileged user, read-only root filesystem, all Linux capabilities
   dropped, `no-new-privileges`, memory and process limits; game files mounted read-only. The game's
   own netcode (2020-era UE4 + Wine) is the most exposed component, which is why it is boxed in.
-- **Limits**: one lobby per player; at most `HOST_PORTS` simultaneous matches.
+- **Limits**: one lobby per player; at most `HOST_PORTS` simultaneous matches (custom lobbies and
+  matchmade games together; when all are busy, queued players wait).
+- **Matchmaking** (PLAY): best effort, no ratings. A match starts when 8 players are queued or the
+  first one has waited 15 s, with whoever is queued (backend options `--match-size`, `--match-wait`).
 - **Not encrypted**: game traffic and the backend API are plain HTTP/UDP, like the original game
   outside its TLS endpoints. Don't reuse a password-like secret anywhere else (the launcher
   generates random ones). Adding TLS would need a domain name.

@@ -43,8 +43,9 @@ nsfile=$(mktemp)
   echo "readlink /proc/self/ns/net > '$nsfile'"   # the cleanup below only touches processes in this namespace
   if [[ ${RUN_BACKEND:-0} == 1 ]]; then
     # game hosts get their own prefix (never share a wineserver with game hosts of a local play session)
-    hostpfx=$REPO/work/run/hosts.prefix; rm -rf "$hostpfx"; cp -a --reflink=auto "$WINEPREFIX" "$hostpfx"
-    echo "WINEPREFIX='$hostpfx' '$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} --game-dir '$client' ${BACKEND_ARGS:-} > '$REPO/work/logs/backend.stdout' 2>&1 &"
+    run=${specs[0]%%:*}   # per run (first instance name), so tests can run side by side
+    hostpfx=$REPO/work/run/$run-hosts.prefix; rm -rf "$hostpfx"; cp -a --reflink=auto "$WINEPREFIX" "$hostpfx"
+    echo "WINEPREFIX='$hostpfx' '$REPO/backend/.venv/bin/python' -u '$REPO/backend/fangs_backend.py' --port ${BACKEND##*:} --game-dir '$client' --log '$REPO/work/logs/$run-backend.jsonl' ${BACKEND_ARGS:-} > '$REPO/work/logs/$run-backend.stdout' 2>&1 &"
     echo "sleep 1"
   fi
   for s in "${specs[@]}"; do

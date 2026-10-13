@@ -12,6 +12,7 @@ from pathlib import Path
 from aiohttp import web, WSMsgType
 
 from hosts import HostManager
+from matchmaker import Matchmaker
 
 NAMESPACE = 'fangs'
 ROUTES = []  # (method-or-*, compiled regex, handler)
@@ -604,17 +605,6 @@ async def lobby_ws(request):
     return ws
 
 
-async def matchmaker_ws(request):
-    """Matchmaking is disabled (custom lobbies only); keep the client's connection happy and idle."""
-    ws = web.WebSocketResponse(heartbeat=30)
-    await ws.prepare(request)
-    await ws.send_str(json.dumps({'msg_type': 'ClientStatusResponse', 'msg': {'status': 'Idle'}}))
-    async for msg in ws:
-        if msg.type == WSMsgType.TEXT:
-            request.app['log']({'ws': 'matchmaker', 'recv': msg.data})
-    return ws
-
-
 # ---------------------------------------------------------------- plumbing
 
 @web.middleware
@@ -630,7 +620,7 @@ async def dispatch(request, handler):
         return await lobby_ws(request)
     if request.path.rstrip('/') == '/matchmaker':
         request.app['log'](entry)
-        return await matchmaker_ws(request)
+        return await request.app['matchmaker'].handle(request)
     for method, rx, fn in ROUTES:
         m = rx.match(request.path)
         if m and method in ('*', request.method):
@@ -671,6 +661,9 @@ def main():
     ap.add_argument('--host-ports', default='7777-7786', help='UDP port range for game hosts')
     ap.add_argument('--run-host', default=str(Path(__file__).parent.parent / 'server' / 'run-host.sh'))
     ap.add_argument('--data', default=str(Path(__file__).parent / 'data' / 'store.json'))
+    ap.add_argument('--match-size', type=int, default=8, help='players per matchmade game (Play -> Casual)')
+    ap.add_argument('--match-wait', type=float, default=15,
+                    help='seconds the first queued player waits before a match starts with whoever is queued')
     ap.add_argument('--log', default=str(Path(__file__).parent.parent / 'work' / 'logs' / 'backend.jsonl'))
     a = ap.parse_args()
     Path(a.log).parent.mkdir(parents=True, exist_ok=True)
@@ -689,6 +682,8 @@ def main():
                                run_script=a.run_host, backend_addr=f'127.0.0.1:{a.port}', log=log,
                                data_dir=str(Path(a.data).resolve().parent))
 
+    app['matchmaker'] = Matchmaker(app, size=a.match_size, wait=a.match_wait)
+
     def host_stopped(host):  # drop the custom lobby whose game server went away
         app['sessions'].pop(host.session_id, None)
     app['hosts'].on_stopped.append(host_stopped)
@@ -699,9 +694,11 @@ def main():
     async def start_udp(app):
         loop = asyncio.get_running_loop()
         app['udp'], _ = await loop.create_datagram_endpoint(_UdpEcho, local_addr=(a.host, a.qos_port))
+        app['matchmaking'] = asyncio.create_task(app['matchmaker'].run())
 
     async def stop_udp(app):
         app['udp'].close()
+        app['matchmaking'].cancel()
         await app['hosts'].shutdown()
     app.on_startup.append(start_udp)
     app.on_cleanup.append(stop_udp)

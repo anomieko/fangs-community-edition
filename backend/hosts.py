@@ -1,7 +1,7 @@
 """Pool of headless FANGS game hosts (dedicated lobby servers) launched via server/run-host.sh.
 
-Each host serves one custom lobby: it starts on the lobby map, the lobby owner configures it, players
-pick heroes, and the server travels to the arena. When the match is over (everyone gone) the host is
+Each host serves one custom lobby or one matchmade game: it starts on the lobby map, players pick
+heroes, and the server travels to the arena. When the match is over (everyone gone) the host is
 stopped and its port freed. Hosts report map/player-count through FangsHost's status file.
 """
 import asyncio, json, os, signal, time
@@ -46,7 +46,7 @@ class HostManager:
         used = {h.port for h in self.hosts.values()}
         return [p for p in self.ports if p not in used]
 
-    async def allocate(self, session_id):
+    async def allocate(self, session_id, extra_args=()):
         ports = self.free_ports()
         if not ports:
             raise RuntimeError('no free game server slots')
@@ -59,7 +59,7 @@ class HostManager:
         self.inst_root.mkdir(parents=True, exist_ok=True)
         logf = open(self.inst_root / f'{hid}.stdout', 'w')
         host.proc = await asyncio.create_subprocess_exec(
-            self.run_script, self.game_dir, str(host.inst), str(port), f'-FangsData={self.data_dir}',
+            self.run_script, self.game_dir, str(host.inst), str(port), f'-FangsData={self.data_dir}', *extra_args,
             stdout=logf, stderr=asyncio.subprocess.STDOUT, env=env, start_new_session=True)
         self.log({'host': hid, 'event': 'starting', 'session': session_id, 'port': port})
         asyncio.create_task(self._watch(host))
@@ -75,13 +75,14 @@ class HostManager:
         while host.proc.returncode is None:
             await asyncio.sleep(2)
             if not host.ready.is_set():
-                # Development builds log the listen line; Shipping builds barely log, so also accept
-                # FangsHost's heartbeat reporting the lobby map.
+                # Ready = listening on the lobby map (Development builds log the listen line; Shipping builds
+                # barely log, FangsHost's heartbeat reports the map) and FangsHost reports the lobby config loaded.
                 try:
                     logged = needle in host.log_path.read_text(errors='replace')
                 except OSError:
                     logged = False
-                if logged or host.status.get('map', '').endswith('LE_Lobby_Map'):
+                st = host.status
+                if (logged or st.get('map', '').endswith('LE_Lobby_Map')) and st.get('ready'):
                     host.ready.set()
                     self.log({'host': host.id, 'event': 'ready', 'port': host.port})
                 continue

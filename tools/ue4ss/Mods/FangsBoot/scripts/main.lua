@@ -3,7 +3,12 @@
 --  * with -TestUser=<name> -TestPass=<pw> on the command line, reports Epic login as successful so the
 --    game falls through to its built-in AccelByte username login (served by our backend).
 local UEHelpers = require("UEHelpers")
-local function log(msg) print("[fangsboot] " .. tostring(msg) .. "\n") end
+-- UE4SS.log is buffered (not readable live); also keep our own line-flushed log next to the exe
+local logFile = io.open("fangsboot.log", "a")
+local function log(msg)
+    print("[fangsboot] " .. tostring(msg) .. "\n")
+    if logFile then logFile:write(os.date("!%Y-%m-%d %H:%M:%S ") .. tostring(msg) .. "\n"); logFile:flush() end
+end
 
 local function commandLine()
     local ok, cl = pcall(function() return UEHelpers.GetKismetSystemLibrary():GetCommandLine():ToString() end)
