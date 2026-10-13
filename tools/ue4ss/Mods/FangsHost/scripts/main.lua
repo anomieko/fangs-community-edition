@@ -10,6 +10,16 @@ local function log(msg)
     if logFile then logFile:write(os.date("!%Y-%m-%d %H:%M:%S ") .. tostring(msg) .. "\n"); logFile:flush() end
 end
 
+-- Runs fn on the game thread every `ms` milliseconds until it returns true. (LoopAsync + ExecuteInGameThread
+-- ran Lua on two threads at once, which now and then crashed the game inside UE4SS's Lua VM: exit code 3.)
+local function every(ms, fn)
+    local handle
+    handle = LoopInGameThreadWithDelay(ms, function()
+        if fn() == true and handle and IsValidDelayedActionHandle(handle) then CancelDelayedAction(handle) end
+    end)
+    return handle
+end
+
 local ok, cl = pcall(function() return UEHelpers.GetKismetSystemLibrary():GetCommandLine():ToString() end)
 if not (ok and cl:find("-FangsHost", 1, true)) then return end
 local lobbyMap = cl:match("-FangsLobbyMap=(%S+)") or "/Game/Environment/Maps/LE_Lobby_Map"
@@ -32,23 +42,21 @@ local function localControllers()
 end
 
 local started, removedAt = false, nil
-LoopAsync(500, function()
-    ExecuteInGameThread(function()
-        if started then return end
-        local gs = FindFirstOf("GameStateBase")
-        if not (gs and gs:IsValid()) then return end
-        local statics, locals = StaticFindObject("/Script/Engine.Default__GameplayStatics"), localControllers()
-        if not removedAt then   -- 1. remove the local player
-            if #locals == 0 then return end
-            for _, pc in ipairs(locals) do statics:RemovePlayer(pc, true) end
-            removedAt = os.time(); log("removed the local player (" .. #locals .. ")")
-            return
-        end
-        if os.time() - removedAt < 2 then return end   -- 2. a moment later (same frame crashed some VPS starts)
-        started = true
-        log("opening " .. lobbyMap .. " as listen server")
-        statics:OpenLevel(gs, FName(lobbyMap), true, "listen")
-    end)
+every(500, function()
+    if started then return end
+    local gs = FindFirstOf("GameStateBase")
+    if not (gs and gs:IsValid()) then return end
+    local statics, locals = StaticFindObject("/Script/Engine.Default__GameplayStatics"), localControllers()
+    if not removedAt then   -- 1. remove the local player
+        if #locals == 0 then return end
+        for _, pc in ipairs(locals) do statics:RemovePlayer(pc, true) end
+        removedAt = os.time(); log("removed the local player (" .. #locals .. ")")
+        return
+    end
+    if os.time() - removedAt < 2 then return end   -- 2. a moment later (same frame crashed some VPS starts)
+    started = true
+    log("opening " .. lobbyMap .. " as listen server")
+    statics:OpenLevel(gs, FName(lobbyMap), true, "listen")
     return started
 end)
 log("loaded (host mode)")
@@ -56,22 +64,19 @@ log("loaded (host mode)")
 -- Safety net: a local player that still shows up on a loaded lobby/arena is removed (never during a level
 -- change, which can leave the server stuck between levels).
 local removedLocal = {}   -- a destroyed controller stays findable until garbage collection
-LoopAsync(1000, function()
-    ExecuteInGameThread(function()
-        if not started then return end
-        local gs = FindFirstOf("GameStateBase")
-        local map = gs and gs:IsValid() and gs:GetFullName():match("Maps/([%w_]+)") or ""
-        if map == "" or map == "LE_Loading_Map" or map == "LE_MainMenu_Map" then return end
-        for _, pc in ipairs(localControllers()) do
-            local name = pc:GetFullName()
-            if not removedLocal[name] then
-                removedLocal[name] = true
-                StaticFindObject("/Script/Engine.Default__GameplayStatics"):RemovePlayer(pc, true)
-                log("removed a local player that was still there: " .. pc:GetFName():ToString() .. " on " .. map)
-            end
+every(1000, function()
+    if not started then return end
+    local gs = FindFirstOf("GameStateBase")
+    local map = gs and gs:IsValid() and gs:GetFullName():match("Maps/([%w_]+)") or ""
+    if map == "" or map == "LE_Loading_Map" or map == "LE_MainMenu_Map" then return end
+    for _, pc in ipairs(localControllers()) do
+        local name = pc:GetFullName()
+        if not removedLocal[name] then
+            removedLocal[name] = true
+            StaticFindObject("/Script/Engine.Default__GameplayStatics"):RemovePlayer(pc, true)
+            log("removed a local player that was still there: " .. pc:GetFName():ToString() .. " on " .. map)
         end
-    end)
-    return false
+    end
 end)
 
 -- Status heartbeat for the backend's host manager: <Win64>/fangshost_status.json. "ready" once the lobby
@@ -79,22 +84,19 @@ end)
 -- joins, from that config, so players must not be sent here before it is loaded.
 configLoaded = false
 launched = false   -- the lobby started its match (LaunchGame); the backend stops abandoned lobbies quickly
-LoopAsync(3000, function()
-    ExecuteInGameThread(function()
-        local map, players = "", 0
-        local gs = FindFirstOf("GameStateBase")
-        if gs and gs:IsValid() then map = gs:GetFullName():match("(/Game/[^%.]+)") or "" end
-        for _, p in ipairs(FindAllOf("PlayerController") or {}) do
-            if p:IsValid() and not p:GetFullName():find("Default__", 1, true) and not isLocal(p) then players = players + 1 end
-        end
-        local f = io.open("fangshost_status.json.tmp", "w")
-        if f then
-            f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "launched": %s, "time": %d}', map, players,
-                tostring(configLoaded), tostring(launched), os.time()))
-            f:close(); os.remove("fangshost_status.json"); os.rename("fangshost_status.json.tmp", "fangshost_status.json")
-        end
-    end)
-    return false
+every(3000, function()
+    local map, players = "", 0
+    local gs = FindFirstOf("GameStateBase")
+    if gs and gs:IsValid() then map = gs:GetFullName():match("(/Game/[^%.]+)") or "" end
+    for _, p in ipairs(FindAllOf("PlayerController") or {}) do
+        if p:IsValid() and not p:GetFullName():find("Default__", 1, true) and not isLocal(p) then players = players + 1 end
+    end
+    local f = io.open("fangshost_status.json.tmp", "w")
+    if f then
+        f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "launched": %s, "time": %d}', map, players,
+            tostring(configLoaded), tostring(launched), os.time()))
+        f:close(); os.remove("fangshost_status.json"); os.rename("fangshost_status.json.tmp", "fangshost_status.json")
+    end
 end)
 
 -- Dedicated-server init the lobby level normally runs only when IsDedicatedServer() is true
@@ -124,26 +126,21 @@ local function configureServerSdk()
 end
 
 local lastLobbyGM = nil
-LoopAsync(1000, function()
-    ExecuteInGameThread(function()
-        local gm = FindFirstOf("BP_GM_Lobby_GameMode_C")
-        if not (gm and gm:IsValid()) or gm == lastLobbyGM then return end
-        local name = gm:GetFullName()
-        if lastLobbyGM and lastLobbyGM:IsValid() and lastLobbyGM:GetFullName() == name then return end
-        lastLobbyGM = gm
-        local gi = FindFirstOf("BP_MOBAInstance_C")
-        if gi and gi:IsValid() then gi.bUseAccelbyteBackend = true end
-        configureServerSdk()
-        gm:AccelByteServerLogin()
-        log("lobby: server login requested")
-        ExecuteWithDelay(4000, function()
-            ExecuteInGameThread(function()
-                local lvl = FindFirstOf("LE_Lobby_Map_C")
-                if lvl and lvl:IsValid() then lvl:OnAccelByteLoginSuccess(); log("lobby: post-login init done") end
-            end)
-        end)
+every(1000, function()
+    local gm = FindFirstOf("BP_GM_Lobby_GameMode_C")
+    if not (gm and gm:IsValid()) or gm == lastLobbyGM then return end
+    local name = gm:GetFullName()
+    if lastLobbyGM and lastLobbyGM:IsValid() and lastLobbyGM:GetFullName() == name then return end
+    lastLobbyGM = gm
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    if gi and gi:IsValid() then gi.bUseAccelbyteBackend = true end
+    configureServerSdk()
+    gm:AccelByteServerLogin()
+    log("lobby: server login requested")
+    ExecuteInGameThreadWithDelay(4000, function()
+        local lvl = FindFirstOf("LE_Lobby_Map_C")
+        if lvl and lvl:IsValid() then lvl:OnAccelByteLoginSuccess(); log("lobby: post-login init done") end
     end)
-    return false
 end)
 
 -- ---------------------------------------------------------------------------------------------
@@ -162,7 +159,7 @@ local function readRecord(rel)
     return s
 end
 
-local function later(fn) ExecuteWithDelay(50, function() ExecuteInGameThread(fn) end) end
+local function later(fn) ExecuteInGameThreadWithDelay(50, fn) end
 local function str(p) local ok, v = pcall(function() return p:get():ToString() end); return ok and v or "" end
 
 local LOBBY_PC = "/Game/BluePrints/Lobby/BP_PC_Lobby_PlayerController.BP_PC_Lobby_PlayerController_C"
@@ -273,30 +270,27 @@ local function setLobbyMap(gs)   -- the lobby's own random pick (GetRandomMap fr
 end
 do
     local firstJoin, size, lastKick = nil, nil, 0
-    LoopAsync(500, function()
-        ExecuteInGameThread(function()
-            if not matchSize then readMatchFile() end
-            if not matchSize then return end
-            size = size or matchSize
-            local gm, gs = FindFirstOf("BP_GM_Lobby_GameMode_C"), FindFirstOf("GS_Lobby_GameState_C")
-            if not (gm and gm:IsValid() and gs and gs:IsValid()) then return end
-            if gameMode() ~= 2 and gameMode() ~= 3 then return end
-            local present = gm.PlayerControllersRP:GetArrayNum()
-            if present > 0 and not firstJoin then firstJoin = os.time() end
-            if gm.LobbyState == 0 and firstJoin and present > 0 and present < size and os.time() - firstJoin > NO_SHOW_SECS then
-                log(string.format("lobby: starting with %d of %d matched players", present, size)); size = present
-            end
-            if gm.MaxPlayers ~= size or gs.MatchSize ~= size then setLobbySize(gm, gs, size) end
-            if matchMap and gs.Level:ToString() ~= matchMap then setLobbyMap(gs) end
-            -- Aug 2022 clients ask for hero select once, right on joining - before the lobby has its real
-            -- size - and never again. Start it from here once everyone is in (retried until it takes).
-            if gm.LobbyState == 0 and present >= size and gm.MaxPlayers == size and os.time() - lastKick >= 3 then
-                if lastKick == 0 then log("lobby: all " .. present .. " matched players are in - starting hero select") end
-                lastKick = os.time()
-                gm:ShowHeroSelectionMenu()
-            end
-        end)
-        return false
+    every(500, function()
+        if not matchSize then readMatchFile() end
+        if not matchSize then return end
+        size = size or matchSize
+        local gm, gs = FindFirstOf("BP_GM_Lobby_GameMode_C"), FindFirstOf("GS_Lobby_GameState_C")
+        if not (gm and gm:IsValid() and gs and gs:IsValid()) then return end
+        if gameMode() ~= 2 and gameMode() ~= 3 then return end
+        local present = gm.PlayerControllersRP:GetArrayNum()
+        if present > 0 and not firstJoin then firstJoin = os.time() end
+        if gm.LobbyState == 0 and firstJoin and present > 0 and present < size and os.time() - firstJoin > NO_SHOW_SECS then
+            log(string.format("lobby: starting with %d of %d matched players", present, size)); size = present
+        end
+        if gm.MaxPlayers ~= size or gs.MatchSize ~= size then setLobbySize(gm, gs, size) end
+        if matchMap and gs.Level:ToString() ~= matchMap then setLobbyMap(gs) end
+        -- Aug 2022 clients ask for hero select once, right on joining - before the lobby has its real
+        -- size - and never again. Start it from here once everyone is in (retried until it takes).
+        if gm.LobbyState == 0 and present >= size and gm.MaxPlayers == size and os.time() - lastKick >= 3 then
+            if lastKick == 0 then log("lobby: all " .. present .. " matched players are in - starting hero select") end
+            lastKick = os.time()
+            gm:ShowHeroSelectionMenu()
+        end
     end)
 end
 
@@ -327,13 +321,11 @@ local function installLaunchHook()
 end
 
 local shimDone = false
-LoopAsync(1000, function()
-    ExecuteInGameThread(function()
-        if shimDone then return end
-        local s, all = pcall(function() return installShim() and installLaunchHook() end)
-        if not s then log("shim install error: " .. tostring(all)) elseif all then
-            shimDone = true; log("server CloudSave shim installed (data: " .. tostring(dataDir) .. ")")
-        end
-    end)
+every(1000, function()
+    if shimDone then return end
+    local s, all = pcall(function() return installShim() and installLaunchHook() end)
+    if not s then log("shim install error: " .. tostring(all)) elseif all then
+        shimDone = true; log("server CloudSave shim installed (data: " .. tostring(dataDir) .. ")")
+    end
     return shimDone
 end)

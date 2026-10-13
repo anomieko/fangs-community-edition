@@ -35,6 +35,16 @@ if [[ -n ${FANGS_BACKEND:-} ]]; then   # server-side AccelByte calls (server log
 fi
 rm -f "$inst/MOBA/Saved/Logs/MOBA.log"
 
+# FANGS_PREFIX_PER_HOST: each game server gets its own Wine prefix (a copy of $WINEPREFIX, refreshed when the
+# Wine version changes), so its own wineserver. Servers sharing one died (exit 3) when another one started.
+if [[ -n ${FANGS_PREFIX_PER_HOST:-} && -n ${WINEPREFIX:-} ]]; then
+  pfx=$inst.wine; ver=$(cat "$WINEPREFIX/.wine-version" 2>/dev/null || true)
+  if [[ ! -f $pfx/system.reg || "$(cat "$pfx/.wine-version" 2>/dev/null)" != "$ver" ]]; then
+    rm -rf "$pfx.tmp"; cp -a "$WINEPREFIX" "$pfx.tmp"; rm -rf "$pfx"; mv "$pfx.tmp" "$pfx"
+  fi
+  export WINEPREFIX=$pfx
+fi
+
 cd "$bin"
 export WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi=n,b"
 # FANGS_HOST_DISPLAY: shared X display (the server container's); otherwise a private Xvfb per game server

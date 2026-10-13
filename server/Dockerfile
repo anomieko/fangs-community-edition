@@ -44,7 +44,7 @@ COPY player player
 # root filesystem read-only. The game's 2020-era netcode is the most exposed part, so it runs boxed in.
 RUN useradd -m -u 10001 -s /usr/sbin/nologin fangs && mkdir -p /data && chown fangs:fangs /data
 USER fangs
-ENV HOME=/home/fangs WINEPREFIX=/data/wine WINEDEBUG=-all \
+ENV HOME=/home/fangs WINEPREFIX=/data/wine FANGS_PREFIX_PER_HOST=1 WINEDEBUG=-all \
     PUBLIC_HOST=127.0.0.1 BACKEND_PORT=8080 QOS_PORT=11032 HOST_PORTS=7777-7778
 VOLUME ["/data"]
 EXPOSE 8080/tcp 11032/udp 7777-7786/udp
