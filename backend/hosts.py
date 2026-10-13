@@ -134,7 +134,8 @@ class HostManager:
         hid = f'host-{port}'
         host = Host(hid, port, self.inst_root / hid)
         self.hosts[hid] = host
-        (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_match.json').unlink(missing_ok=True)
+        for stale in ('fangshost_match.json', 'fangshost_status.json'):   # left by the previous server here
+            (host.inst / 'MOBA' / 'Binaries' / 'Win64' / stale).unlink(missing_ok=True)
         env = dict(os.environ, FANGS_BACKEND=self.backend_addr)
         self.inst_root.mkdir(parents=True, exist_ok=True)
         logf = open(self.inst_root / f'{hid}.stdout', 'w')
