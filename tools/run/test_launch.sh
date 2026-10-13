@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Lobby-launch test along the real UI path: the owner creates a 2-slot custom lobby, picks a side,
-# the Launch button must appear although the lobby isn't full; Launch -> hero select -> pick + lock in
-# -> the match starts with just the owner. Own backend data and host dir, so local play is untouched.
+# the Launch button must appear although the lobby isn't full; Launch -> hero select -> click Lancer
+# (like WB_LobbyHeroButton) + lock in -> the match starts with just the owner, as Lancer.
+# Own backend data and host dir, so local play is untouched.
 # Usage: CLIENT_DIR=clients/<build> tools/run/test_launch.sh
 set -u
 cd "$(dirname "$0")/../.."
@@ -23,15 +24,21 @@ WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:I
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); if pc.PlayerState.ChosenSlot < 0 then pc:SelectTeamSlotOnServer(0) return "picked slot 0" end return "already had a slot"' >> $A
   sleep 4; echo "$STATUS" >> $A
   echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "launch pressed"' >> $A
-  sleep 12; echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=pc.WB_LobbyHeroSelectRef; pc:UpdateChosenHero("Berserker"); return "hero select open=" .. tostring(h:IsValid() and h:IsInViewport())' >> $A
+  sleep 12; echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=pc.WB_LobbyHeroSelectRef; local gi=FindFirstOf("BP_MOBAInstance_C"); gi.WB_MainMenuRef:UpdatePlayerHero("Lancer", false); pc:UpdateChosenHero("Lancer"); return "hero select open=" .. tostring(h:IsValid() and h:IsInViewport()) .. ", clicked Lancer"' >> $A
   sleep 4; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> $A
   sleep 70; echo "$WHERE" >> $A
   echo 'lua local p=FindFirstOf("BP_PlayerChar_C"); return "pawn: " .. (p and p:IsValid() and p:GetFullName() or "none")' >> $A
+  echo 'lua local r=FindFirstOf("WB_Round_C"); if not (r and r:IsValid()) then return "HUD: none" end'\
+' local function child(c, n) local tag=r:GetFName():ToString() .. ".WidgetTree." .. n for _, w in ipairs(FindAllOf(c) or {}) do'\
+' if w:IsValid() and w:GetFullName():sub(-#tag) == tag then return w end end end'\
+' local t, i = child("TextBlock", "CommunityEditionTag"), child("Image", "EarlyDevTag")'\
+' return "HUD tag: " .. (t and t:GetText():ToString() or "missing") .. ", early-dev image visibility=" .. tostring(i and i:GetVisibility())' >> $A
+  echo 'shot showui' >> $A   # -> <prefix>/.../MOBA/Saved/Screenshots
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
   BACKEND_ARGS="--data $PWD/work/run/launch-store.json --instances $PWD/work/run/launch-hosts" \
-  tools/run/headless.sh "${DURATION:-220}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
+  tools/run/headless.sh "${DURATION:-235}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
   -- launch:0:"-TestUser=owner -TestPass=x" 2>&1 | grep -v Segmentation
 wait
-grep -hE 'fangsctl\]|fangsboot\] lobby' work/run/launch/MOBA/Binaries/Win64/ue4ss/UE4SS.log | cut -c30-260
+grep -hE 'fangsctl\]|fangsboot\] (lobby|HUD|retag)' work/run/launch/MOBA/Binaries/Win64/ue4ss/UE4SS.log | cut -c30-260
 grep -hE 'fangshost\] lobby' work/run/launch-hosts/host-*/MOBA/Binaries/Win64/ue4ss/UE4SS.log 2>/dev/null | cut -c30-200
