@@ -201,11 +201,22 @@ if gameVersion():find("^alpha7") then
     end
 
     local pending = nil   -- the one lobby request in flight: {req, kind = "create"|"list", pm, started}
+    local lastCreate = 0
+    local function liveMenu()   -- the play menu on screen right now (none while loading or in a game)
+        local gi = FindFirstOf("BP_MOBAInstance_C")
+        local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
+        if not (menu and menu:IsValid() and menu:IsInViewport()) then return nil end
+        local pm = menu.WB_PlayMenu
+        return pm and pm:IsValid() and pm or nil
+    end
     local function request(kind, pm, verb, path, body)
+        if kind == "create" then lastCreate = os.time() end
         local base = backendBase()
         if not base then return log("lobby: no backend address (Engine.ini)") end
         local vr = FindFirstOf("VaRestSubsystem")
-        local req = vr:ConstructVaRestRequestExt(verb, 2)   -- verb 0 GET / 1 POST, content type 2 = JSON
+        -- verb 0 GET / 1 POST. Content type: JSON (2) for POSTs; a GET must have none (0 = URL parameters): with a
+        -- JSON body the GET never went out and sat "processing" until the request object was garbage-collected
+        local req = vr:ConstructVaRestRequestExt(verb, verb == 0 and 0 or 2)
         req:SetHeader("Authorization", "Bearer accelbyte/" .. FindFirstOf("AccelByte"):GetUserClientToken():ToString())
         if body then
             local obj = vr:ConstructVaRestJsonObject()
@@ -241,9 +252,10 @@ if gameVersion():find("^alpha7") then
 
     local function finishRequest()
         local p = pending
+        if not p.req:IsValid() then pending = nil; return log("lobby: " .. p.kind .. " request lost") end
         local status = p.req:GetStatus()      -- 0 not started, 1 processing, 2/3 failed, 4 succeeded
         if status < 2 then
-            if os.time() - p.started > 150 then status = 2 else return end
+            if os.time() - p.started > 30 then status = 2 else return end
         end
         pending = nil
         local code = p.req:GetResponseCode()
@@ -252,11 +264,17 @@ if gameVersion():find("^alpha7") then
                 p.pm:OnComplete_8D51ACCE4F51DE2218C3C9BCE91C5034(p.req)   -- the game's own "lobby reserved" handler
                 log("lobby: created, joining")
             else
-                showLobbies(p.pm, p.req:GetResponseContentAsString(true):ToString())
+                local pm = liveMenu()   -- the player may have left the menu meanwhile (joined, started a game)
+                if pm and pm:GetAddress() == p.pm:GetAddress() then
+                    showLobbies(pm, p.req:GetResponseContentAsString(true):ToString())
+                end
             end
         else
             log("lobby: " .. p.kind .. " request failed (status " .. status .. ", HTTP " .. code .. ")")
-            p.pm:FinishedSearching()
+            local pm = liveMenu()
+            if pm and pm:GetAddress() == p.pm:GetAddress() then   -- not an endless spinner
+                if p.kind == "list" then showLobbies(pm, "") else pm:FinishedSearching() end
+            end
         end
     end
 
@@ -267,6 +285,23 @@ if gameVersion():find("^alpha7") then
         if pending then
             local ok, e = pcall(finishRequest)
             if not ok then pending = nil; log("lobby: " .. tostring(e)) end
+        end
+    end)
+
+    -- The Join view searches through an internal Blueprint call (the mode button runs FindLobbies on itself),
+    -- which the hooks below never see: answer every search the menu shows (LobbyJoinSwitcher page 1 =
+    -- "searching") with our list. Also hide the replay button: there are no replays and it crashed the game.
+    local lastList = 0
+    every(500, function()
+        local pm = liveMenu()
+        if not pm then return end
+        local replay = pm.Button_477
+        if replay and replay:IsValid() and replay:GetVisibility() ~= 1 then replay:SetVisibility(1) end   -- Collapsed
+        -- GetSessions: set by a lobby search, cleared by "create lobby" (whose spinner is the same page)
+        if not pending and pm.GetSessions and pm.LobbyJoinSwitcher:GetActiveWidgetIndex() == 1
+                and os.time() - lastList >= 2 and os.time() - lastCreate > 30 then
+            lastList = os.time()
+            request("list", pm, 0, "/zeuz/sessions.txt")
         end
     end)
 
