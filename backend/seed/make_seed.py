@@ -23,8 +23,11 @@ server = {
 # Maps present in the playtest pak; names for unlocalized ones are ours.
 maps = [('The Garden of Vermilia', 'LE_Arena02_Map'), ('Dragon Arena', 'LE_Arena06_Map'),
         ('Arena', 'LE_Arena01_Map'), ('Payload', 'LE_Payload03_Map'), ('Payload II', 'LE_Payload04_Map')]
+# DT_Heroes rows of the released heroes (the remaining rows are unfinished: no names, no owner class).
+heroes = ['Berserker', 'ShieldGirl', 'Lancer', 'Gunslinger', 'Backstab', 'FireMage', 'IceMage', 'LightningArcher',
+          'DemonGirl', 'WoodenSword', 'BookMage', 'Sidekick', 'BattleMonk', 'CatSupp', 'BigBoi']
 version_data = {
-    'Servers': [server], 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
+    'Servers': [server], 'AvailableHeroes': heroes, 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
     'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
     # WB_CreateLobby.SelectGameMode: Duel=2, 2vs2=4, Battle=6, 4vs4=8, 5vs5=10, 6vs6=12, Trio=3, Solo=1, AI=bots
     'AvailableCustomModes': ['Battle', 'Duel', '2vs2', '4vs4', '5vs5', '6vs6', 'Trio', 'Solo', 'AI'],

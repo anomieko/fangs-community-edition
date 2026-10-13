@@ -27,6 +27,23 @@
      "UpdateLoadoutsURL": "update-loadouts"
     }
    ],
+   "AvailableHeroes": [
+    "Berserker",
+    "ShieldGirl",
+    "Lancer",
+    "Gunslinger",
+    "Backstab",
+    "FireMage",
+    "IceMage",
+    "LightningArcher",
+    "DemonGirl",
+    "WoodenSword",
+    "BookMage",
+    "Sidekick",
+    "BattleMonk",
+    "CatSupp",
+    "BigBoi"
+   ],
    "UnlockAllHeroes": true,
    "UnlockAllSkins": true,
    "EnableAllMounts": true,
@@ -101,6 +118,23 @@
      "UpdatePlayerSettingsURL": "update-player-settings",
      "UpdateLoadoutsURL": "update-loadouts"
     }
+   ],
+   "AvailableHeroes": [
+    "Berserker",
+    "ShieldGirl",
+    "Lancer",
+    "Gunslinger",
+    "Backstab",
+    "FireMage",
+    "IceMage",
+    "LightningArcher",
+    "DemonGirl",
+    "WoodenSword",
+    "BookMage",
+    "Sidekick",
+    "BattleMonk",
+    "CatSupp",
+    "BigBoi"
    ],
    "UnlockAllHeroes": true,
    "UnlockAllSkins": true,

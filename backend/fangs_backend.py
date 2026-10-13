@@ -324,16 +324,61 @@ async def fangs_update_player_info(request):
     return web.json_response(info)
 
 
+@route('PUT', r'/fangsapi/[^/]+/update-player-settings')
+async def fangs_update_player_settings(request):
+    store, uid = request.app['store'], lambda_user(request)
+    if not uid:
+        return err(401, 20001, 'unauthorized')
+    body = await request.json()   # FPlayerSettings (volumes, ...); the client reads it back from PROFILE_SETTINGS_KEY
+    if not isinstance(body, dict):
+        return err(400, 20002, 'settings must be an object')
+    store.data['player_records'].setdefault(uid, {})['PROFILE_SETTINGS_KEY'] = body
+    store.save()
+    return web.json_response(body)
+
+
+@route('GET', r'/fangsapi/[^/]+/get-shop-data')
+async def fangs_shop_data(request):
+    return web.json_response({})   # {shopId: {StartTime, EndTime, Items}}; no shops (nothing to buy)
+
+
 @route('GET', r'/fangsapi/[^/]+/get-player-missions')
 async def fangs_player_missions(request):
     return web.json_response({})
 
 
-# ---------------------------------------------------------------- Platform (no store/economy: everything unlocked via config)
+# ---------------------------------------------------------------- Platform (no economy: everything unlocked)
 
-@route('GET', r'/platform/public/namespaces/[^/]+/users/[^/]+/entitlements')
+# The client's inventory (UMOBAInventorySubsystem) only counts items that are in the catalog *and* entitled:
+# catalog item title = internal id (DT_Heroes row, e.g. "Berserker"), first categoryPath segment = item class
+# ("Hero", "Skin", ...), and an entitlement matches a catalog item by name == title. The Play panel stays
+# hidden until the player owns a Hero, so the catalog holds every hero in AvailableHeroes and everyone owns them.
+def catalog_items(store):
+    heroes = []
+    for version in (store.data['game_records'].get('FANGSConfig') or {}).values():
+        if isinstance(version, dict):
+            heroes += [h for h in version.get('AvailableHeroes', []) if h not in heroes]
+    stamp = '2023-02-15T00:00:00.000Z'
+    return [{'title': h, 'name': h, 'itemId': hashlib.md5(f'hero:{h}'.encode()).hexdigest(), 'sku': f'hero-{h}',
+             'namespace': NAMESPACE, 'categoryPath': '/Hero', 'status': 'ACTIVE', 'entitlementType': 'DURABLE',
+             'itemType': 'INGAMEITEM', 'useCount': 0, 'listable': False, 'purchasable': False, 'regionData': [],
+             'tags': [], 'features': [], 'images': [], 'itemIds': [], 'boundItemIds': [],
+             'createdAt': stamp, 'updatedAt': stamp} for h in heroes]
+
+
+def paged(data):
+    return web.json_response({'data': data, 'paging': {'previous': '', 'next': ''}})
+
+
+@route('GET', r'/platform/public/namespaces/[^/]+/users/(?P<uid>[^/]+)/entitlements')
 async def entitlements(request):
-    return web.json_response({'data': [], 'paging': {'previous': '', 'next': ''}})
+    uid, stamp = request.match_info['uid'], '2023-02-15T00:00:00.000Z'
+    return paged([{'id': hashlib.md5(f"{uid}:{i['itemId']}".encode()).hexdigest(), 'namespace': NAMESPACE,
+                   'clazz': 'ENTITLEMENT', 'type': 'DURABLE', 'status': 'ACTIVE', 'sku': i['sku'], 'userId': uid,
+                   'itemId': i['itemId'], 'itemNamespace': NAMESPACE, 'name': i['title'], 'features': [],
+                   'useCount': 0, 'source': 'GIFT', 'stackable': False,
+                   'grantedAt': stamp, 'createdAt': stamp, 'updatedAt': stamp}
+                  for i in catalog_items(request.app['store'])])
 
 
 @route('GET', r'/platform/public/namespaces/[^/]+/currencies')
@@ -356,7 +401,7 @@ async def wallet(request):
 
 @route('GET', r'/platform/public/namespaces/[^/]+/items/byCriteria')
 async def items_by_criteria(request):
-    return web.json_response({'data': [], 'paging': {'previous': '', 'next': ''}})
+    return paged(catalog_items(request.app['store']))
 
 
 @route('GET', r'/social/v1/public/namespaces/[^/]+/users/[^/]+/statitems')
