@@ -17,12 +17,13 @@ Last updated: 2026-10-14.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-14-1811` (`bb679fb`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-14-1821` (`273d2d1`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
 - since 14 Oct 18:11: cut items back in play (5 boons, 16 arena artifacts, 21 heirlooms), menus list only usable
-  items, unreleased heroes as a separate group (Inventory section, hero-select toggle, notice).
+  items, unreleased heroes as a separate group (Inventory section, hero-select toggle, notice);
+- since 14 Oct 18:21: lobby creation no longer fails when an owner's retry races a booting server.
 
 ## Done, not deployed
 
@@ -59,6 +60,9 @@ Nothing.
 - A full party match (queue → accept → server) is untested; parties live in memory (lost on a backend
   restart).
 - Voice chat (Vivox) is unavailable.
+- Capacity: 2 game servers (RAM). Each Training session takes a whole server; when both are busy, creating a
+  lobby fails. A server boots in 20-25 s but the client gives up after ~18 s, so a first try without a ready
+  standby can fail (the retry then works). Idea: run Training on the player's own PC.
 - PLAY needs 8 queued players; the server can lower it (`--match-size`) if the group prefers.
 
 ## Decisions
