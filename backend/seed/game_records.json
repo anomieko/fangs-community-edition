@@ -67,8 +67,7 @@
     "5vs5",
     "6vs6",
     "Trio",
-    "Solo",
-    "AI"
+    "Solo"
    ],
    "AvailableMaps": [
     {
@@ -82,18 +81,8 @@
      "Custom": true
     },
     {
-     "Name": "Arena",
-     "Map": "LE_Arena01_Map",
-     "Custom": true
-    },
-    {
      "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
-     "Custom": true
-    },
-    {
-     "Name": "Payload II",
-     "Map": "LE_Payload04_Map",
      "Custom": true
     }
    ],
@@ -105,6 +94,10 @@
     {
      "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
+    },
+    {
+     "Name": "Crownwatch",
+     "Map": "LE_Payload03_Map"
     }
    ],
    "RankedMaps": [
@@ -115,6 +108,10 @@
     {
      "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
+    },
+    {
+     "Name": "Crownwatch",
+     "Map": "LE_Payload03_Map"
     }
    ],
    "AvailableAugments": [
@@ -2560,8 +2557,7 @@
     "5vs5",
     "6vs6",
     "Trio",
-    "Solo",
-    "AI"
+    "Solo"
    ],
    "AvailableMaps": [
     {
@@ -2575,18 +2571,8 @@
      "Custom": true
     },
     {
-     "Name": "Arena",
-     "Map": "LE_Arena01_Map",
-     "Custom": true
-    },
-    {
      "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
-     "Custom": true
-    },
-    {
-     "Name": "Payload II",
-     "Map": "LE_Payload04_Map",
      "Custom": true
     }
    ],
@@ -2598,6 +2584,10 @@
     {
      "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
+    },
+    {
+     "Name": "Crownwatch",
+     "Map": "LE_Payload03_Map"
     }
    ],
    "RankedMaps": [
@@ -2608,6 +2598,10 @@
     {
      "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
+    },
+    {
+     "Name": "Crownwatch",
+     "Map": "LE_Payload03_Map"
     }
    ],
    "AvailableAugments": [
@@ -5062,11 +5056,6 @@
      "Custom": true
     },
     {
-     "Name": "Arena",
-     "Map": "LE_Arena01_Map",
-     "Custom": true
-    },
-    {
      "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
      "Custom": true
@@ -5080,6 +5069,10 @@
     {
      "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
+    },
+    {
+     "Name": "Crownwatch",
+     "Map": "LE_Payload03_Map"
     }
    ],
    "RankedMaps": [
@@ -5090,6 +5083,10 @@
     {
      "Name": "Stormheart",
      "Map": "LE_Arena06_Map"
+    },
+    {
+     "Name": "Crownwatch",
+     "Map": "LE_Payload03_Map"
     }
    ],
    "AvailableAugments": [
