@@ -17,9 +17,9 @@ runs on the same stack; the Dec 2023 Closed Playtest (`main_v0_0_444`) is kept a
   a static background where the menu video can't play (Wine).
 - Server: hardened Debian 13 VPS + Docker image (`server/`, `docs/SERVER.md`); one standby game server
   is kept booted so lobbies start instantly; failed server starts are retried.
-- Players: Windows launcher `FangsCE.exe` (`launcher/`): asks for install dir and name, downloads and
-  verifies the game from the server (resumable, only changed files, signed file list), updates itself,
-  starts the game. Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
+- Players: Windows launcher `FangsCE.exe` (`launcher/`): asks for install dir and name (and, in the public
+  build from GitHub Releases, an invite code), downloads and verifies the game from the server (resumable,
+  only changed files, signed file list), updates itself, starts the game. Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
 
 ## History
 
@@ -68,6 +68,10 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
   lobby screen's 45 s matchmade timeout for the joiner ("Failed to Connect to Match.", then the lobby ends).
   FangsBoot keeps it Custom; `fangsboot.log` records why a player leaves a lobby.
 - In a match, team = client index (lobby seat) % 2: even seats are team A, odd seats team B.
+- Game servers: no `FindFirstOf`/`FindAllOf` in loops that run during matches. Each walks every object on the game
+  thread (10-17 ms in a full arena on a fast PC, several times that on the VPS) and was the source of the ~200 ms
+  hitches. Don't cancel UE4SS loops (`CancelDelayedAction`): in this UE4SS build that sometimes stopped another loop.
+  Loading a map resets `t.MaxFPS` (`docs/recon/server-performance.md`).
 
 ## Next
 

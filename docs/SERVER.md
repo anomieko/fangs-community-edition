@@ -5,8 +5,9 @@ work (the game is x86 Windows code running under Wine).
 
 ## Sizing
 
-Each running match is one headless game process: ~3 GB RAM and up to ~1 CPU core. The backend itself
-is tiny. `HOST_PORTS` sets how many game servers can run at once (one UDP port each); 8 GB RAM → 2.
+Each running match is one headless game process: ~2.5 GB RAM (plus ~0.1 GB of Wine helpers) and, for a full
+match, roughly one vCPU of a small VPS; an idle standby a few % of one. The backend itself is tiny. Load test:
+`tools/run/test_perf.sh` (`docs/recon/server-performance.md`). `HOST_PORTS` sets how many game servers can run at once (one UDP port each); 8 GB RAM → 2.
 One of them is normally a booted standby, so a lobby or match starts instantly.
 
 ## Signed updates
@@ -19,7 +20,12 @@ make launchers install anything; at worst they can break downloads.
 
 - The key never goes to the server. **Back it up** (e.g. in a password manager): without it you can't ship
   updates to existing launchers; whoever has it could.
-- The very first download of `FangsCE.exe` is plain HTTP and not covered (HTTPS would need a domain).
+- The very first download of `FangsCE.exe` from the server is plain HTTP and not covered. The public build on
+  GitHub Releases (HTTPS) avoids that, and browsers don't block it the way they block an `.exe` over HTTP:
+  `launcher/release.sh` builds it (only the public key built in; check it with `strings`), publish with
+  `gh release create`. Players paste an invite code on the first start: `FANGS_JOIN_CODE=$(cat work/joincode)
+  server/invite.sh <public-host>` (share it privately, like the join code). The launcher then updates itself
+  to the server's copy.
 - `server/build-client.sh` (full client zip, `.bat` launcher packages) is not signed; deploy doesn't use it.
 
 ## Game server lifecycle

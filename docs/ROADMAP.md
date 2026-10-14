@@ -31,6 +31,12 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
 
 ## Done, not deployed
 
+- Easier download: public launcher build for GitHub Releases (HTTPS, nothing secret built in) that asks
+  for an invite code (`server/invite.sh`); player steps in `README.md`. Published 14 Oct as GitHub release
+  `launcher-1d34ff1` (players' link: `.../releases/latest/download/FangsCE.exe`); works with today's server (it
+  updates itself to the server's copy); the server's copy remembers the invite after the next deploy.
+- Mask of Mana and Vital Offering parked (they only react to channeled Health Shrines, gone from the Feb
+  maps); superseded by the old Shard system below, which restores them while it is on.
 - **Old Shard system back, behind one switch** (branch `shards`; `docs/recon/shards.md`): on the arena maps Shards
   are carried and turned in at a Capture Zone again (own zone: the Shard's buff; enemy zone: steal the enemy's
   buffs), channeled Health Shrines replace the walk-over pickups, Payload II's Shard works; the Prismatic Shard
@@ -60,13 +66,15 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
    output `work/art/refs/`, local only). The game also contains official paintings of the unreleased heroes
    (`docs/recon/heroes.md`): use them for portraits/cards first; generated art for the remaining slots.
    BladeMaster dropped from the unreleased group (grey mannequin, no abilities).
-2. **Server smoothness up to 12 players (6v6)** (in progress, agent: load test with bots, hitch hunt, fixes).
-   Target: no frame over ~50 ms. The user allows load tests on the VPS's game slots when nobody plays (test
-   lobbies only, read-only measurements; deploys still only with the user's OK).
-   Live data 14 Oct: arena 1 player ~58 fps / longest frame ~30 ms; 2 players ~40 fps / ~180 ms (up to 254);
-   4 players ~42 fps / ~200 ms. The game's net tick is 30 Hz, so the problem is the recurring ~200 ms frames
-   (replication stalls = stutter), not the average. Then: verify on the VPS with bots in a quiet moment (ask
-   first); maybe a 60 Hz net tick.
+2. **Server smoothness up to 12 players (6v6)** (done, not deployed: FangsHost, `server/run-host.sh`,
+   `backend/hosts.py`; findings and numbers in `docs/recon/server-performance.md`, load test `tools/run/test_perf.sh`).
+   Cause of the ~200 ms hitches: FangsHost's 2 s / 3 s loops scanned all objects on the game thread. Locally with
+   3 active players + 9 bots: before 10 frames > 50 ms in 140 s (longest 99 ms), after 0 (longest 18 ms); servers
+   also skip movies, CEF and the `-log` console. Next: deploy (user's OK), then compare the VPS `perf` lines of the
+   next real match (`frame_ms`, `slow`, `fps_min`). Open: ntsync on the VPS (capacity, needs kernel + Wine change);
+   replication runs at ~20-25 Hz whatever `NetServerMaxTickRate` says, so no 60 Hz net tick from config.
+   FangsBoot (players' mod) still cancels finished loops the way that sometimes stopped other loops in FangsHost:
+   switch it to idling too (needs a player update; watch for menu lists that stop refreshing).
 3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
@@ -78,8 +86,10 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
 
 - Payload II has no Shard in the Feb build; fixed by the old Shard system (Done, not deployed).
 - Courage's bonus damage is untested in matches.
-- Old Shard system: in round 2 Swiftrunner's speed and Shadowbringer's stealth stop ~1.5 s after a Shard pickup
-  (round 1 fine); cause unknown, next step in `docs/recon/shards.md` (Tests).
+- Old Shard system, open: from round 2 on a carrier now and then loses the HoldingOrb tag ~1.4 s after a pickup (the
+  Shard's effect stays): Swiftrunner's speed and Shadowbringer's stealth stop, and such a carrier most likely can't
+  turn the Shard in (Capture Zones check the tag). FangsHost sends the Shard back if that carrier dies or leaves.
+  Cause unknown; next steps in `docs/recon/shards.md` (Tests).
 - A full party match (queue → accept → server) is untested; parties live in memory (lost on a backend
   restart).
 - Voice chat (Vivox) is unavailable.
