@@ -74,3 +74,23 @@ calls with `ExecuteInGameThreadWithDelay(1, fn)`.
   keep a reference, reload when invalid) for `SetBrushFromTexture`/brush properties. Ship PNGs with FangsBoot.
 - **Risk**: a lobby pick is saved as the player's hero; with a hero that has no preview asset the main menu needs
   a released hero set back.
+
+## Reference renders and the game's own art (2026-10-14)
+
+`tools/run/render_heroes.sh` (with `render_heroes.lua`, run in a client through FangsCtl) renders every hero's 3D
+model with a transparent background, full body and bust, 2048×2048 (rendered in 3×3 tiles of 2048), into
+`work/art/refs/` (not committed: game content). It builds each hero from its preview asset (default skin mesh and
+materials, preview animation; Sniper and Scythe use their in-game idle, the preview pose is broken) with its own
+sun light and scene capture. Findings:
+- Hero materials (`M_Character_PBRLite_Global`) are unlit toon shaders that follow only the sun light's direction.
+- BladeMaster's mesh is an untextured grey mannequin (`WeaponMaster_Twinblades`); PetSum and VampMage reuse other
+  heroes' meshes.
+- **Official painted art for the unreleased heroes is in the pak**: `/Game/UI/Textures/Hero3DRenders/` has a face and
+  an upper-body painting each for Warlock, Scythe, Sniper (painted backgrounds) and WaterBlade (transparent), plus
+  `PriestHeroSelectBannerImage`; `/Game/HeroSelectRenders/BaseHero3DRenders/HeroSelect<Name>` for the released
+  heroes. FangsBoot can point portrait slots at these texture paths directly (nothing to ship).
+- UE4SS techniques that work here: load assets with `MakeSoftObjectPath` + `Conv_SoftObjPathToSoftObjRef` +
+  `LoadAsset_Blocking` (UE4SS `LoadAsset` fails early); object out-parameters arrive in the passed table under the
+  parameter's name; `ExportRenderTarget` writes PNG for RGBA8 targets (EXR for RGBA16f); scene captures honour
+  `CustomProjectionMatrix` (tiling); `ReadRenderTargetRawPixel` is fast; a spawned `SkeletalMeshActor` needs
+  `VisibilityBasedAnimTickOption = 0` to animate.
