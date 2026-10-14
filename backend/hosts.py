@@ -51,6 +51,7 @@ class HostManager:
         self.standby, self.attempts = standby, attempts
         self.hosts = {}          # id -> Host
         self.on_stopped = []     # callbacks(host)
+        self.on_result = []      # callbacks(host, result): a finished match (FangsHost's fangshost_result-*.json)
         self._booting = 0        # standby servers being started
         self._releasing = set()  # ports of stopped servers whose process hasn't exited yet
         self._closing = False
@@ -157,6 +158,23 @@ class HostManager:
             await asyncio.sleep(0.5)
         return self.free_ports()
 
+    def collect_results(self, host):
+        """Hands every match result FangsHost saved in this server's directory to on_result once, then deletes it
+        (one that can't be read is kept as .bad)."""
+        for f in sorted((host.inst / 'MOBA' / 'Binaries' / 'Win64').glob('fangshost_result-*.json')):
+            try:
+                result = json.loads(f.read_text())
+            except (OSError, ValueError) as e:
+                self.log({'host': host.id, 'event': 'unreadable match result', 'file': f.name, 'error': str(e)})
+                f.rename(f.with_suffix('.bad'))
+                continue
+            f.unlink(missing_ok=True)
+            for cb in self.on_result:
+                try:
+                    cb(host, result)
+                except Exception as e:   # one bad result must not stop the server's watcher
+                    self.log({'host': host.id, 'event': 'match result failed', 'error': repr(e)})
+
     async def _ready_or_exit(self, host):
         waiter = asyncio.create_task(host.ready.wait())
         exited = asyncio.create_task(host.proc.wait())
@@ -170,6 +188,7 @@ class HostManager:
         self.hosts[hid] = host
         for stale in ('fangshost_match.json', 'fangshost_status.json'):   # left by the previous server here
             (host.inst / 'MOBA' / 'Binaries' / 'Win64' / stale).unlink(missing_ok=True)
+        self.collect_results(host)   # a match a previous server here finished just before it died
         env = dict(os.environ, FANGS_BACKEND=self.backend_addr)
         self.inst_root.mkdir(parents=True, exist_ok=True)
         logf = open(self.inst_root / f'{hid}.stdout', 'w')
@@ -198,6 +217,7 @@ class HostManager:
                     host.ready.set()
                     self.log({'host': host.id, 'event': 'ready', 'port': host.port})
                 continue
+            self.collect_results(host)
             st = host.status
             players = st.get('players', 0)
             if players and time.time() - host.perf_logged >= 30:   # how busy servers are doing (frame times)
@@ -240,6 +260,7 @@ class HostManager:
                     await host.proc.wait()
         finally:
             self._releasing.discard(host.port)
+        self.collect_results(host)
         for cb in self.on_stopped:
             cb(host)
         self.replenish()

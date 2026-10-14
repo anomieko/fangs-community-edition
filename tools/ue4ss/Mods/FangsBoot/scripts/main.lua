@@ -520,3 +520,33 @@ if not gameVersion():find("^alpha7") then
         return true
     end)
 end
+
+-- ---------------------------------------------------------------------------------------------
+-- End of match: the victory/defeat screen plays a video in an image (WB_GameResult.BattleEndMovie). Where it
+-- doesn't play (Wine without the codec) that image is a big white panel over the screen: hide it then.
+do
+    local GAME_RESULT = "/Game/UI/Hud/InRound/NewFolder/WB_GameResult.WB_GameResult_C"
+    local function checkMovie(ctx)
+        local w = ctx:get()
+        ExecuteInGameThreadWithDelay(3000, function()
+            local ok, e = pcall(function()
+                if not w:IsValid() or (w.MediaPlayer:IsValid() and w.MediaPlayer:IsPlaying()) then return end
+                w.BattleEndMovie:SetVisibility(1)
+                log("end of match: video not playing, hidden")
+            end)
+            if not ok then log("end of match: " .. tostring(e)) end
+        end)
+    end
+    local hooked = {}   -- function -> address of the UFunction hooked (the class is reloaded for every match)
+    every(1000, function()
+        for _, fn in ipairs({ "PlayEndMatchVictoryMovie", "PlayEndMatchDefeatMovie" }) do
+            local path = GAME_RESULT .. ":" .. fn
+            local f = StaticFindObject(path)
+            if f and f:IsValid() and hooked[fn] ~= f:GetAddress() then
+                local ok, e = pcall(RegisterHook, path, checkMovie)   -- runs after the event body
+                hooked[fn] = f:GetAddress()
+                if not ok then log("end of match hook failed: " .. tostring(e)) end
+            end
+        end
+    end)
+end

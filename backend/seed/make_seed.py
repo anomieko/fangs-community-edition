@@ -34,6 +34,9 @@ def augments(name):
 # Every skin, sticker, sigil, banner, title and mount of a build (tools/re/cosmetics.py); the backend puts them all
 # in its catalog and entitles everyone to them. The lobby only lists skins named in AvailableSkins.
 cosmetics_feb = augments('cosmetics-feb2023.json')
+# XP per account level and per hero mastery level (tools/re/levels.py): the backend levels players up after each
+# match; the hero screens show mastery progress against HeroLevelRewards.
+levels = augments('levels-feb2023.json')
 
 
 version_data = {
@@ -64,7 +67,9 @@ records = {
     'FANGSConfig': {'NoServerMessage': 'Fangs: Community Edition server',
                     **{v: version_data for v in ('main_v0_0_444', 'Playtest021523v1_v0_0_02')},
                     'alpha7.0.7.51': alpha7_data},
-    'season': {}, 'HeroLevelRewards': {}, 'Mission': {},
+    'season': {}, 'Mission': {},
+    'HeroLevelRewards': {f'Tier{n}': {'Xp': xp, 'Bonus': False} for n, xp in enumerate(levels['Hero'], 1)},
+    'CELevels': levels,   # not read by the client
     # Not read by the client: the backend's catalog per AccelByte namespace (Feb/Dec builds use "fangs", Aug
     # "fangsbeta"). Item class = key (the categoryPath), item id = title = entitlement name.
     'CECatalog': {'fangs': {**{k: v for k, v in cosmetics_feb.items() if k != 'Skin'},

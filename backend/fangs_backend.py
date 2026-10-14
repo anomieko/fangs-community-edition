@@ -6,7 +6,7 @@ returns an AccelByte-style 404 so we can see what the game needs next.
 
 Run:  backend/.venv/bin/python backend/fangs_backend.py --port 8080
 """
-import argparse, asyncio, base64, hashlib, hmac, json, os, re, time, uuid
+import argparse, asyncio, base64, hashlib, hmac, json, math, os, re, time, uuid
 from pathlib import Path
 
 from aiohttp import web, WSMsgType
@@ -240,6 +240,21 @@ STATS_DEFAULTS = {'PROFILE_HISTORY_KEY': {'Matches': []},
                   'PROFILE_RATINGS_KEY': {'casual_rating': DEFAULT_RATING, 'ranked_rating': DEFAULT_RATING}}
 
 
+def history_for_viewer(history, owner, viewer):
+    """A friend's match list renders the rows of whoever is looking (WB_MatchOverviewBtn finds the viewer's own
+    UserId in each match): hand out a copy with the owner's rows under the viewer's id (and the viewer's own
+    rows, from games they played together, under none)."""
+    history = json.loads(json.dumps(history))
+    for match in history.get('Matches') or []:
+        for rnd in match.get('MatchResults') or []:
+            for row in rnd.get('RoundResults') or []:
+                if row.get('UserId') == owner:
+                    row['UserId'] = viewer
+                elif row.get('UserId') == viewer:
+                    row['UserId'] = ''
+    return history
+
+
 def stats_record(store, uid, key):
     value = store.data['player_records'].get(uid, {}).get(key)
     return value if value is not None else json.loads(json.dumps(STATS_DEFAULTS[key]))
@@ -314,7 +329,11 @@ async def player_record(request):
             return err(403, 20013, f'{key} is kept by the server')
         if not store.user_by_id(uid):
             return err(404, 18022, f'record {key} not found for user {uid}')
-        return web.json_response(record_body(key, stats_record(store, uid, key), uid, bool(request.match_info['pub'])))
+        value = stats_record(store, uid, key)
+        viewer = who.get('user_id')
+        if key == 'PROFILE_HISTORY_KEY' and viewer and viewer != uid:
+            value = history_for_viewer(value, uid, viewer)
+        return web.json_response(record_body(key, value, uid, bool(request.match_info['pub'])))
     recs = store.data['player_records'].setdefault(uid, {})
     if request.method == 'GET':
         if key not in recs and (default := default_player_record(store, uid, key)) is not None:
@@ -609,6 +628,107 @@ async def server_time(request):
 @route('GET', r'/lobby/v1/messages')
 async def lobby_messages(request):
     return web.json_response([])
+
+
+# ---------------------------------------------------------------- Match results (history, mastery, ratings)
+
+# From the game's BP_AC_MatchReport: XP per match, the match-history length, and its rating model's parameters.
+XP_MATCH_CAP, XP_WIN, XP_LOSE = 5400.0, (0.11, 6.6), (0.09, 5.4)    # seconds counted; (per second, base)
+HISTORY_LENGTH = 20
+RATED_MODES = {2, 3, 4}                    # ENUM_MapGameMode Casual, Ranked, Custom (not training/tutorial)
+PL_BETA, PL_EPSILON = 5.0, 0.001           # OpenSkill Plackett-Luce, as the game sent it to its ratings service
+TEAMS = {1: 'TeamA', 2: 'TeamB'}
+
+
+def level_up(level, xp, table, strict):
+    """Carries XP over into levels: table[n-1] is the XP needed to leave level n. Account levels need more than
+    that (Process XPRewards), hero mastery at least that (GetHeroMasteryIfClaimed); the last level keeps the XP."""
+    while 1 <= level <= len(table) and (xp > table[level - 1] if strict else xp >= table[level - 1]):
+        xp -= table[level - 1]
+        level += 1
+    return level, xp
+
+
+def plackett_luce(teams):
+    """OpenSkill Plackett-Luce update. teams: [(rank, [rating dict, ...])], lower rank = better; new ratings."""
+    c = math.sqrt(sum(sum(r['sigma'] ** 2 for r in rs) + PL_BETA ** 2 for _, rs in teams))
+    mus = [sum(r['mu'] for r in rs) for _, rs in teams]
+    s2 = [sum(r['sigma'] ** 2 for r in rs) for _, rs in teams]
+    ranks = [rank for rank, _ in teams]
+    tied = [ranks.count(rk) for rk in ranks]
+    sum_q = [sum(math.exp(mus[i] / c) for i in range(len(teams)) if ranks[i] >= ranks[q]) for q in range(len(teams))]
+    out = []
+    for i, (_, rs) in enumerate(teams):
+        omega = delta = 0.0
+        for q in range(len(teams)):
+            if ranks[q] > ranks[i]:
+                continue
+            quotient = math.exp(mus[i] / c) / sum_q[q]
+            omega += ((1 - quotient) if q == i else -quotient) / tied[q]
+            delta += quotient * (1 - quotient) / tied[q]
+        omega *= s2[i] / c
+        delta *= (s2[i] / c ** 2) * (math.sqrt(s2[i]) / c)
+        out.append([{'mu': r['mu'] + r['sigma'] ** 2 / s2[i] * omega,
+                     'sigma': r['sigma'] * math.sqrt(max(1 - r['sigma'] ** 2 / s2[i] * delta, PL_EPSILON))}
+                    for r in rs])
+    return out
+
+
+def ingest_match(store, result, log):
+    """A match FangsHost saved at its end (fangshost_result-*.json): the game's own match-history entry plus the
+    winner. Every player with an account gets it in PROFILE_HISTORY_KEY, XP/levels/wins in PROFILE_MASTERY_KEY,
+    and (when both teams had players) a new rating in PROFILE_RATINGS_KEY, the same for casual and ranked."""
+    entry, winner = result.get('results') or {}, TEAMS.get(result.get('winning_team'))
+    rounds = entry.get('MatchResults') or []
+    match_id = hashlib.sha1(json.dumps([entry.get('TimePlayed'), entry.get('MapLevel'),
+                                        [r.get('TotalRoundTime') for r in rounds]]).encode()).hexdigest()[:16]
+    seen = store.data.setdefault('matches_seen', [])
+    if match_id in seen or not rounds or not winner:
+        return log({'match': match_id, 'skipped': 'duplicate' if match_id in seen else 'no rounds or winner'})
+    players = {}   # user id -> {'user', 'team', 'hero'} from the last round each one appears in
+    for rnd in rounds:
+        for row in rnd.get('RoundResults') or []:
+            user = store.user_by_id(str(row.get('UserId', '')))
+            if user and row.get('Team') in TEAMS.values():
+                players[user['user_id']] = {'user': user, 'team': row['Team'], 'hero': str(row.get('Type', ''))}
+                row['Name'] = user['display_name']
+    seen.append(match_id)
+    del seen[:-200]
+    mode, levels = result.get('game_mode'), store.data['game_records'].get('CELevels') or {}
+    secs = min(float(result.get('match_time') or sum(r.get('TotalRoundTime', 0) for r in rounds)), XP_MATCH_CAP)
+    for uid, p in players.items():
+        recs, won = store.data['player_records'].setdefault(uid, {}), p['team'] == winner
+        history = stats_record(store, uid, 'PROFILE_HISTORY_KEY')
+        history['Matches'] = (history.get('Matches') or [])[-(HISTORY_LENGTH - 1):] + [entry]
+        recs['PROFILE_HISTORY_KEY'] = history
+        if mode not in RATED_MODES:
+            continue
+        per_sec, base = XP_WIN if won else XP_LOSE
+        xp = int(secs * per_sec + base)
+        m = stats_record(store, uid, 'PROFILE_MASTERY_KEY')
+        m['Level'], m['XPToNext'] = level_up(m.get('Level', 1), m.get('XPToNext', 0) + xp, levels.get('Account', []), True)
+        m['MatchesPlayed'] = m.get('MatchesPlayed', 0) + 1
+        m['MatchesWon'] = m.get('MatchesWon', 0) + won
+        m['RoundsWon'] = m.get('RoundsWon', 0) + int(result.get('rounds_a' if p['team'] == 'TeamA' else 'rounds_b') or 0)
+        if p['hero']:
+            h = m.get(p['hero']) if isinstance(m.get(p['hero']), dict) else {'Level': 1, 'XPToNext': 0}
+            h['Level'], h['XPToNext'] = level_up(h.get('Level', 1), h.get('XPToNext', 0) + xp, levels.get('Hero', []), False)
+            h['MatchesPlayed'] = h.get('MatchesPlayed', 0) + 1
+            h['MatchesWon'] = h.get('MatchesWon', 0) + won
+            m[p['hero']] = h
+        recs['PROFILE_MASTERY_KEY'] = m
+    sides = [[uid for uid, p in players.items() if p['team'] == t] for t in (winner, *(set(TEAMS.values()) - {winner}))]
+    rated = mode in RATED_MODES and all(sides)
+    if rated:
+        old = [[stats_record(store, uid, 'PROFILE_RATINGS_KEY').get('ranked_rating') or DEFAULT_RATING for uid in side]
+               for side in sides]
+        for side, new in zip(sides, plackett_luce([(0, old[0]), (1, old[1])])):
+            for uid, r in zip(side, new):
+                r = {'mu': round(r['mu'], 4), 'sigma': round(r['sigma'], 4)}
+                store.data['player_records'][uid]['PROFILE_RATINGS_KEY'] = {'casual_rating': r, 'ranked_rating': dict(r)}
+    store.save()
+    log({'match': match_id, 'mode': mode, 'map': entry.get('MapLevel'), 'winner': winner, 'rated': rated,
+         'players': {p['user']['display_name']: p['team'] for p in players.values()}})
 
 
 # ---------------------------------------------------------------- Session browser (custom lobbies)
@@ -990,6 +1110,7 @@ def main():
         app['sessions'].pop(host.session_id, None)
         app['zeuz'].pop(host.session_id, None)
     app['hosts'].on_stopped.append(host_stopped)
+    app['hosts'].on_result.append(lambda host, result: ingest_match(app['store'], result, log))
     if Path(a.seed).exists():  # seed (re)defines the global game records on every start
         app['store'].data['game_records'].update(json.loads(Path(a.seed).read_text()))
     app['store'].export_records()
