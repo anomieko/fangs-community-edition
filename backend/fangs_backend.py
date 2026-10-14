@@ -1113,8 +1113,9 @@ def main():
     ap.add_argument('--host-standby', type=int, default=1,
                     help='game servers kept booted and idle so lobbies/matches start at once (each ~3 GB RAM)')
     ap.add_argument('--match-size', type=int, default=8, help='players per matchmade game (Play -> Casual)')
-    ap.add_argument('--match-wait', type=float, default=15,
-                    help='seconds the first queued player waits before a match starts with whoever is queued')
+    ap.add_argument('--match-wait', type=float, default=0,
+                    help='if > 0: seconds the first queued player waits before a match starts with whoever is queued '
+                         '(at least 2); by default matches only start full')
     ap.add_argument('--log', default=str(Path(__file__).parent.parent / 'work' / 'logs' / 'backend.jsonl'))
     a = ap.parse_args()
     Path(a.log).parent.mkdir(parents=True, exist_ok=True)

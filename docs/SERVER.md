@@ -76,13 +76,19 @@ Everything else is dropped by the firewall (`/etc/nftables.conf`, table `inet fa
 - **Names**: first login binds a name to that install's secret; nobody else can log in as you.
 - **Server-only APIs** (server login, game records, other players' records) only work from the
   machine itself (the game hosts) — remote callers get 401/403.
+- **Match statistics** (history, levels, wins, ratings, leaderboard) are written only by the backend, from
+  the results the game servers save when a match ends; players can't set them. The main menu's
+  players-online count (`/fangsapi/*/online-players`) is a number anyone can read.
+- **Friends and chat**: friend requests need the exact `name#1234`; party details and invites only travel
+  between friends and party members.
 - **Container**: runs as an unprivileged user, read-only root filesystem, all Linux capabilities
   dropped, `no-new-privileges`, memory and process limits; game files mounted read-only. The game's
   own netcode (2020-era UE4 + Wine) is the most exposed component, which is why it is boxed in.
 - **Limits**: one lobby per player; at most `HOST_PORTS` simultaneous matches (custom lobbies and
   matchmade games together; when all are busy, queued players wait).
-- **Matchmaking** (PLAY): best effort, no ratings. A match starts when 8 players are queued or the
-  first one has waited 15 s, with whoever is queued (backend options `--match-size`, `--match-wait`).
+- **Matchmaking** (PLAY): no skill matching. A match starts when it is full: 8 players queued (4 vs 4;
+  parties stay together). Backend options: `--match-size` (players per game), `--match-wait N` (start after
+  N seconds with whoever is queued, at least 2). Custom lobbies start whenever their owner launches.
 - **Not encrypted**: game traffic and the backend API are plain HTTP/UDP, like the original game
   outside its TLS endpoints. Don't reuse a password-like secret anywhere else (the launcher
   generates random ones). Adding TLS would need a domain name.

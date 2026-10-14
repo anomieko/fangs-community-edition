@@ -22,16 +22,17 @@ built and played the game can run private custom matches again.
 
 ## Status
 
-Players can queue for matches (PLAY: a simple matchmaker puts whoever is queueing into a game) or create
-and join custom lobbies, pick heroes and play on a self-hosted server.
-Target game build: **15 February 2023 (Steam build 10554626)**. All heroes are unlocked.
+Players can queue for matches (PLAY: a simple matchmaker puts whoever is queueing into a game, parties
+together) or create and join custom lobbies, pick heroes and play on a self-hosted server. Friends, parties,
+chat, match history, levels and a leaderboard work; all heroes and cosmetics are unlocked.
+Target game build: **15 February 2023 (Steam build 10554626)**.
 See **[docs/STATUS.md](docs/STATUS.md)** and **[docs/SERVER.md](docs/SERVER.md)**.
 
 ## How it works
 
 | Piece | Path | Role |
 |---|---|---|
-| Backend | `backend/` | Python (aiohttp) service that speaks the subset of the AccelByte API the game uses: login, profiles/cloud save, store catalog, session browser (custom lobbies), lobby WebSocket, matchmaker, QoS. It also launches game servers. |
+| Backend | `backend/` | Python (aiohttp) service that speaks the subset of the AccelByte API the game uses: login, profiles/cloud save, store catalog, session browser (custom lobbies), lobby WebSocket (friends, parties, chat), matchmaker, leaderboard, QoS. It also launches game servers and keeps match history, levels and ratings. |
 | Game servers | `server/run-host.sh` | Runs an unmodified game client headless under Wine as a dedicated lobby/match server (one per lobby). |
 | UE4SS mods | `tools/ue4ss/` | Small Lua mods for [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS): `FangsBoot` (player side: skip the dead Epic login, use username login), `FangsHost` (server side: dedicated-server setup and replacements for server-only code missing from the client build), `FangsCtl` (remote control for automated tests). |
 | Client config | `tools/run/config/Engine.ini.template` | User-level config that points the game at your backend. No game files are modified. |

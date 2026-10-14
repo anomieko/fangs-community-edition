@@ -1,7 +1,8 @@
 """Best-effort matchmaker for the client's matchmaking websocket (Play -> Casual / Ranked / beginner queue).
 
-No ratings: everyone who queues is pooled. A match is made as soon as `size` players are queued, or when
-the longest-waiting player has waited `wait` seconds (then with whoever is queued, at least 1).
+No ratings: everyone who queues is pooled. A match is made once `size` players are queued (a full game:
+the queue never starts a match with empty seats). With `wait` > 0 it also starts when the longest-waiting
+player has waited that long, with whoever is queued (at least 2 players).
 
 Protocol (UMOBAMatchMakerSubsystem in the Feb 2023 client; JSON text frames, subprotocol "json",
 Authorization "Bearer secret-token:accelbyte/<access token>"):
@@ -56,25 +57,36 @@ class Ticket:
         return set(self.joined) >= set(self.expected) or now - self.queued_at >= PARTY_WAIT
 
 
+def split(tickets, per_side):
+    """Sides (0/1 per ticket) with at most per_side players each and as even as possible, or None.
+    A party is never split; there are at most a few tickets, so all splits are tried."""
+    sizes = [len(t.joined) for t in tickets]
+    best = None
+    for mask in range(1 << len(sizes)):
+        a = sum(n for i, n in enumerate(sizes) if mask >> i & 1)
+        b = sum(sizes) - a
+        if a <= per_side and b <= per_side and (best is None or abs(a - b) < best[0]):
+            best = (abs(a - b), [mask >> i & 1 for i in range(len(sizes))])
+    return best and best[1]
+
+
 class Match:
     def __init__(self, tickets, accept_secs, size):
         self.id = uuid.uuid4().hex
         self.tickets = list(tickets)            # to put them back in line if the match falls through
         self.players = [p for t in tickets for p in t.joined]
         self.team = {}                          # user id -> 0/1; a party is never split
-        count = [0, 0]
-        for t in sorted(tickets, key=lambda t: -len(t.joined)):
-            side = 0 if count[0] <= count[1] else 1
+        sides = split(tickets, (size + 1) // 2) or split(tickets, len(self.players))
+        for t, side in zip(tickets, sides):
             for p in t.joined:
                 self.team[p] = side
-            count[side] += len(t.joined)
         self.accepted = set()
         self.deadline = time.time() + accept_secs + 2   # the client rejects by itself at accept_secs
         self.starting = False
 
 
 class Matchmaker:
-    def __init__(self, app, *, size=8, wait=15.0, accept_secs=15):
+    def __init__(self, app, *, size=8, wait=0.0, accept_secs=15):
         self.app, self.size, self.wait, self.accept_secs = app, size, wait, accept_secs
         self.clients = {}    # user id -> websocket
         self.tickets = {}    # token -> Ticket waiting in line
@@ -278,10 +290,12 @@ class Matchmaker:
             await self.cancel(m, drop=set(m.players) - m.accepted, reason='not accepted in time')
         picked, count = [], 0
         for ticket in sorted(self.tickets.values(), key=lambda t: t.queued_at):
-            if ticket.ready(now) and count + len(ticket.joined) <= self.size:
+            if ticket.ready(now) and count + len(ticket.joined) <= self.size \
+                    and split(picked + [ticket], (self.size + 1) // 2) is not None:   # even teams stay possible
                 picked.append(ticket)
                 count += len(ticket.joined)
-        if not picked or (count < self.size and now - picked[0].queued_at < self.wait):
+        early = self.wait > 0 and count >= 2 and now - picked[0].queued_at >= self.wait
+        if not picked or (count < self.size and not early):
             return
         if not self.app['hosts'].free_ports():
             return   # all game server slots busy: keep everyone queued

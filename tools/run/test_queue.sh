@@ -35,7 +35,7 @@ HOST_STATUS='lua local gm=FindFirstOf("BP_GM_Lobby_GameMode_C"); if not (gm and 
   echo 'lua local p=FindFirstOf("BP_PlayerChar_C"); return "pawn: " .. (p and p:IsValid() and p:GetFName():ToString() or "none")' >> $A
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
-  BACKEND_ARGS="--data $PWD/work/run/queue-store.json --instances $PWD/work/run/queue-hosts --match-wait 5" \
+  BACKEND_ARGS="--data $PWD/work/run/queue-store.json --instances $PWD/work/run/queue-hosts --match-size 1" \
   tools/run/headless.sh "${DURATION:-290}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
   -- queue:0:"-TestUser=queuer -TestPass=x" 2>&1 | grep -v Segmentation
 wait

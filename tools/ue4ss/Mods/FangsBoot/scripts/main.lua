@@ -85,6 +85,32 @@ every(2000, function()
     return true
 end)
 
+-- Why this player leaves a lobby (Shipping builds log nothing): the reason ReturnToMainMenu shows, the
+-- matchmade-lobby timeout, the owner ending the lobby. Re-hooked when the lobby classes are loaded again.
+do
+    local LOBBY_PC = "/Game/BluePrints/Lobby/BP_PC_Lobby_PlayerController.BP_PC_Lobby_PlayerController_C"
+    local LOBBY_MENU = "/Game/UI/Lobby/WB_LobbyMenu.WB_LobbyMenu_C"
+    local diag = {
+        [LOBBY_PC .. ":ReturnToMainMenu"] = function(ctx, msg)
+            local ok, text = pcall(function() return msg:get():ToString() end)
+            log("lobby: back to the main menu (" .. (ok and text ~= "" and text or "no reason given") .. ")")
+        end,
+        [LOBBY_MENU .. ":TimedOutFromQueue"] = function() log("lobby: timed out waiting for the match") end,
+        [LOBBY_PC .. ":EndLobbyOnServer"] = function() log("lobby: this player ended the lobby") end,
+    }
+    local hooked = {}   -- path -> address of the UFunction hooked
+    every(2000, function()
+        for path, fn in pairs(diag) do
+            local f = StaticFindObject(path)
+            if f and f:IsValid() and hooked[path] ~= f:GetAddress() then
+                hooked[path] = f:GetAddress()
+                local ok, e = pcall(RegisterHook, path, function(...) pcall(fn, ...) end)
+                if not ok then log("lobby diagnostics hook failed: " .. tostring(e)) end
+            end
+        end
+    end)
+end
+
 local logoDone, loginDone = false, false
 every(500, function()
     local gi = gameInstance()
@@ -507,6 +533,22 @@ if not gameVersion():find("^alpha7") then
             if not ok then log("menu: background: " .. tostring(done)) end
         end
         updateOnline()
+    end)
+
+    -- Joining a custom lobby from the lobby list: the PLAY button sets the game mode to Casual (anything but
+    -- Ranked becomes Casual, "Join a lobby" too), and the clicked lobby is saved and joined with it. In the lobby
+    -- that player then counts as matchmade: the lobby screen's 45 s "Failed to Connect to Match" timeout runs
+    -- (the owner launching later sends them back to the menu, which ends the lobby for everyone), and the lobby
+    -- server is told it is a Casual lobby. While the list is searching, keep the mode at Custom.
+    local CUSTOM = 4
+    every(250, function()
+        local gi = gameInstance()
+        local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
+        if not (menu and menu:IsValid() and menu:IsInViewport()) then return end
+        if menu.WB_PlayMenu.GetSessions and gi.MapGameMode ~= CUSTOM then
+            log("lobby list: game mode " .. gi.MapGameMode .. " -> Custom")
+            gi.MapGameMode = CUSTOM
+        end
     end)
 
     -- The Store also opens from "unlock" buttons on items you don't own (none: everything is owned).
