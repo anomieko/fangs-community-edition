@@ -72,6 +72,16 @@ pick() {
   echo 'lua local pm=FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu; if pm.LobbyList:GetChildrenCount() == 0 then return "bob: nothing to click" end'\
 ' pm.LobbyList:GetChildAt(0):BndEvt__SelectSessionBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); return "bob: clicked the lobby"' >> $B
   sleep 30
+  if [[ -n ${PROBE_MODE:-} ]]; then   # game mode each side has, and whether the lobby screen's timeout is running
+    MODE='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local t={} for _, m in ipairs(FindAllOf("WB_LobbyMenu_C") or {}) do'\
+' if m:IsValid() and m:IsInViewport() then local k=StaticFindObject("/Script/Engine.Default__KismetSystemLibrary")'\
+' t[#t+1]=string.format("timer active=%s remaining=%.0f of %.0f", tostring(k:K2_IsTimerActiveHandle(m, m.LobbyTimeoutTimer)), k:K2_GetTimerRemainingTimeHandle(m, m.LobbyTimeoutTimer), m.LobbyTimeOut) end end'\
+' return "mode: client MapGameMode=" .. gi.MapGameMode .. " lobby screen: " .. (t[1] or "none")'
+    echo "$MODE" >> $A; echo "$MODE" >> $B
+    for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do
+      echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); local gm=FindFirstOf("BP_GM_Lobby_GameMode_C"); return "mode: server gi=" .. gi.MapGameMode .. " gm=" .. (gm and gm:IsValid() and gm.MapGameMode or -1)' >> $h/fangsctl_cmd.txt
+    done
+  fi
   if [[ -n ${SLOTS:-} ]]; then   # sides/seats, e.g. SLOTS="4 6": nobody in seat 0, whose turn the game's draft starts with
     read -r sa sb <<< "$SLOTS"
     echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SelectTeamSlotOnServer('$sa'); return "alice: seat '$sa'"' >> $A
@@ -134,6 +144,8 @@ grep -h 'lobby:' work/run/$R-bob/MOBA/Binaries/Win64/fangsboot.log | sed 's/^/bo
 grep -h 'lua \(ok\|error\): server net' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | sed 's/^/host: /' | cut -c1-200
 grep -h 'tick:' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangshost.log 2>/dev/null | sed 's/^/host: /'
 grep -h 'server lobby' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | grep -v ': none' | sed 's/^/host: /' | cut -c1-260
+grep -h 'mode: server' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | sed 's/^/host: /'
+grep -h 'lobby: back\|timed out\|ended the lobby' work/run/$R-{alice,bob}/MOBA/Binaries/Win64/fangsboot.log 2>/dev/null
 if [[ -n ${END:-} ]]; then
   grep -h 'server skins\|surrendered\|match end' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangs{ctl,host}.log 2>/dev/null | sed 's/^/host: /' | cut -c1-260
   grep -h '"match"' work/logs/$R-alice-backend.jsonl | cut -c1-300

@@ -1,20 +1,25 @@
 # Status — Fangs: Community Edition
 
-**Target build: FANGS Closed Playtest Alpha 7 hotfix, 26 Aug 2022 (build 9396481, `alpha7.0.7.51`)** —
-see `docs/clients/fangs-2022-08-26-b9396481.md`. The 15 Feb 2023 build (10554626) was the first target
-and still runs on the same stack; the Dec 2023 Closed Playtest (`main_v0_0_444`) is kept as a reference.
+**Target build: FANGS 15 Feb 2023 (Steam build 10554626, `Playtest021523v1_v0_0_02`)**, the build the
+server runs. The Aug 2022 Closed Playtest Alpha 7 hotfix (`alpha7.0.7.51`, `docs/clients/fangs-2022-08-26-b9396481.md`)
+runs on the same stack; the Dec 2023 Closed Playtest (`main_v0_0_444`) is kept as a reference.
 
-## Where things are (2026-10-13)
+## Where things are (2026-10-14)
 
-- Aug 2022 build, verified headless: custom lobbies (create → instant standby server → launch any time →
-  hero pick → match) and PLAY/Casual matchmaking (matched → server-started hero select → match).
-  Augments come from the backend's `AvailableAugments` (generated per build from its own data).
-- Feb 2023 build: full flow verified (2 players and solo, headless, and on the VPS).
+- Play: custom lobbies (create → instant standby server → launch any time → hero pick → match) and
+  PLAY/Casual matchmaking, solo or as a party. Verified headless with 1–2 players and on the VPS.
+- Everything unlocked: heroes, skins, stickers, avatars (sigils), banners, titles, mounts (backend catalog +
+  entitlements; lists generated per build by `tools/re/cosmetics.py`). Augments: the seed's `AvailableAugments`.
+- Profiles: match history, account and hero levels, wins, ratings and the leaderboard come from finished
+  matches (FangsHost saves the game's own match report; the backend keeps the records).
+- Social: friends (add by `name#1234`), presence, parties, party chat and whispers (`backend/social.py`).
+- Main menu: no Battle Pass, Store, missions or Discord banner; players-online count instead of missions;
+  a static background where the menu video can't play (Wine).
 - Server: hardened Debian 13 VPS + Docker image (`server/`, `docs/SERVER.md`); one standby game server
   is kept booted so lobbies start instantly; failed server starts are retried.
 - Players: Windows launcher `FangsCE.exe` (`launcher/`): asks for install dir and name, downloads and
-  verifies the game from the server (resumable, only changed files), updates itself, starts the game.
-- Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
+  verifies the game from the server (resumable, only changed files, signed file list), updates itself,
+  starts the game. Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
 
 ## History
 
@@ -62,6 +67,6 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
 ## Next
 
 1. Play tests with friends on the VPS.
-2. Match end → return to menu → host teardown (untested); root cause of the occasional server crash at
-   start (covered by retries).
-3. Cosmetics (skins etc. in the catalog); TLS/domain for the server.
+2. A player is occasionally dropped from a two-player lobby a few seconds into hero select (FangsBoot logs
+   why a client leaves a lobby; see `fangsboot.log`).
+3. Voice chat (Vivox) is not available; TLS/domain for the server.
