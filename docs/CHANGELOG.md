@@ -17,8 +17,8 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 | Change | Commits | Off switch |
 |---|---|---|
-| Online list: the deploy's smoke test account no longer counts as online | see git log | remove `smoketest` from `SERVICE_USERS` |
-| Online list: one line per name; names can carry a server-granted style (`CENameStyles` in the seed): "anomie" in animated rainbow; the free servers line stays last (FangsBoot asks `server-status?v=2`; older clients get plain names) | see git log | empty `CENameStyles` in `make_seed.py` (server only) |
+| Online list: the deploy's smoke test account no longer counts as online | `9b971cb` | remove `smoketest` from `SERVICE_USERS` |
+| Online list: one line per name; names can carry a server-granted style (`CENameStyles` in the seed): "anomie" in animated rainbow; the free servers line stays last (FangsBoot asks `server-status?v=2`; older clients get plain names) | `9b971cb` | empty `CENameStyles` in `make_seed.py` (server only) |
 
 ## deploy-2026-10-14-1855 (`478b254`, Feb 2023 build)
 
