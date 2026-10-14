@@ -42,6 +42,16 @@ levels = augments('levels-feb2023.json')
 # Cut content back in play: items the developers took out of the in-match pick lists although they still work.
 # restore-feb2023.json lists DT_MOBALoot rows per hero ("Generic": boons and artifacts, every hero); each is
 # verified in a match before it goes in. itempaths-feb2023.json (tools/re/itempaths.py) gives their objects.
+def offered_augments(all_file, paths_file, restore_file, heroes):
+    """AvailableAugments: the items the game's own in-match pools offer (these heroes and the shared one) plus the
+    restored ones. The menus list every item they are sent, so the full table would show cut, unfinished and
+    other-map items, some even under the wrong hero (an item's owner class can be a leftover)."""
+    pools = augments(paths_file)['pools']
+    keep = {row for h in ['Generic', *heroes] for row in pools.get(h, [])}
+    keep |= {row for rows in augments(restore_file).values() for row in rows}
+    return [a for a in augments(all_file) if a['Item'] in keep]
+
+
 def restored(paths_file, restore_file):
     paths = augments(paths_file)
     return [{'Class': '*' if hero == 'Generic' else paths['heroes'][hero],
@@ -60,7 +70,7 @@ version_data = {
     'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
     # The HUD and loadout screens only offer augments listed here (no EnableAugmentProgress: all unlocked).
     # Generated per build from its DT_MOBALoot and hero preview assets by tools/re/augments.py.
-    'AvailableAugments': augments('augments-feb2023.json'),
+    'AvailableAugments': offered_augments('augments-feb2023.json', 'itempaths-feb2023.json', 'restore-feb2023.json', heroes),
     'AvailableSkins': cosmetics_feb['Skin'],
 }
 # Aug 2022 build: no LE_Payload04_Map in its pak, no "AI" custom mode in its create-lobby screen

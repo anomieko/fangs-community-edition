@@ -1,13 +1,26 @@
 # Fangs: Community Edition — notes for Claude
 
-Goal: keep FANGS playable (custom lobbies on a self-hosted backend + game servers) and preserve it.
+Goal: keep FANGS playable for a small group (self-hosted backend + game servers on a VPS) and preserve it.
 This is a public, non-commercial fan project: never commit game files, extracted/decompiled game
 content, header dumps, or credentials found in the game. See the README disclaimer.
 
-- `clients/playtest-main_v0_0_444/` is the **Closed Playtest** build — a UE 4.26.2 *Development*
-  build. A different "target" client version may be added later; always say which client a
-  finding comes from. Per-client facts live in `docs/clients/*.md` — read before re-doing recon.
-- Pak is unencrypted + uncompressed v11; use `tools/pak/`. Assets: unversioned headers, tagged props, UE 4.26.
+**Keep track of the work** (several agents often run in parallel):
+- `docs/ROADMAP.md`: what is in progress, done but not deployed, live, blocked, and the user's decisions.
+  Read it first; update it in the same commit as the change that moves an item.
+- `docs/recon/*.md`: research findings (items, heroes, backend API, match flow). A finding that only lives
+  in a chat or an agent transcript is lost: write it there.
+- `docs/STATUS.md`: what exists and gotchas; `docs/clients/*.md`: per-build facts. Say which build a
+  finding comes from.
+
+Builds: the server runs the **15 Feb 2023** build (`clients/fangs-2023-02-15-b10554626`, Shipping, encrypted
+pak; key recovered locally into `work/re/`, never print or commit it). The Aug 2022 build is also supported;
+the Dec 2023 playtest (`clients/playtest-main_v0_0_444`, Development build) is a reference. UE 4.26,
+unversioned assets; tools in `tools/pak`, `tools/re`.
+
+Rules:
 - Never commit anything from `clients/`, `work/`, `third_party/` or `backend/data/`; never publish the
-  AccelByte secrets found in the pak's `DefaultEngine.ini`. Start with `docs/STATUS.md`.
+  join code, signing key, server access or the AccelByte secrets in the game's config.
+- Tests run in their own network namespace with their own backend data (`tools/run/*.sh`); never touch
+  `work/hosts`, `backend/data` or a running local play session. Don't edit a test script while it runs.
+- Deploy (`server/deploy.sh`) only with the user's OK for that deploy, and never while people play.
 - Run Python that reads game data with `python3 -I`.
