@@ -15,8 +15,9 @@ for line in open(sys.argv[1]):
     rd = re.search(r'rounds (\S+)', rest)
     ab = re.search(r'aspect boost A (\d+) B (\d+)', rest)
     pr = re.search(r'prismatic dead (\w+)', rest)
+    ia = re.search(r'items active \[([^\]]*)\] holding (\w+)', rest)
     add, rem = sorted(ge - prev), sorted(prev - ge); prev = ge
     print((f"{t:>6} r{rd.group(1) if rd else '?'} " + (f"A{st.group(1)} B{st.group(2)} taken={st.group(3)[0]} shrine={st.group(4)[0]} drop={st.group(5)[0]} " if st else rest[:60] + ' ')
           + (f"shard={sh.group(1) or '-'} b{sh.group(3)} ch={sh.group(4)[0]} " if sh else '') + (f"hs[{hs.group(1)}] " if hs and hs.group(1) else '')
-          + (f"aspect+{ab.group(1)}/{ab.group(2)} " if ab and ab.group(1) + ab.group(2) != '00' else '') + (f"prismatic-dead={pr.group(1)[0]} " if pr else '')
+          + (f"aspect+{ab.group(1)}/{ab.group(2)} " if ab and ab.group(1) + ab.group(2) != '00' else '') + (f"prismatic-dead={pr.group(1)[0]} " if pr else '') + (f"items[{ia.group(1)}] hold={ia.group(2)[0]} " if ia and ia.group(1) else '')
           + (f"hp{hp.group(1)} mp{hp.group(2)} sp{hp.group(3)} " if hp else '') + (f"+{add} " if add else '') + (f"-{rem}" if rem else '')).replace('BP_GE_', '').replace('BP_GA_', ''))
