@@ -35,6 +35,9 @@ async def main(addr, name, code=''):
                     ok = f.get('status') == 'BUSY'
                     print(f"dsNotif status={f.get('status')} server={f.get('ip')}:{f.get('port')} "
                           f"after {time.time() - t0:.0f}s {f.get('message', '')}")
+                    # end the test session: its game server would otherwise hold a slot for minutes
+                    async with http.delete(f'{base}/sessionbrowser/namespaces/fangs/gamesession/{sid}', headers=auth):
+                        pass
                     return 0 if ok else 1
     return 1
 
