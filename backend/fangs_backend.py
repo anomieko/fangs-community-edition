@@ -1080,14 +1080,19 @@ def online_count(app):
     return len(app['lobby_users']) + len(app['lobby_left'])
 
 
-# Main menu, newer FangsBoot: "<players online>\t<free game servers>\t<game servers>". A game server is in use while
-# a lobby or match has it; a free one is booted (or booting) standby or an unused slot.
+# Main menu, newer FangsBoot: "<players online>\t<free game servers>\t<game servers>", then (only for a logged-in
+# player) the online players' names (without the #1234 tag), one per line. A game server is in use while a lobby or match has it; a free
+# one is booted (or booting) standby or an unused slot.
 @route('GET', r'/fangsapi/[^/]+/server-status')
 async def fangs_server_status(request):
-    hosts = request.app['hosts']
+    app, hosts = request.app, request.app['hosts']
     used = sum(1 for h in hosts.hosts.values() if h.session_id is not None)
     total = len(hosts.ports)
-    return web.Response(text=f'{online_count(request.app)}\t{max(total - used, 0)}\t{total}', content_type='text/plain')
+    lines = [f'{online_count(app)}\t{max(total - used, 0)}\t{total}']
+    if caller(request).get('user_id'):
+        users = (app['store'].user_by_id(uid) for uid in [*app['lobby_users'], *app['lobby_left']])
+        lines += sorted((u['display_name'] for u in users if u), key=str.lower)   # names as chosen, no #1234
+    return web.Response(text='\n'.join(lines) + '\n', content_type='text/plain')
 
 
 # ---------------------------------------------------------------- plumbing
