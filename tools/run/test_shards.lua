@@ -100,9 +100,24 @@ function T.state()
     if valid(c.prismatic) then out[#out + 1] = string.format("prismatic dead %s at %s", tostring(c.prismatic.Dead), at(c.prismatic)) end
     if valid(ph) then out[#out + 1] = string.format("aspect boost A %d B %d", ph.RelicsCapturedByTeamA, ph.RelicsCapturedByTeamB) end
     if valid(p) then
-        local holding = false
+        local holding, count = false, "?"
         pcall(function() holding = p.AbilitySystemComponent:HasMatchingGameplayTag({ TagName = FName("HoldingOrb") }) end)
-        out[#out + 1] = "holding " .. tostring(holding)
+        pcall(function() count = tostring(p.AbilitySystemComponent:GetTagCount({ TagName = FName("HoldingOrb") })) end)
+        local specs = {}   -- item ability specs on the hero (a class twice = granted twice) and how many run
+        pcall(function()
+            p.AbilitySystemComponent.ActivatableAbilities.Items:ForEach(function(_, e)
+                local spec = e:get()
+                local a = spec.Ability
+                if valid(a) and a:GetFullName():find("/Items/", 1, true) then
+                    local n = a:GetClass():GetFName():ToString():gsub("^BP_GA_", ""):gsub("_C$", "")
+                    local act = "?"
+                    pcall(function() act = tostring(spec.ActiveCount) end)
+                    specs[#specs + 1] = n .. ":" .. act
+                end
+            end)
+        end)
+        table.sort(specs)
+        out[#out + 1] = string.format("holding %s count %s specs [%s]", tostring(holding), count, table.concat(specs, ","))
         out[#out + 1] = string.format("hero %s %s %s GEs [%s]", name(p), at(p), attrs(p), table.concat(effects(p), ","))
     end
     return table.concat(out, "; ")
@@ -159,7 +174,10 @@ function T.vanish()   -- the hero goes away without dying (as when a player leav
     local p = cached().hero
     if not valid(p) then return "no hero" end
     p:K2_DestroyActor()
-    return "hero removed"
+    local flags = EInternalObjectFlags and EInternalObjectFlags.PendingKill
+    local ok, dying = pcall(function() return p:HasAnyInternalFlags(flags) end)
+    return "hero removed (pending kill " .. tostring(flags) .. ": " .. tostring(ok and dying) .. ", IsValid "
+        .. tostring(valid(p)) .. ")"
 end
 
 function T.endRound(team)
