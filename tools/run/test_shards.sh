@@ -4,9 +4,9 @@
 # change of the Shard / Health Shrine / hero state (shardwatch.log); the client channels with the F key's own handler.
 # Sequence: Health Shrine channel (before the Shard spawns: Energy still 0); Shard spawn; pick up; own Capture Zone;
 # respawn; pick up; carrier killed by the enemy turret (the Shard goes back to a shrine); pick up; enemy Capture Zone
-# (back-cap); Health Shrine channel after turret damage; round end; round 2 Shard, picked up, then the carrier's hero
-# removed without dying (a player leaving): the Shard must go back. Maps without turrets (Payload II) skip the turret
-# steps.
+# (back-cap); Health Shrine channel after turret damage; round end; round 2: two Shards picked up and turned in (own,
+# enemy zone), a third picked up, then the carrier's hero removed without dying (a player leaving): it must go back.
+# Maps without turrets (Payload II) skip the turret steps.
 # MODE=off: the Feb 2023 kill system instead (seed with the switch off): Prismatic Shard spawn and kill, pickups.
 # Own backend data, seed and game servers; local play is untouched.
 # Usage: RUN=shards-<name> MAP=LE_Arena02_Map [MODE=on|off] [SPEEDUP=off|mask_of_speed|every_capture]
@@ -62,7 +62,7 @@ shot() { echo 'lua local n=0 for _, w in ipairs(FindAllOf("WB_LobbyMenu_C") or {
   else
     sleep 18; host 'tp("shrine")'; sleep 2; client 'channel()'; sleep 4; host 'state()'
     sleep 6; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 1; shot
-    sleep 4; host 'tp("own")'; sleep 2; client 'channel()'; sleep 4; shot; host 'ascension()'
+    sleep 4; host 'tp("own")'; sleep 2; client 'channel()'; sleep 4; shot
     sleep 22; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 4; host 'tp("turret")'
     sleep 14; host 'state()'
     sleep 26; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 4; host 'tp("enemy")'; sleep 2; client 'channel()'; sleep 4; shot
@@ -70,12 +70,14 @@ shot() { echo 'lua local n=0 for _, w in ipairs(FindAllOf("WB_LobbyMenu_C") or {
     sleep 3; host 'endRound(1)'
     sleep 30; client 'equip({})'; sleep 5; host 'equipment()'
     sleep 30; host 'state()'; shot
-    sleep 2; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 4; host 'vanish()'; sleep 4; host 'state()'
+    sleep 2; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 6; host 'tp("own")'; sleep 2; client 'channel()'; sleep 4; host 'state()'
+    sleep 18; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 6; host 'tp("enemy")'; sleep 2; client 'channel()'; sleep 4; host 'state()'
+    sleep 18; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 4; host 'vanish()'; sleep 4; host 'state()'
   fi
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
   BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts --seed $PWD/work/run/$R-seed.json" \
-  tools/run/headless.sh "${DURATION:-480}" clients/fangs-2023-02-15-b10554626 \
+  tools/run/headless.sh "${DURATION:-560}" clients/fangs-2023-02-15-b10554626 \
   -- $R:0:"-TestUser=sharder -TestPass=x" 2>&1 | grep -v Segmentation
 wait
 mkdir -p work/logs/$R

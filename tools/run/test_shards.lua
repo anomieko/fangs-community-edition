@@ -1,5 +1,5 @@
 -- Helpers for tools/run/test_shards.sh, loaded by FangsCtl (dofile) into the test client and the game server.
--- Server side: watch() logs every change of the Shard / Health Shrine / hero state to shardwatch.log; tp(), damage(),
+-- Server side: watch() logs every change of the Shard / Health Shrine / hero state to shardwatch.log; tp(), vanish(),
 -- endRound() move the game along. Client side: equip(), channel() (the F key's own handler), texts().
 FCE_SHARDS = FCE_SHARDS or {}
 local T = FCE_SHARDS
@@ -17,7 +17,6 @@ end
 local function first(className, exact) return all(className, exact)[1] end
 local function at(a) local l = a:K2_GetActorLocation(); return string.format("%.0f,%.0f,%.0f", l.X, l.Y, l.Z) end
 local function statics() return StaticFindObject("/Script/Engine.Default__GameplayStatics") end
-local function fl() return StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.Default__BP_FL_MOBA_AbilitySystemFunctionLibrary_C") end
 local logf = nil
 local function log(file, msg)
     logf = logf or {}
@@ -48,31 +47,69 @@ end
 local function hero() return first("BP_PlayerChar_C") end
 
 -- ---------------------------------------------------------------------------------------------- server
+-- Objects are looked up (object scans: 10+ ms each in an arena, a hitch for everyone) only when the cache misses
+-- one, at most every 5 s; the watch loop itself only reads properties. Rule states come from the game mode.
+local C = { t = -100 }
+local function refresh(force)
+    if not force and os.clock() - C.t < 5 then return end
+    C.t = os.clock()
+    C.gm = first("BP_GM_MOBA_GameMode_C")
+    C.gs = first("GS_MOBA_Battle_C")
+    C.hero = hero()
+    C.shrines = all("BP_HealingOrb_C", true)
+    C.pickups = #all("BP_PickupActor_C", true)
+    C.prismatic = first("BP_BuffActor_C", true)
+    C.turrets = all("BP_Turret_C", true)
+    C.zones = all("BP_TeamGoalChannel_Buff_C", true)
+    C.ga = {}
+    for _, c in ipairs({ "BP_GA_RelicRunner_C", "BP_GA_BubbleBobble_C" }) do C.ga[c] = all(c, true) end
+end
+local function cached()
+    if not (valid(C.gm) and valid(C.gs) and valid(C.hero)) then refresh(false) end
+    return C
+end
+local function rules()
+    local rs, ph
+    pcall(function() rs = C.gm.BP_GR_Relic_Garden2.RuleStateComp end)
+    pcall(function() ph = C.gm.BP_GR_Phoenix.RuleStateComp end)
+    return valid(rs) and rs or nil, valid(ph) and ph or nil
+end
+
 function T.state()
-    local p, out = hero(), {}
-    local gs = first("GS_MOBA_Battle_C")
-    if valid(gs) then out[#out + 1] = string.format("rounds %d-%d", gs.TeamARoundsWon, gs.TeamBRoundsWon) end
-    local rs, rsd = first("BP_RS_Relic_C"), first("BP_RS_Relic_Destructible_C")
-    out[#out + 1] = "rule " .. (valid(rs) and "carry" or valid(rsd) and "destructible" or "none")
-    if valid(rs) then
+    local c, out = cached(), {}
+    local p = c.hero
+    if valid(c.gs) then out[#out + 1] = string.format("rounds %d-%d", c.gs.TeamARoundsWon, c.gs.TeamBRoundsWon) end
+    local rs, ph = rules()
+    local kind = valid(rs) and rs:GetClass():GetFName():ToString() or ""
+    local carry = kind == "BP_RS_Relic_C"
+    out[#out + 1] = "rule " .. (carry and "carry" or kind:find("Destructible") and "destructible" or "none")
+    if carry then
         out[#out + 1] = string.format("A %d B %d taken %s atShrine %s dropped %s carrier %s", rs.TeamARelics, rs.TeamBRelics,
             tostring(rs.IsOrbTaken), tostring(rs.OrbPlacedAtShrine), tostring(rs.OrbHasBeenDropped), name(rs.ShrineOrbCarrier))
+        local o = rs.BP_ShrineOrbRef
+        if valid(o) then
+            out[#out + 1] = string.format("shard %s %s buff %s channeled %s", o.Location:ToString(), at(o), tostring(o.RandomBuff), tostring(o.bBeingChanneled))
+        end
     end
-    for _, o in ipairs(all("BP_ShrineOrb_BUff_C", true)) do
-        out[#out + 1] = string.format("shard %s %s buff %s channeled %s", o.Location:ToString(), at(o), tostring(o.RandomBuff), tostring(o.bBeingChanneled))
-    end
-    local hs = all("BP_HealingOrb_C", true)
-    if #hs > 0 then
+    if #(c.shrines or {}) > 0 then
         local ch = {}
-        for _, h in ipairs(hs) do if h.bBeingChanneled then ch[#ch + 1] = at(h) end end
-        out[#out + 1] = string.format("health shrines %d (channeled: %s)", #hs, table.concat(ch, " "))
+        for _, h in ipairs(c.shrines) do if valid(h) and h.bBeingChanneled then ch[#ch + 1] = at(h) end end
+        out[#out + 1] = string.format("health shrines %d (channeled: %s)", #c.shrines, table.concat(ch, " "))
     end
-    out[#out + 1] = "pickups " .. #all("BP_PickupActor_C", true)
-    local ba = first("BP_BuffActor_C", true)
-    if valid(ba) then out[#out + 1] = string.format("prismatic dead %s at %s", tostring(ba.Dead), at(ba)) end
-    local ph = first("BP_RS_Phoenix_C")
+    out[#out + 1] = "pickups " .. tostring(c.pickups)
+    if valid(c.prismatic) then out[#out + 1] = string.format("prismatic dead %s at %s", tostring(c.prismatic.Dead), at(c.prismatic)) end
     if valid(ph) then out[#out + 1] = string.format("aspect boost A %d B %d", ph.RelicsCapturedByTeamA, ph.RelicsCapturedByTeamB) end
     if valid(p) then
+        local ga = {}   -- item abilities that react to carrying: instances and whether they are active
+        for cls, list in pairs(c.ga or {}) do
+            local n, act = 0, 0
+            for _, a in ipairs(list) do if valid(a) then n = n + 1; local ok, v = pcall(function() return a:IsActive() end); if ok and v then act = act + 1 end end end
+            if n > 0 then ga[#ga + 1] = string.format("%s %d/%d", cls:sub(7, -3), act, n) end
+        end
+        table.sort(ga)
+        local holding = false
+        pcall(function() holding = p.AbilitySystemComponent:HasMatchingGameplayTag({ TagName = FName("HoldingOrb") }) end)
+        out[#out + 1] = string.format("items active [%s] holding %s", table.concat(ga, ", "), tostring(holding))
         out[#out + 1] = string.format("hero %s %s %s GEs [%s]", name(p), at(p), attrs(p), table.concat(effects(p), ","))
     end
     return table.concat(out, "; ")
@@ -81,6 +118,7 @@ end
 function T.watch(file)   -- log every change, every 400 ms, until the server ends
     if T.watching then return "already watching" end
     T.watching, T.t0 = true, os.clock()
+    refresh(true)
     local last = ""
     LoopInGameThreadWithDelay(400, function()
         local ok, s = pcall(T.state)
@@ -92,18 +130,22 @@ function T.watch(file)   -- log every change, every 400 ms, until the server end
     return "watching"
 end
 
-function T.tp(what)   -- move the hero next to: shard | own | enemy (Capture Zone) | shrine (Health Shrine)
-    local p = hero()
+local function enemyTurret(p)   -- the turrets have a team
+    for _, t in ipairs(C.turrets or {}) do if valid(t) and t.Team ~= p.PlayerState.Team then return t end end
+end
+
+function T.tp(what)   -- move the hero next to: shard | own | enemy (Capture Zone) | shrine | prismatic | turret
+    local c = cached()
+    local p = c.hero
     if not valid(p) then return "no hero" end
     local target
-    if what == "shard" then target = first("BP_ShrineOrb_BUff_C", true)
-    elseif what == "shrine" then target = first("BP_HealingOrb_C", true)
-    elseif what == "prismatic" then target = first("BP_BuffActor_C", true)
-    elseif what == "turret" then   -- the enemy turret shoots the hero (150 damage/s and more): a real death
-        for _, t in ipairs(all("BP_Turret_C", true)) do if t.Team ~= p.PlayerState.Team then target = t end end
+    if what == "shard" then local rs = rules(); target = rs and rs.BP_ShrineOrbRef
+    elseif what == "shrine" then target = (c.shrines or {})[1]
+    elseif what == "prismatic" then target = c.prismatic
+    elseif what == "turret" then target = enemyTurret(p)   -- it shoots the hero (150 damage/s and more): a real death
     else
-        for _, z in ipairs(all("BP_TeamGoalChannel_Buff_C", true)) do
-            if (what == "own") == (z.Team == p.PlayerState.Team) then target = z end
+        for _, z in ipairs(c.zones or {}) do
+            if valid(z) and (what == "own") == (z.Team == p.PlayerState.Team) then target = z end
         end
     end
     if not valid(target) then return "tp: no " .. what end
@@ -113,49 +155,31 @@ function T.tp(what)   -- move the hero next to: shard | own | enemy (Capture Zon
     return "tp " .. what .. " " .. at(target)
 end
 
-local function enemyTurret(p)   -- damage needs an enemy source (heroes can't hurt themselves); the turrets have a team
-    for _, t in ipairs(all("BP_Turret_C", true)) do if t.Team ~= p.PlayerState.Team then return t end end
-end
-
-function T.ascension()   -- Mask of Ascension: the hero hits the enemy turret after it got a Shard buff
-    local p = hero()
-    local t = enemyTurret(p)
-    if not valid(t) then return "ascension: no enemy turret on this map" end
-    local blue = StaticFindObject("/Game/Gameplay/Effects/Shared/BP_GE_BlueBuff.BP_GE_BlueBuff_C")
-    t.AbilitySystemComponent:BP_ApplyGameplayEffectToSelf(blue, 1, {})
-    local ga = first("BP_GA_RoleGetSwole_C")
-    local before = valid(ga) and ga.TargetBuffCount or "-"
-    local spec = fl():MakeDamageEffectSpec(p, 10, false, 0, true, p)
-    fl():ApplyEffectSpecToTarget(p, t, spec, p)
-    return string.format("ascension: turret effects [%s]; Shard effects counted on the target: %s -> %s",
-        table.concat(effects(t), ","), tostring(before), tostring(valid(ga) and ga.TargetBuffCount or "no ability"))
-end
-
 function T.hitPrismatic()   -- the Feb 2023 destructible Shard: what its damage handler does on a killing blow by the hero
-    local p, ba = hero(), first("BP_BuffActor_C", true)
-    if not valid(ba) then return "no prismatic shard" end
-    ba:Damaged(p, true)
-    return "prismatic shard hit: dead " .. tostring(ba.Dead)
+    local c = cached()
+    if not valid(c.prismatic) then return "no prismatic shard" end
+    c.prismatic:Damaged(c.hero, true)
+    return "prismatic shard hit: dead " .. tostring(c.prismatic.Dead)
 end
 
 function T.vanish()   -- the hero goes away without dying (as when a player leaves)
-    local p = hero()
+    local p = cached().hero
     if not valid(p) then return "no hero" end
     p:K2_DestroyActor()
     return "hero removed"
 end
 
 function T.endRound(team)
-    local gs = first("GS_MOBA_Battle_C")
+    local gs = cached().gs
     gs:FlushNetDormancy(); gs.WinningTeam = team
     gs:DoRoundEndCelebration(0, team, { X = 0, Y = 0, Z = 0 })
     return "round ended, winner " .. team
 end
 
 function T.equipment()
-    local ps, eq, ab = first("BP_PlayerState_MOBA_Hero_C"), {}, {}
+    local p, eq, ab = cached().hero, {}, {}
+    local ps = valid(p) and p.PlayerState
     if valid(ps) then ps.HeroEquipment:ForEach(function(i, e) local it = e:get(); if valid(it) then eq[#eq + 1] = i .. "=" .. it:GetFName():ToString() end end) end
-    local p = hero()
     if valid(p) then
         p.AbilitySystemComponent.ActivatableAbilities.Items:ForEach(function(_, e)
             local a = e:get().Ability

@@ -53,11 +53,26 @@ return function(env)
         GS:FinishSpawningActor(a, xf)
         return a
     end
-    local function actors(className)   -- placed and spawned actors of exactly this class
-        local out = {}
-        for _, o in ipairs(FindAllOf(className) or {}) do
-            if o:IsValid() and not o:GetFullName():find("Default__", 1, true)
-                and o:GetClass():GetFName():ToString() == className then out[#out + 1] = o end
+    -- Placed and spawned actors of exactly this class, through the world's actor list (GetAllActorsOfClass), not an
+    -- object scan (FindAllOf walks every object: 10+ ms in an arena). Runs once per match, at its start.
+    local CLASSES = {
+        BP_ShrineOrb_BUff_C = SHARD,
+        BP_WestShrine_C = "/Game/BluePrints/BP_WestShrine.BP_WestShrine_C",
+        BP_TeamGoalChannel_Buff_C = "/Game/BluePrints/MapObjectives/BP_TeamGoalChannel_Buff.BP_TeamGoalChannel_Buff_C",
+        BP_PickupActor_C = "/Game/BluePrints/MapObjectives/HealthOrb/BP_PickupActor.BP_PickupActor_C",
+    }
+    local function actors(context, className)
+        local out, class = {}, StaticFindObject(CLASSES[className])
+        if not valid(class) then return out end   -- not loaded: no such actor in this level
+        GS = GS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+        local res = {}
+        GS:GetAllActorsOfClass(context, class, res)
+        local list = res.OutActors
+        if list and list.ForEach then
+            list:ForEach(function(_, e)
+                local o = e:get()
+                if valid(o) and o:GetClass():GetFName():ToString() == className then out[#out + 1] = o end
+            end)
         end
         return out
     end
@@ -66,19 +81,19 @@ return function(env)
     -- mode and the rule state then).
     local function setup(gm)
         local map = gm:GetFullName():match("Maps/([%w_]+)%.") or "?"
-        local shard = actors("BP_ShrineOrb_BUff_C")[1]
+        local shard = actors(gm, "BP_ShrineOrb_BUff_C")[1]
         if not shard then
-            local class, west = loadClass(SHARD), actors("BP_WestShrine_C")[1]
+            local class, west = loadClass(SHARD), actors(gm, "BP_WestShrine_C")[1]
             local l = valid(west) and west:K2_GetActorLocation() or { X = 0, Y = 0, Z = 0 }
             shard = class and spawn(gm, class, xform(l.X, l.Y, l.Z, 0, 0.9))
             log("old shards: " .. map .. ": Shard " .. (valid(shard) and "spawned" or "NOT spawned"))
         end
         if valid(shard) then   -- the Capture Zones look the Shard up once, at their BeginPlay
-            for _, zone in ipairs(actors("BP_TeamGoalChannel_Buff_C")) do
+            for _, zone in ipairs(actors(gm, "BP_TeamGoalChannel_Buff_C")) do
                 if not valid(zone.RelicRef_0) then zone.RelicRef_0 = shard end
             end
         end
-        local pickups = actors("BP_PickupActor_C")
+        local pickups = actors(gm, "BP_PickupActor_C")
         if #pickups > 0 then
             local class, spots = loadClass(HEALTH_SHRINE), AUG_SHRINES[map]
             if not spots then
@@ -108,32 +123,52 @@ return function(env)
         end)
         return found
     end
-    -- Also a safety net the game lacks: a carrier whose hero goes away without dying (a player who leaves) would keep
-    -- the Shard "taken" until the round ends; after 2 s the Shard goes back to a shrine, as when a carrier dies.
+    -- Two safety nets the game lacks. A carrier whose hero goes away without dying (a player who leaves) would keep the
+    -- Shard "taken" until the round ends. And from round 2 on a carrier now and then loses the HoldingOrb tag ~1.4 s
+    -- after the pickup while the Shard's HoldingOrb effect stays (cause not found): such a carrier who dies keeps the
+    -- Shard (the game drops it only from a carrier with the tag). Either way, after 2 s the Shard goes back to a
+    -- shrine, as when a carrier dies. The rule states come from the game mode's rule components: no object scans in
+    -- this loop (it runs all match long).
+    local DEAD = { TagName = FName("State.Dead") }
     local track = nil   -- this match: { gm, mode, rs, phoenix, a, b, carrier, lost }
     every(250, function()
         if not track then return end
-        if not valid(track.gm) then track = nil; return end
-        if not valid(track.rs) then track.rs = FindFirstOf("BP_RS_Relic_C"); if not valid(track.rs) then return end end
+        local gm = track.gm
+        if not valid(gm) then track = nil; return end
+        if not valid(track.rs) then
+            local ok, rs = pcall(function() return gm.BP_GR_Relic_Garden2.RuleStateComp end)
+            if not (ok and valid(rs)) then return end
+            track.rs = rs
+        end
         local rs = track.rs
-        if rs.IsOrbTaken and not valid(rs.ShrineOrbCarrier) then
+        local carrier = rs.IsOrbTaken and rs.ShrineOrbCarrier
+        local gone = rs.IsOrbTaken and not valid(carrier)
+        if not gone and valid(carrier) then
+            local ok, dead = pcall(function() return carrier.AbilitySystemComponent:HasMatchingGameplayTag(DEAD) end)
+            gone = ok and dead
+        end
+        if gone then
             track.lost = (track.lost or 0) + 1
             if track.lost == 8 then
                 rs:ResetOrb(true)
-                log("old shards: the carrier is gone - Shard back to a shrine")
+                log("old shards: the carrier is gone or dead - Shard back to a shrine")
             end
         else
             track.lost = nil
         end
         if track.mode == "off" then return end
-        if not valid(track.phoenix) then track.phoenix = FindFirstOf("BP_RS_Phoenix_C"); if not valid(track.phoenix) then return end end
-        if rs.IsOrbTaken and valid(rs.ShrineOrbCarrier) then track.carrier = rs.ShrineOrbCarrier end
+        if not valid(track.phoenix) then
+            local ok, ph = pcall(function() return gm.BP_GR_Phoenix.RuleStateComp end)
+            if not (ok and valid(ph)) then return end
+            track.phoenix = ph
+        end
+        if rs.IsOrbTaken and valid(carrier) then track.carrier = carrier end
         local a, b = rs.TeamARelics, rs.TeamBRelics
         for team, now in pairs({ [1] = a, [2] = b }) do
             local before = team == 1 and track.a or track.b
             if now > before then
-                local carrier = track.carrier
-                if track.mode == "every_capture" or (valid(carrier) and hasMaskOfSpeed(carrier)) then
+                local c = track.carrier
+                if track.mode == "every_capture" or (valid(c) and hasMaskOfSpeed(c)) then
                     local ph = track.phoenix
                     if team == 1 then ph.RelicsCapturedByTeamA = ph.RelicsCapturedByTeamA + 1
                     else ph.RelicsCapturedByTeamB = ph.RelicsCapturedByTeamB + 1 end
