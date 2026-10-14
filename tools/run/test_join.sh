@@ -26,6 +26,11 @@ LOCKIN_BTN='lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=
 ' local vis=h:ShowSelectHeroBtn(); local seat=pc.PlayerState.ChosenSlot;'\
 ' if vis == 0 then h:BndEvt__ReadyBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature() end'\
 ' return string.format("lock in button %s (seat %d, draft step %d, order %s)", vis == 0 and "VISIBLE, clicked" or "HIDDEN", seat, gs.GS_HeroSelectStep, gs.DraftOrderJSONStr:ToString():gsub("%s", ""))'
+LOBBY_SERVER='lua local gm=FindFirstOf("BP_GM_Lobby_GameMode_C"); local gs=FindFirstOf("GS_Lobby_GameState_C"); if not (gm and gm:IsValid() and gs and gs:IsValid()) then return "server lobby: none" end'\
+' local gi=FindFirstOf("BP_MOBAInstance_C"); local t={} gs.PlayerArray:ForEach(function(_, e) local p=e:get() local ok, s=pcall(function()'\
+' return string.format("%s seat=%d owner=%s hero=%s locked=%s", p:GetPlayerName():ToString(), p.ChosenSlot, tostring(p.IsLobbyOwner), p.ChosenHero:ToString(), tostring(p.IsLockedIn)) end) t[#t+1]=ok and s or "?" end)'\
+' return string.format("server lobby: state=%d mode=%d max=%d size=%d step=%d entry=%.0f/%.0f unreserve=%.0f/%.0f | %s", gm.LobbyState, gi.MapGameMode, gm.MaxPlayers, gs.MatchSize,'\
+' gs.GS_HeroSelectStep, gm.EntryTime, gm.EntryTimeOutTime, gm.UnreserveElapsedTime, gm.CheckUnReserveTime, table.concat(t, "; "))'
 pick() {
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("'"$2"'", false); pcall(function() pc:UpdateChosenHero("'"$2"'") end); return "clicked '"$2"'"' >> "$1"
 }
@@ -47,7 +52,8 @@ pick() {
   sleep 1
   echo 'lua local pm=FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu; local t={}'\
 ' for i=0, pm.LobbyList:GetChildrenCount()-1 do t[#t+1]=pm.LobbyList:GetChildAt(i).LobbyName:ToString() end'\
-' return "bob sees " .. #t .. " lobbies: " .. table.concat(t, ", ") .. " (search page " .. pm.LobbyJoinSwitcher:GetActiveWidgetIndex() .. ", replay button visibility " .. tostring(pm.Button_477:GetVisibility()) .. ")"' >> $B
+' local ok, rv = pcall(function() return pm.Button_477:GetVisibility() end)'\
+' return "bob sees " .. #t .. " lobbies: " .. table.concat(t, ", ") .. " (search page " .. pm.LobbyJoinSwitcher:GetActiveWidgetIndex() .. ", replay button visibility " .. (ok and tostring(rv) or "n/a") .. ")"' >> $B
   echo 'lua local pm=FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu; if pm.LobbyList:GetChildrenCount() == 0 then return "bob: nothing to click" end'\
 ' pm.LobbyList:GetChildAt(0):BndEvt__SelectSessionBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); return "bob: clicked the lobby"' >> $B
   sleep 30
@@ -59,6 +65,12 @@ pick() {
   sleep 10
   echo "$LOBBY" >> $A; echo "$LOBBY" >> $B
   echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "alice: launch"' >> $A
+  if [[ -n ${PROBE_LOBBY:-} ]]; then   # the lobby server's state every 2 s after Launch
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do echo "$LOBBY_SERVER" >> $h/fangsctl_cmd.txt; done
+      sleep 2
+    done &
+  fi
   sleep 12; pick $A Lancer; pick $B Berserker
   sleep 4
   for f in $A $B; do echo "$LOCKIN_BTN" >> $f; done
@@ -78,9 +90,10 @@ pick() {
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
   BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts" \
   tools/run/headless.sh "${DURATION:-300}" "${CLIENT_DIR:-clients/fangs-2022-08-26-b9396481}" \
-  -- $R-alice:0:"-TestUser=alice -TestPass=x" -- $R-bob:3:"-TestUser=bob -TestPass=x" 2>&1 | grep -v Segmentation
+  -- $R-alice:0:"-TestUser=alice -TestPass=x ${CLIENT_ARGS:-}" -- $R-bob:3:"-TestUser=bob -TestPass=x ${CLIENT_ARGS:-}" 2>&1 | grep -v Segmentation
 wait
 for n in alice bob; do grep -h 'lua \(ok\|error\)' work/run/$R-$n/MOBA/Binaries/Win64/fangsctl.log | sed "s/^/$n: /" | cut -c1-200; done
 grep -h 'lobby:' work/run/$R-bob/MOBA/Binaries/Win64/fangsboot.log | sed 's/^/bob boot: /' | tail -4
 grep -h 'lua \(ok\|error\): server net' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | sed 's/^/host: /' | cut -c1-200
 grep -h 'tick:' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangshost.log 2>/dev/null | sed 's/^/host: /'
+grep -h 'server lobby' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | grep -v ': none' | sed 's/^/host: /' | cut -c1-260

@@ -50,6 +50,14 @@ end
 -- Object lookups (FindFirstOf/FindAllOf) scan every object: ~3 ms each on a fast PC, several times that on
 -- a small VPS, on the game thread. Loops below avoid them where they can: the game instance never changes,
 -- and lobby-only work is skipped on other maps (currentMap comes from the 3 s heartbeat).
+-- Game build (MOBA/Content/Data/version.txt): the Aug 2022 build is "alpha7...", the Feb 2023 build "Playtest...".
+local IS_AUG2022 = (function()
+    local f = io.open("../../Content/Data/version.txt", "r")
+    if not f then return false end
+    local v = f:read("l") or ""; f:close()
+    return v:find("^alpha7") ~= nil
+end)()
+
 local cachedGI = nil
 local function gameInstance()
     if not (cachedGI and cachedGI:IsValid()) then cachedGI = FindFirstOf("BP_MOBAInstance_C") end
@@ -143,9 +151,10 @@ end
 -- Frame-rate cap by what the server is doing: a full tick (FANGS_TICKRATE, 60) only in matches. An empty
 -- server ticking at 60 used most of a CPU core for nothing, taken from the matches on the same machine.
 local MATCH_FPS = tonumber(os.getenv("FANGS_TICKRATE") or "") or 60
+local LOBBY_FPS = tonumber(os.getenv("FANGS_LOBBY_FPS") or "") or 30
 local fpsCap = nil
 local function capFps(gs, map, players)
-    local want = (map ~= "" and not map:find("LE_Lobby_Map", 1, true)) and MATCH_FPS or (players > 0 and 30 or 15)
+    local want = (map ~= "" and not map:find("LE_Lobby_Map", 1, true)) and MATCH_FPS or (players > 0 and LOBBY_FPS or 15)
     if want == fpsCap then return end
     if not (gs and gs:IsValid()) then return end
     UEHelpers.GetKismetSystemLibrary():ExecuteConsoleCommand(gs, "t.MaxFPS " .. want, nil)
@@ -213,6 +222,9 @@ every(1000, function()
     local name = gm:GetFullName()
     if lastLobbyGM and lastLobbyGM:IsValid() and lastLobbyGM:GetFullName() == name then return end
     lastLobbyGM = gm
+    -- A waiting matchmade lobby ends the server 35 s after the last player joined (EntryTimeOutTime): one
+    -- slow PC loading in killed the lobby for everyone, before our own "start with who's there" (45 s).
+    pcall(function() gm.EntryTimeOutTime = 120 end)
     local gi = gameInstance()
     if gi and gi:IsValid() then gi.bUseAccelbyteBackend = true end
     configureServerSdk()
@@ -318,8 +330,10 @@ local function startWithPresentPlayers(ctx)
     if n < 1 or n >= gm.MaxPlayers then return end
     log(string.format("lobby: owner launched with %d of %d players", n, gm.MaxPlayers))
     setLobbySize(gm, gs, n)
-    -- the hook runs after the RPC body, which already gave up waiting for the missing players: run it again
-    later(function() if gm:IsValid() then gm:ShowHeroSelectionMenu() end end)
+    -- The hook runs after the RPC body. Aug 2022: that body waited for the missing players, so start hero
+    -- select again now that the lobby has its real size. Feb 2023 already started it (launch any time):
+    -- starting it a second time broke a player's connection now and then, which ends the lobby.
+    later(function() if gm:IsValid() and gm.LobbyState == 0 then gm:ShowHeroSelectionMenu() end end)
 end
 
 -- Matchmade games (Play -> Casual/Ranked, MapGameMode 2/3): every joining client sets the lobby to 8
@@ -370,7 +384,8 @@ do
         if matchMap and gs.Level:ToString() ~= matchMap then setLobbyMap(gs) end
         -- Aug 2022 clients ask for hero select once, right on joining - before the lobby has its real
         -- size - and never again. Start it from here once everyone is in (retried until it takes).
-        if gm.LobbyState == 0 and present >= size and gm.MaxPlayers == size and os.time() - lastKick >= 3 then
+        -- Feb 2023 clients start it themselves; starting it for them broke the lobby (timer ran out).
+        if IS_AUG2022 and gm.LobbyState == 0 and present >= size and gm.MaxPlayers == size and os.time() - lastKick >= 3 then
             if lastKick == 0 then log("lobby: all " .. present .. " matched players are in - starting hero select") end
             lastKick = os.time()
             gm:ShowHeroSelectionMenu()
@@ -399,9 +414,36 @@ local function ensureTravel(ctx)
     log("lobby: travelling to " .. level)
 end
 
+local function logLogout(ctx)   -- who leaves a lobby and when (the game logs nothing in Shipping builds)
+    local gm = ctx:get()
+    log(string.format("lobby: a player left (state %d, %d still here)", gm.LobbyState, gm.PlayerControllersRP:GetArrayNum()))
+end
+
+-- Why players leave a lobby and why a lobby ends (the game logs nothing in Shipping builds). Hooked once the
+-- lobby classes are loaded; functions a build doesn't have are skipped.
+do
+    local diag = {
+        [LOBBY_PC .. ":ReturnToMainMenu"] = function(ctx, msg) log("lobby: sending a player back to the menu: " .. str(msg)) end,
+        [LOBBY_GM .. ":KickPlayer"] = function(ctx, id) log("lobby: kicking player " .. str(id)) end,
+        [LOBBY_GM .. ":KickAllPlayers"] = function(ctx, msg) log("lobby: kicking everyone: " .. str(msg)) end,
+        [LOBBY_GM .. ":StopServer"] = function() log("lobby: the game stops the server") end,
+    }
+    local tries = 0
+    every(1000, function()
+        if not StaticFindObject(LOBBY_GM) then return end
+        tries = tries + 1
+        local pending = 0
+        for path, fn in pairs(diag) do
+            if not hooks[path] and StaticFindObject(path) then hook(path, fn) elseif not hooks[path] then pending = pending + 1 end
+        end
+        return pending == 0 or tries > 60
+    end)
+end
+
 local function installLaunchHook()
     return hook(LOBBY_PC .. ":StartHeroSelectionTimer", startWithPresentPlayers)
         and hook(LOBBY_GM .. ":LaunchGame", ensureTravel)
+        and hook(LOBBY_GM .. ":K2_OnLogout", logLogout)
 end
 
 local shimDone = false
