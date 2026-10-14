@@ -45,7 +45,9 @@ Ships with the next deploy. Decision: one deploy once heirlooms are tested too (
    - make them as playable as possible: bug list per hero from showcase and bot matches, runtime fixes;
    - art (splash, portraits, ability and heirloom icons): references rendered from the in-game 3D models,
      images generated outside, shipped as PNGs and loaded at runtime.
-   Next: UI integration research (in progress), clean showcase screenshots.
+   Showcase done (findings in `docs/recon/heroes.md`): all five have animated models; Priest and Scythe
+   have real effects, Sniper uses placeholder effects, Warlock and WaterBlade have few.
+   Next: UI integration research (in progress, agent), then a bug list per hero from bot/2-player matches.
 3. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
