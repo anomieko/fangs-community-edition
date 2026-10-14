@@ -2269,6 +2269,464 @@
      "Item": "Warlock_LMB_DoubleTick",
      "Owner": "Generic"
     }
+   ],
+   "AvailableSkins": [
+    {
+     "Item": "LightningArcherFutureOrange",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFuturePurple",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureBlue",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureRed",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureYellow",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureGreen",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "FireMageArcanaBlue",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "LancerFutureGreen",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFuturePink",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureYellow",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureRed",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureBlue",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureWhite",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightDarkBlue",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightGreen",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightRed",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightGray",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightPink",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightWhite",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "BerserkerFantasyKnightWhite",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightBlue",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightPurple",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightGreen",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightBlack",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightGold",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "ShieldGirlMechanicalBlueCyan",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalRed",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalPurple",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalGreen",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalOrange",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalBluePink",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "IceMageDemonPriestessPurple",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessRed",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessBlue",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessGreen",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessPink",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessGray",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessPurple",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "CatSuppKigurumiBase",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiDarkBlue",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiGreen",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiPurple",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiRainbow",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiRed",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "SidekickDemonLordBase",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "FireMagePostApocBase",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocBlack",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocBlue",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocPink",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocPurple",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocRed",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "SidekickDemonLordGold",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordGreen",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordPink",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordPurple",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordRed",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "CosmicBookMageBlack",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageBlue",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageGreen",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMagePink",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageRed",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageYellow",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "HellhoundBerserkerRed",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerGold",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerGreen",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerGrey",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerPurple",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "LancerValkyrieBase",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieBlue",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieGrey",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyriePurple",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieRainbow",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieRed",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "IceMageDemonPriestessRed",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessYellow",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessBlue",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessGreen",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessBlack",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "BackstabVampireHunterRed",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterYellow",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterCrimson",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterIce",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterPink",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterPurple",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "DemonGirlFutureGold",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureRed",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureBlue",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFuturePurple",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureGreen",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureNeon",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Green",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Blue",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Red",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Pink",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Brown",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Black",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "HellhoundCatSuppRed",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppBlue",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppGreen",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppPurple",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppWhite",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppRainbow",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Gold",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Black",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Rust",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Green",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Ice",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Pink",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_BlueBlack",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Purple",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Orange",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Red",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Ice",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Gold",
+     "Owner": "WoodenSword"
+    }
    ]
   },
   "Playtest021523v1_v0_0_02": {
@@ -4539,6 +4997,464 @@
      "Item": "Warlock_LMB_DoubleTick",
      "Owner": "Generic"
     }
+   ],
+   "AvailableSkins": [
+    {
+     "Item": "LightningArcherFutureOrange",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFuturePurple",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureBlue",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureRed",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureYellow",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "LightningArcherFutureGreen",
+     "Owner": "LightningArcher"
+    },
+    {
+     "Item": "FireMageArcanaBlue",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "LancerFutureGreen",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFuturePink",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureYellow",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureRed",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureBlue",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerFutureWhite",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightDarkBlue",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightGreen",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightRed",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightGray",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightPink",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSwordFantasyKnightWhite",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "BerserkerFantasyKnightWhite",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightBlue",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightPurple",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightGreen",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightBlack",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "BerserkerFantasyKnightGold",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "ShieldGirlMechanicalBlueCyan",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalRed",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalPurple",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalGreen",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalOrange",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "ShieldGirlMechanicalBluePink",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "IceMageDemonPriestessPurple",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessRed",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessBlue",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessGreen",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessPink",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessGray",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "BattleMonkLavaGoddessPurple",
+     "Owner": "BattleMonk"
+    },
+    {
+     "Item": "CatSuppKigurumiBase",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiDarkBlue",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiGreen",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiPurple",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiRainbow",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "CatSuppKigurumiRed",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "SidekickDemonLordBase",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "FireMagePostApocBase",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocBlack",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocBlue",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocPink",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocPurple",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "FireMagePostApocRed",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "SidekickDemonLordGold",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordGreen",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordPink",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordPurple",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "SidekickDemonLordRed",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "CosmicBookMageBlack",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageBlue",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageGreen",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMagePink",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageRed",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "CosmicBookMageYellow",
+     "Owner": "BookMage"
+    },
+    {
+     "Item": "HellhoundBerserkerRed",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerGold",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerGreen",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerGrey",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "HellhoundBerserkerPurple",
+     "Owner": "Berserker"
+    },
+    {
+     "Item": "LancerValkyrieBase",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieBlue",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieGrey",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyriePurple",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieRainbow",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerValkyrieRed",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "IceMageDemonPriestessRed",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessYellow",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessBlue",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessGreen",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "IceMageDemonPriestessBlack",
+     "Owner": "IceMage"
+    },
+    {
+     "Item": "BackstabVampireHunterRed",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterYellow",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterCrimson",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterIce",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterPink",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "BackstabVampireHunterPurple",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "DemonGirlFutureGold",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureRed",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureBlue",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFuturePurple",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureGreen",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "DemonGirlFutureNeon",
+     "Owner": "DemonGirl"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Green",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Blue",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Red",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Pink",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Brown",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "Gunslinger_ChaosCorp_Black",
+     "Owner": "Gunslinger"
+    },
+    {
+     "Item": "HellhoundCatSuppRed",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppBlue",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppGreen",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppPurple",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppWhite",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "HellhoundCatSuppRainbow",
+     "Owner": "CatSupp"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Gold",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Black",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Rust",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Green",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Ice",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_HeavensGear_Pink",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_BlueBlack",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Purple",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Orange",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Red",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Ice",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "WoodenSword_DeathGod_Gold",
+     "Owner": "WoodenSword"
+    }
    ]
   },
   "alpha7.0.7.51": {
@@ -6509,6 +7425,339 @@
  "season": {},
  "HeroLevelRewards": {},
  "Mission": {},
+ "CECatalog": {
+  "fangs": {
+   "Sticker": [
+    "FireMageYa",
+    "FireMageGG",
+    "BerserkerPog",
+    "Monkas",
+    "LightningArcher4Head",
+    "LightningArcher5Head",
+    "FireMageHypers",
+    "BerserkerThink",
+    "LightningArcherDead",
+    "StickerDemonGirl1",
+    "StickerShieldGirl1",
+    "StickerIceMage1",
+    "StickerLightningArcher1",
+    "StickerWoodenSword1",
+    "StickerWoodenSword2",
+    "StickerBattleMonk1",
+    "StickerAniFireMage1",
+    "StickerAniFireMage2",
+    "StickerAniBackstab1",
+    "StickerAniBookMage1",
+    "StickerAniBerserker1",
+    "StickerAniCatSupp1",
+    "StickerAniDemonGirl1",
+    "StickerAniSidekick1",
+    "StickerAniSidekick2",
+    "StickerAniTurtle1",
+    "StickerAniGunslinger1",
+    "StickerLancer1",
+    "sticker_fiorne_akanbe",
+    "StickerHyoonOK",
+    "StickerIceMageXmasTaunt",
+    "StickerGunslingerXmasGrumpy",
+    "StickerBattleMonkXmasHappy",
+    "StickerShieldGirlXmasGrumpy",
+    "StickerIceMageXmasMugSip",
+    "StickerCapybaraTY",
+    "StickerCapybaraGG",
+    "StickerCapybaraOK",
+    "Sticker_100fongs_backstab",
+    "Sticker_chill_lancer",
+    "sticker_carioca_icemage",
+    "sticker_mathlady_battlemonk",
+    "sticker_sadhappy_bookmage"
+   ],
+   "Sigil": [
+    "sigil_supportive_rocksprite",
+    "sigil_alpha_reward",
+    "sigil_fifi",
+    "sigil_fat_bird_friend",
+    "sigil_vitalwrath_charm",
+    "sigil_sylverin",
+    "sigil_acaras_crown",
+    "sigil_annihilators_tome",
+    "sigil_warriors_bounty",
+    "sigil_deathmender",
+    "sigil_pin_cushion",
+    "sigil_nanaley",
+    "sigil_lord_precious_iii",
+    "sigil_aegis_sprite",
+    "sigil_mothers_keepsake",
+    "sigil_omen_of_the_warlands",
+    "sigil_bulls_blessing",
+    "sigil_allseeing_death_mask",
+    "sigil_rejuvenating_assistant",
+    "sigil_sand_timer",
+    "sigil_branch_squire",
+    "sigil_ghost_snake",
+    "sigil_omen_of_vermilia",
+    "sigil_demons_bounty",
+    "sigil_bullwhack",
+    "sigil_speedy_moonshine",
+    "sigil_crownguards_commendation",
+    "sigil_verminlias_totem",
+    "sigil_healing_talisman",
+    "sigil_omen_of_the_cursed",
+    "sigil_klaive_untethered",
+    "sigil_binding_witch_hat",
+    "sigil_boos_eyeglasses",
+    "sigil_omen_of_the_ralia",
+    "sigil_vanquish_glasses",
+    "sigil_fiorne_akanbe",
+    "sigil_hyooncorgi",
+    "sigil_demongirlxmasgift",
+    "sigil_berserkerxmassnowman",
+    "sigil_corgixmasderp",
+    "sigil_firemagexmascookie",
+    "sigil_early_bird_tufts",
+    "sigil_bluemacaw_brazil"
+   ],
+   "Banner": [
+    "banner_redlightning",
+    "banner_capybaracool",
+    "banner_hyoonmoonswoon",
+    "banner_ffsadeishir",
+    "banner_cuddlekingdomboo",
+    "banner_hellhoundaxe",
+    "banner_hellhoundzoey",
+    "banner_hotheadbrutus",
+    "banner_fiorneakanbe",
+    "banner_chibifangs1",
+    "banner_chibifangs2",
+    "banner_heroicrose",
+    "banner_slayyourwayhazy",
+    "banner_pensiveyanari",
+    "banner_rosesarered",
+    "banner_gunslingersgaze",
+    "banner_waterdancer",
+    "banner_wintersgrip",
+    "banner_phoenixrising",
+    "banner_bellowroth",
+    "banner_tuftsnoir",
+    "banner_redfangsfangs",
+    "banner_merryfangmas",
+    "banner_fiornestreamer",
+    "banner_redplayfangs",
+    "banner_slayyourwayfangs",
+    "banner_groovy_boo"
+   ],
+   "Title": [
+    "title_nerfbrutusclub",
+    "title_alphachosenone",
+    "title_seeherokillhero",
+    "title_whatsanobjective",
+    "title_astraduh",
+    "title_rayoisbaeyo",
+    "title_icequeen",
+    "title_aspectaddict",
+    "title_borntobewylde",
+    "title_baobucksminer",
+    "title_burnitall",
+    "title_bigshatter",
+    "title_zykaonishir",
+    "title_oopsforgotiwascaptain",
+    "title_rushb",
+    "title_notyourcaptain",
+    "title_soloartist",
+    "title_idontreadaugments",
+    "title_borntofiorne",
+    "title_phoenixrider",
+    "title_bigboi",
+    "title_itchyitchy",
+    "title_hidesinbrush",
+    "title_notmymain",
+    "title_bronzehalla",
+    "title_mymainisdiamond",
+    "title_onemoregame",
+    "title_cantendonaloss",
+    "title_itsthewarmupgame",
+    "title_fiorneapologist",
+    "title_brohammer",
+    "title_gotcarried",
+    "title_diedintutorial",
+    "title_1v4specialist",
+    "title_pushtheaspect",
+    "title_5throundenthusiast",
+    "title_dontworrywescale",
+    "title_imlagging",
+    "title_lmbcatcher",
+    "title_kdachaser",
+    "title_statspadder",
+    "title_captaintunnelvision",
+    "title_totalfanger",
+    "title_oopsisharded",
+    "title_captainkillonly",
+    "title_alwaysonaspect",
+    "title_dashdelivery",
+    "title_sitsonshard",
+    "title_metaabuser",
+    "title_onetrick",
+    "title_sweatproof",
+    "title_playingonhighping",
+    "title_anticaptain",
+    "title_forgetstoreadyup",
+    "title_fiornefanclub",
+    "title_bot",
+    "title_hotshot",
+    "title_beastmode",
+    "title_notdeadyet",
+    "title_tryhard",
+    "title_dancingdodger",
+    "title_spintowin",
+    "title_itsfangintime",
+    "title_captainguardian",
+    "title_captainhunter",
+    "title_aspectwarrior",
+    "title_aspectguide",
+    "title_shardenchanter",
+    "title_shardrunner",
+    "title_backcapper",
+    "title_shardgamer",
+    "title_duelist",
+    "title_engager",
+    "title_rumblechampion",
+    "title_facetanking",
+    "title_unlucky",
+    "title_rosebeforethrows",
+    "title_ez30",
+    "title_mmmmykiona",
+    "title_ettubrutus"
+   ],
+   "Mount": [
+    "PhoenixMount",
+    "TigerWhite",
+    "TigerEpic",
+    "TigerOrange",
+    "TigerGalactic",
+    "Capybara",
+    "CapybaraSunglasses",
+    "CorgiKlondike",
+    "CorgiPepperjack",
+    "CorgiEinstein"
+   ],
+   "Skin": [
+    "LightningArcherFutureOrange",
+    "LightningArcherFuturePurple",
+    "LightningArcherFutureBlue",
+    "LightningArcherFutureRed",
+    "LightningArcherFutureYellow",
+    "LightningArcherFutureGreen",
+    "FireMageArcanaBlue",
+    "LancerFutureGreen",
+    "LancerFuturePink",
+    "LancerFutureYellow",
+    "LancerFutureRed",
+    "LancerFutureBlue",
+    "LancerFutureWhite",
+    "WoodenSwordFantasyKnightDarkBlue",
+    "WoodenSwordFantasyKnightGreen",
+    "WoodenSwordFantasyKnightRed",
+    "WoodenSwordFantasyKnightGray",
+    "WoodenSwordFantasyKnightPink",
+    "WoodenSwordFantasyKnightWhite",
+    "BerserkerFantasyKnightWhite",
+    "BerserkerFantasyKnightBlue",
+    "BerserkerFantasyKnightPurple",
+    "BerserkerFantasyKnightGreen",
+    "BerserkerFantasyKnightBlack",
+    "BerserkerFantasyKnightGold",
+    "ShieldGirlMechanicalBlueCyan",
+    "ShieldGirlMechanicalRed",
+    "ShieldGirlMechanicalPurple",
+    "ShieldGirlMechanicalGreen",
+    "ShieldGirlMechanicalOrange",
+    "ShieldGirlMechanicalBluePink",
+    "IceMageDemonPriestessPurple",
+    "BattleMonkLavaGoddessRed",
+    "BattleMonkLavaGoddessBlue",
+    "BattleMonkLavaGoddessGreen",
+    "BattleMonkLavaGoddessPink",
+    "BattleMonkLavaGoddessGray",
+    "BattleMonkLavaGoddessPurple",
+    "CatSuppKigurumiBase",
+    "CatSuppKigurumiDarkBlue",
+    "CatSuppKigurumiGreen",
+    "CatSuppKigurumiPurple",
+    "CatSuppKigurumiRainbow",
+    "CatSuppKigurumiRed",
+    "SidekickDemonLordBase",
+    "FireMagePostApocBase",
+    "FireMagePostApocBlack",
+    "FireMagePostApocBlue",
+    "FireMagePostApocPink",
+    "FireMagePostApocPurple",
+    "FireMagePostApocRed",
+    "SidekickDemonLordGold",
+    "SidekickDemonLordGreen",
+    "SidekickDemonLordPink",
+    "SidekickDemonLordPurple",
+    "SidekickDemonLordRed",
+    "CosmicBookMageBlack",
+    "CosmicBookMageBlue",
+    "CosmicBookMageGreen",
+    "CosmicBookMagePink",
+    "CosmicBookMageRed",
+    "CosmicBookMageYellow",
+    "HellhoundBerserkerRed",
+    "HellhoundBerserkerGold",
+    "HellhoundBerserkerGreen",
+    "HellhoundBerserkerGrey",
+    "HellhoundBerserkerPurple",
+    "LancerValkyrieBase",
+    "LancerValkyrieBlue",
+    "LancerValkyrieGrey",
+    "LancerValkyriePurple",
+    "LancerValkyrieRainbow",
+    "LancerValkyrieRed",
+    "IceMageDemonPriestessRed",
+    "IceMageDemonPriestessYellow",
+    "IceMageDemonPriestessBlue",
+    "IceMageDemonPriestessGreen",
+    "IceMageDemonPriestessBlack",
+    "BackstabVampireHunterRed",
+    "BackstabVampireHunterYellow",
+    "BackstabVampireHunterCrimson",
+    "BackstabVampireHunterIce",
+    "BackstabVampireHunterPink",
+    "BackstabVampireHunterPurple",
+    "DemonGirlFutureGold",
+    "DemonGirlFutureRed",
+    "DemonGirlFutureBlue",
+    "DemonGirlFuturePurple",
+    "DemonGirlFutureGreen",
+    "DemonGirlFutureNeon",
+    "Gunslinger_ChaosCorp_Green",
+    "Gunslinger_ChaosCorp_Blue",
+    "Gunslinger_ChaosCorp_Red",
+    "Gunslinger_ChaosCorp_Pink",
+    "Gunslinger_ChaosCorp_Brown",
+    "Gunslinger_ChaosCorp_Black",
+    "HellhoundCatSuppRed",
+    "HellhoundCatSuppBlue",
+    "HellhoundCatSuppGreen",
+    "HellhoundCatSuppPurple",
+    "HellhoundCatSuppWhite",
+    "HellhoundCatSuppRainbow",
+    "BigBoi_HeavensGear_Gold",
+    "BigBoi_HeavensGear_Black",
+    "BigBoi_HeavensGear_Rust",
+    "BigBoi_HeavensGear_Green",
+    "BigBoi_HeavensGear_Ice",
+    "BigBoi_HeavensGear_Pink",
+    "WoodenSword_DeathGod_BlueBlack",
+    "WoodenSword_DeathGod_Purple",
+    "WoodenSword_DeathGod_Orange",
+    "WoodenSword_DeathGod_Red",
+    "WoodenSword_DeathGod_Ice",
+    "WoodenSword_DeathGod_Gold"
+   ]
+  }
+ },
  "Justice": {
   "justiceSchema": "1.1",
   "subsystemEnabled": false,

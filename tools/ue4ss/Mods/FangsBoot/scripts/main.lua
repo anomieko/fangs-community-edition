@@ -247,20 +247,20 @@ local function gameVersion()
     return v
 end
 
-if gameVersion():find("^alpha7") then
-    local PLAY_MENU = "/Game/UI/MainMenu/WB_PlayMenu.WB_PlayMenu_C"
-
-    local function backendBase()   -- from the connection settings the launcher writes (AccelByte BaseUrl)
-        for _, dir in ipairs({ (os.getenv("LOCALAPPDATA") or "") .. "\\MOBA\\Saved\\Config\\WindowsNoEditor",
-                               "..\\..\\Saved\\Config\\WindowsNoEditor" }) do
-            local f = io.open(dir .. "\\Engine.ini", "r")
-            if f then
-                local text = f:read("a"); f:close()
-                local base = text:match('BaseUrl="(http[^"]-)"')
-                if base then return base end
-            end
+local function backendBase()   -- from the connection settings the launcher writes (AccelByte BaseUrl)
+    for _, dir in ipairs({ (os.getenv("LOCALAPPDATA") or "") .. "\\MOBA\\Saved\\Config\\WindowsNoEditor",
+                           "..\\..\\Saved\\Config\\WindowsNoEditor" }) do
+        local f = io.open(dir .. "\\Engine.ini", "r")
+        if f then
+            local text = f:read("a"); f:close()
+            local base = text:match('BaseUrl="(http[^"]-)"')
+            if base then return base end
         end
     end
+end
+
+if gameVersion():find("^alpha7") then
+    local PLAY_MENU = "/Game/UI/MainMenu/WB_PlayMenu.WB_PlayMenu_C"
 
     local pending = nil   -- the one lobby request in flight: {req, kind = "create"|"list", pm, started}
     local lastCreate = 0
@@ -420,5 +420,103 @@ if gameVersion():find("^alpha7") then
         for _ in pairs(hooked) do n = n + 1 end
         if n == 5 then log("custom lobbies via our backend (Aug 2022 build)") end
         return n == 5
+    end)
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Main menu (Feb 2023 build). Dead services off: the Battle Pass and Store tabs, the battle-pass currency and
+-- the "Join our Discord" banner. The missions list (no missions any more) becomes the number of players online
+-- (backend /fangsapi/prod/online-players, every 30 s while the menu is on screen). Tabs are collapsed, never
+-- removed: SelectMainMenuTab picks the tab buttons by their position.
+-- Pages other than Home (Leaderboard, Collection > Artifacts, ...) have no background of their own: they show
+-- the 4K splash video (ClientBkg). Where it doesn't play (Wine without the codec) the image renders white;
+-- then a dark static background replaces it.
+if not gameVersion():find("^alpha7") then
+    local SELECT_TAB = "/Game/UI/MainMenu/WB_MainMenu.WB_MainMenu_C:SelectMainMenuTab"
+    local TAB_BATTLEPASS, TAB_STORE = 4, 5   -- ENUM_MainMenu
+    local COLLAPSED = 1
+    local STATIC_BKG = "/Game/UI/Textures/Client/HeroSelect/HeroMasteryBkg.HeroMasteryBkg"
+
+    local cleaned, shownAt, bkgFixed, onlineText = nil, 0, false, nil
+    local function fixBackground(menu)
+        local player = menu.BkgMediaPlayer
+        if player and player:IsValid() and player:IsPlaying() then return true end
+        if os.time() - shownAt < 5 then return false end   -- the video opens asynchronously
+        local tex = StaticFindObject(STATIC_BKG)
+        if tex and tex:IsValid() then
+            menu.ClientBkg:SetBrushFromTexture(tex, false)
+        else   -- the unplayed video texture is white: tint it dark
+            menu.ClientBkg:SetColorAndOpacity({ R = 0.015, G = 0.03, B = 0.06, A = 1 })
+        end
+        if player and player:IsValid() then player:Close() end
+        log("menu: background video not playing, static background instead")
+        return true
+    end
+    local function hide(what, widget)
+        local ok, e = pcall(function() widget:SetVisibility(COLLAPSED) end)
+        if not ok then log("menu: can't hide " .. what .. ": " .. tostring(e)) end
+    end
+    local function cleanMenu(menu)
+        local pm = menu.WB_PlayMenu
+        hide("battle pass tab", menu.BattlePassTab); hide("store tab", menu.ShopTab)
+        hide("battle pass currency", menu.BpcTipBtn); hide("missions button", menu.MissionBtn)
+        hide("discord banner", pm.PromoButton)
+        -- WB_Missions: VerticalBox_1 > [HorizontalBox_0 > "MISSIONS" header, Image_106 line, ScaleBox_0 > cards]
+        local ok, e = pcall(function()
+            local cards = pm.WB_Missions.MissionsSizeBox:GetParent()
+            cards:SetVisibility(COLLAPSED)
+            onlineText = cards:GetParent():GetChildAt(0):GetChildAt(0)
+            onlineText:SetText(FText("PLAYERS ONLINE"))
+        end)
+        if not ok then log("menu: missions list: " .. tostring(e)) end
+        log("menu: cleaned up")
+    end
+
+    local vr, req, asked = nil, nil, 0
+    local function updateOnline()
+        if req then
+            local status = req:IsValid() and req:GetStatus() or 2   -- 0 not started, 1 processing, 2/3 failed, 4 ok
+            if status < 2 and os.time() - asked < 20 then return end
+            local n = status == 4 and req:GetResponseCode() == 200
+                and tonumber(req:GetResponseContentAsString(true):ToString())
+            if n and onlineText and onlineText:IsValid() then
+                onlineText:SetText(FText(n .. (n == 1 and " PLAYER ONLINE" or " PLAYERS ONLINE")))
+            end
+            req = nil
+        elseif os.time() - asked >= 30 then
+            asked = os.time()
+            local base = backendBase()
+            if not base then return end
+            if not (vr and vr:IsValid()) then vr = FindFirstOf("VaRestSubsystem") end
+            req = vr:ConstructVaRestRequestExt(0, 0)   -- GET, no body
+            req:ProcessURL(base .. "/fangsapi/prod/online-players")
+        end
+    end
+
+    every(1000, function()
+        local gi = gameInstance()
+        local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
+        if not (menu and menu:IsValid() and menu:IsInViewport()) then return end
+        if cleaned ~= menu:GetAddress() then   -- a new main menu after every game
+            cleaned, asked, shownAt, bkgFixed = menu:GetAddress(), 0, os.time(), false
+            cleanMenu(menu)
+        end
+        if not bkgFixed then
+            local ok, done = pcall(fixBackground, menu)
+            bkgFixed = done or not ok
+            if not ok then log("menu: background: " .. tostring(done)) end
+        end
+        updateOnline()
+    end)
+
+    -- The Store also opens from "unlock" buttons on items you don't own (none: everything is owned).
+    every(1000, function()
+        if not StaticFindObject(SELECT_TAB) then return end
+        local ok, e = pcall(RegisterHook, SELECT_TAB, function(ctx, tab)   -- runs after the body
+            local t = tab:get()
+            if t == TAB_BATTLEPASS or t == TAB_STORE then ctx:get():SelectMainMenuTab(0) end
+        end)
+        if not ok then log("menu: tab hook failed: " .. tostring(e)) end
+        return true
     end)
 end

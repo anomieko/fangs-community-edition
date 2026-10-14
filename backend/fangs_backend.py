@@ -200,6 +200,20 @@ async def users_me(request):
                               'platformUserId': '', 'phoneVerified': False, 'deletionStatus': False, 'authType': 'EMAILPASSWD'})
 
 
+# Names for user ids (friends and party lists, leaderboard rows). The SDK sends it with and without the /iam prefix.
+@route('POST', r'(?:/iam)?/v3/public/namespaces/[^/]+/users/bulk/basic')
+async def users_bulk_basic(request):
+    store = request.app['store']
+    if not caller(request):
+        return err(401, 20001, 'unauthorized')
+    body = await request.json()
+    ids = body.get('userIds', []) if isinstance(body, dict) else []
+    users = [u for u in (store.user_by_id(str(i)) for i in ids[:100]) if u]
+    return web.json_response({'data': [{'userId': u['user_id'], 'displayName': tagged_name(u), 'namespace': NAMESPACE,
+                                        'avatarUrl': '', 'publisherAvatarUrl': '', 'platformUserIds': {}}
+                                       for u in users]})
+
+
 # ---------------------------------------------------------------- CloudSave
 
 # GameplayTutorialComplete (WB_MainMenu): 0 forced tutorial, 1 starter-hero pick, 2 menu hints, 3 done.
@@ -214,8 +228,53 @@ def default_player_record(store, uid, key):
     if key == 'PROFILE_INFO_KEY':
         return {'Username': tagged_name(user), 'Version': 'main_v0_0_444', 'AccountType': 'Player',
                 'Hero': 'Berserker', 'Region': 'Local', 'Sigil': '', 'Stickers': [],
-                'GameplayTutorialComplete': TUTORIAL_DONE, 'Cosmetics': {}}
+                'GameplayTutorialComplete': TUTORIAL_DONE, 'Cosmetics': dict(DEFAULT_COSMETICS)}
     return None
+
+
+# Match statistics, written only by the backend from finished matches (see ingest_match): players can't set them.
+# Defaults are served, not stored. MatchesPlayed is left out until the first match ("0% of 0" on the profile).
+DEFAULT_RATING = {'mu': 25.0, 'sigma': 8.33333}   # the game's own defaults (BP_AC_MatchReport)
+STATS_DEFAULTS = {'PROFILE_HISTORY_KEY': {'Matches': []},
+                  'PROFILE_MASTERY_KEY': {'Level': 1, 'XPToNext': 0},
+                  'PROFILE_RATINGS_KEY': {'casual_rating': DEFAULT_RATING, 'ranked_rating': DEFAULT_RATING}}
+
+
+def stats_record(store, uid, key):
+    value = store.data['player_records'].get(uid, {}).get(key)
+    return value if value is not None else json.loads(json.dumps(STATS_DEFAULTS[key]))
+
+
+# What WB_AccountMenu equips at login when Cosmetics has no Banner/Title.
+DEFAULT_COSMETICS = {'Banner': 'banner_redplayfangs', 'Title': 'title_aspectwarrior'}
+
+
+def fix_profile(info):
+    """Repairs profiles written by earlier versions of update-player-info; True if anything changed.
+    Stickers must stay a list (the client's JSON-to-struct conversion stops at a non-array TArray field and
+    drops the fields after it), and Cosmetics only holds plain keys (hero name -> skin, Banner, Title, Mount)."""
+    changed = False
+    st = info.get('Stickers')
+    if not isinstance(st, list) or not all(isinstance(x, str) for x in st):
+        info['Stickers'] = sticker_slots(st); changed = True
+    cos = info.get('Cosmetics')
+    if not isinstance(cos, dict):
+        info['Cosmetics'] = cos = {}; changed = True
+    for k in [k for k in cos if '.' in k or k == 'Hero' or not isinstance(cos[k], str)]:
+        del cos[k]; changed = True
+    return changed
+
+
+def sticker_slots(value):
+    """The sticker wheel's 5 slots ("" = empty); the client sends them as a JSON string of a list."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            value = []
+    if not isinstance(value, list):
+        return []
+    return [x if isinstance(x, str) and re.fullmatch(r'[A-Za-z0-9_]{0,32}', x) else '' for x in value[:5]]
 
 
 def record_body(key, value, user_id=None, is_public=False):
@@ -224,6 +283,21 @@ def record_body(key, value, user_id=None, is_public=False):
     if user_id:
         b['user_id'] = user_id
     return b
+
+
+# Leaderboard rows: one entry per requested user, in request order (the client matches rows by index).
+@route('POST', r'/cloudsave/v1/namespaces/[^/]+/users/bulk/records/(?P<key>[^/]+)/public')
+async def bulk_public_records(request):
+    store, key = request.app['store'], request.match_info['key']
+    if not caller(request):
+        return err(401, 20001, 'unauthorized')
+    body = await request.json()
+    ids = [str(i) for i in (body.get('userIds', []) if isinstance(body, dict) else [])][:100]
+    if key in STATS_DEFAULTS:
+        values = [stats_record(store, uid, key) for uid in ids]
+    else:
+        values = [store.data['player_records'].get(uid, {}).get(key, {}) for uid in ids]
+    return web.json_response({'data': [record_body(key, v, uid, True) for uid, v in zip(ids, values)]})
 
 
 @route('*', r'/cloudsave/v1(?:/admin)?/namespaces/[^/]+/users/(?P<uid>[^/]+)/records/(?P<key>[^/]+?)(?P<pub>/public)?')
@@ -235,6 +309,12 @@ async def player_record(request):
         return err(401, 20001, 'unauthorized')
     if request.method != 'GET' and not is_server(request) and who.get('user_id') != uid:
         return err(403, 20013, 'you can only change your own records')
+    if key in STATS_DEFAULTS:
+        if request.method != 'GET':
+            return err(403, 20013, f'{key} is kept by the server')
+        if not store.user_by_id(uid):
+            return err(404, 18022, f'record {key} not found for user {uid}')
+        return web.json_response(record_body(key, stats_record(store, uid, key), uid, bool(request.match_info['pub'])))
     recs = store.data['player_records'].setdefault(uid, {})
     if request.method == 'GET':
         if key not in recs and (default := default_player_record(store, uid, key)) is not None:
@@ -245,6 +325,8 @@ async def player_record(request):
                 info['GameplayTutorialComplete'] = TUTORIAL_DONE; store.save()
             if user and '#' not in str(info.get('Username', '#')):
                 info['Username'] = tagged_name(user); store.save()
+            if fix_profile(info):
+                store.save()
         if key not in recs:
             return err(404, 18022, f'record {key} not found for user {uid}')
         return web.json_response(record_body(key, recs[key], uid, bool(request.match_info['pub'])))
@@ -338,9 +420,11 @@ async def fangs_update_player_info(request):
         if not isinstance(node.get(k), dict):
             node[k] = {}
         node = node[k]
-    node[path[-1]] = str(body.get('cosmeticId', ''))
-    for k in ('Hero', 'Cosmetics.Title'):   # misfiled by earlier versions of this handler
-        info.get('Cosmetics', {}).pop(k, None)
+    if path == ['Stickers']:
+        node['Stickers'] = sticker_slots(body.get('cosmeticId'))
+    else:
+        node[path[-1]] = str(body.get('cosmeticId', ''))
+    fix_profile(info)
     recs['PROFILE_INFO_KEY'] = info
     store.save()
     return web.json_response(info)
@@ -406,18 +490,23 @@ async def fangs_player_missions(request):
 # The client's inventory (UMOBAInventorySubsystem) only counts items that are in the catalog *and* entitled:
 # catalog item title = internal id (DT_Heroes row, e.g. "Berserker"), first categoryPath segment = item class
 # ("Hero", "Skin", ...), and an entitlement matches a catalog item by name == title. The Play panel stays
-# hidden until the player owns a Hero, so the catalog holds every hero in AvailableHeroes and everyone owns them.
-def catalog_items(store):
-    heroes = []
-    for version in (store.data['game_records'].get('FANGSConfig') or {}).values():
+# hidden until the player owns a Hero, so the catalog holds every hero in AvailableHeroes and everyone owns them;
+# the cosmetics (skins, stickers, sigils, banners, titles, mounts) come from the seed's CECatalog, per namespace.
+def catalog_items(store, namespace=None):
+    records = store.data['game_records']
+    items = []
+    for version in (records.get('FANGSConfig') or {}).values():
         if isinstance(version, dict):
-            heroes += [h for h in version.get('AvailableHeroes', []) if h not in heroes]
+            items += [('Hero', h) for h in version.get('AvailableHeroes', []) if ('Hero', h) not in items]
+    for ns, classes in (records.get('CECatalog') or {}).items():
+        if namespace in (None, ns):
+            items += [(cls, i) for cls, ids in classes.items() for i in ids]
     stamp = '2023-02-15T00:00:00.000Z'
-    return [{'title': h, 'name': h, 'itemId': hashlib.md5(f'hero:{h}'.encode()).hexdigest(), 'sku': f'hero-{h}',
-             'namespace': NAMESPACE, 'categoryPath': '/Hero', 'status': 'ACTIVE', 'entitlementType': 'DURABLE',
-             'itemType': 'INGAMEITEM', 'useCount': 0, 'listable': False, 'purchasable': False, 'regionData': [],
-             'tags': [], 'features': [], 'images': [], 'itemIds': [], 'boundItemIds': [],
-             'createdAt': stamp, 'updatedAt': stamp} for h in heroes]
+    return [{'title': i, 'name': i, 'itemId': hashlib.md5(f'{cls.lower()}:{i}'.encode()).hexdigest(),
+             'sku': f'{cls.lower()}-{i}', 'namespace': NAMESPACE, 'categoryPath': f'/{cls}', 'status': 'ACTIVE',
+             'entitlementType': 'DURABLE', 'itemType': 'INGAMEITEM', 'useCount': 0, 'listable': False,
+             'purchasable': False, 'regionData': [], 'tags': [], 'features': [], 'images': [], 'itemIds': [],
+             'boundItemIds': [], 'createdAt': stamp, 'updatedAt': stamp} for cls, i in dict.fromkeys(items)]
 
 
 def paged(data):
@@ -453,14 +542,63 @@ async def wallet(request):
                               'createdAt': now_iso(), 'updatedAt': now_iso()})
 
 
-@route('GET', r'/platform/public/namespaces/[^/]+/items/byCriteria')
+@route('GET', r'/platform/public/namespaces/(?P<ns>[^/]+)/items/byCriteria')
 async def items_by_criteria(request):
-    return paged(catalog_items(request.app['store']))
+    return paged(catalog_items(request.app['store'], request.match_info['ns']))
 
 
 @route('GET', r'/social/v1/public/namespaces/[^/]+/users/[^/]+/statitems')
 async def stat_items(request):
     return web.json_response({'data': [], 'paging': {'previous': '', 'next': ''}})
+
+
+# The game server adds kills, damage, ... per player after a match; match statistics come from ingest_match instead.
+@route('PUT', r'/social/v2/admin/namespaces/[^/]+/statitems/value/bulk')
+async def stat_items_bulk(request):
+    if not is_server(request):
+        return err(403, 20013, 'server only')
+    body = await request.json()
+    return web.json_response([{'statCode': i.get('statCode', ''), 'userId': i.get('userId', ''), 'success': True,
+                               'details': {}} for i in (body if isinstance(body, list) else []) if isinstance(i, dict)])
+
+
+# ---------------------------------------------------------------- Leaderboard
+
+def rank_points(rating):
+    """The profile screen's rank points (WB_ReputationMenu CalcOnlineRank): 90 * (mu - 2 sigma)."""
+    return int(90 * (rating.get('mu', 25.0) - 2 * rating.get('sigma', 8.33333)))
+
+
+def leaderboard(store):
+    """[(user id, points)], best first: everyone who has finished a match."""
+    rows = []
+    for uid, recs in store.data['player_records'].items():
+        if (recs.get('PROFILE_MASTERY_KEY') or {}).get('MatchesPlayed'):
+            rows.append((uid, rank_points((recs.get('PROFILE_RATINGS_KEY') or {}).get('ranked_rating') or {})))
+    return sorted(rows, key=lambda r: -r[1])
+
+
+# The leaderboard code is the season id, which our (empty) season record leaves blank; every code is one board.
+@route('GET', r'/leaderboard/v\d/public/namespaces/[^/]+/leaderboards/[^/]*/users/(?P<uid>[^/]+)')
+async def leaderboard_user(request):
+    uid, rows = request.match_info['uid'], leaderboard(request.app['store'])
+    rank = next((i + 1 for i, (u, _) in enumerate(rows) if u == uid), 0)
+    pts = rows[rank - 1][1] if rank else rank_points(stats_record(request.app['store'], uid, 'PROFILE_RATINGS_KEY')
+                                                     .get('ranked_rating') or {})
+    entry = {'point': pts, 'rank': rank}
+    return web.json_response({'userId': uid, 'allTime': entry, 'current': entry, 'daily': entry, 'monthly': entry,
+                              'weekly': entry})
+
+
+@route('GET', r'/leaderboard/v\d/public/namespaces/[^/]+/leaderboards/[^/]*/(?:alltime|season|month|week|today)')
+async def leaderboard_page(request):
+    rows = leaderboard(request.app['store'])
+    try:
+        offset, limit = max(0, int(request.query.get('offset', 0))), max(0, min(100, int(request.query.get('limit', 20))))
+    except ValueError:
+        offset, limit = 0, 20
+    return web.json_response({'data': [{'userId': u, 'point': p} for u, p in rows[offset:offset + limit]],
+                              'paging': {'first': '', 'last': '', 'previous': '', 'next': ''}})
 
 
 @route('GET', r'/basic/v1/public/misc/time')
@@ -722,19 +860,42 @@ async def lobby_ws(request):
     await ws.prepare(request)
     app, who, log = request.app, caller(request), request.app['log']
     log({'ws': 'lobby', 'event': 'connect', 'who': who})
-    await ws.send_str(lobby_frame(type='connectNotif', lobbySessionID=uuid.uuid4().hex))
-    async for msg in ws:
-        if msg.type != WSMsgType.TEXT:
-            continue
-        log({'ws': 'lobby', 'recv': msg.data})
-        fields = dict(line.split(': ', 1) for line in msg.data.split('\n') if ': ' in line)
-        t, mid = fields.get('type', ''), fields.get('id', '')
-        if t.endswith('Request'):
-            await ws.send_str(lobby_frame(type=t[:-len('Request')] + 'Response', id=mid, code=0))
-        if t == 'createDSRequest':
-            asyncio.create_task(handle_create_ds(app, ws, fields))
-    log({'ws': 'lobby', 'event': 'close', 'who': who})
+    uid = who.get('user_id')   # players only (game hosts log in without a user)
+    if uid:
+        app['lobby_users'].setdefault(uid, set()).add(ws)
+    try:
+        await ws.send_str(lobby_frame(type='connectNotif', lobbySessionID=uuid.uuid4().hex))
+        async for msg in ws:
+            if msg.type != WSMsgType.TEXT:
+                continue
+            log({'ws': 'lobby', 'recv': msg.data})
+            fields = dict(line.split(': ', 1) for line in msg.data.split('\n') if ': ' in line)
+            t, mid = fields.get('type', ''), fields.get('id', '')
+            if t.endswith('Request'):
+                await ws.send_str(lobby_frame(type=t[:-len('Request')] + 'Response', id=mid, code=0))
+            if t == 'createDSRequest':
+                asyncio.create_task(handle_create_ds(app, ws, fields))
+    finally:
+        if uid:
+            socks = app['lobby_users'].get(uid, set())
+            socks.discard(ws)
+            if not socks:
+                app['lobby_users'].pop(uid, None)
+                app['lobby_left'][uid] = time.time()
+        log({'ws': 'lobby', 'event': 'close', 'who': who})
     return ws
+
+
+# Main-menu "players online" (FangsBoot, in place of the missions list): players with an open lobby connection,
+# which the game keeps from login to quit, or who lost it less than a minute ago (map changes, reconnects).
+# Public like the rest of the login screen's data; it is just a number.
+@route('GET', r'/fangsapi/[^/]+/online-players')
+async def fangs_online_players(request):
+    app, now = request.app, time.time()
+    for uid, t in list(app['lobby_left'].items()):
+        if now - t > 60 or uid in app['lobby_users']:
+            del app['lobby_left'][uid]
+    return web.Response(text=str(len(app['lobby_users']) + len(app['lobby_left'])), content_type='text/plain')
 
 
 # ---------------------------------------------------------------- plumbing
@@ -815,6 +976,7 @@ def main():
     app = web.Application(middlewares=[dispatch], client_max_size=16 * 1024 * 1024)
     app['store'], app['log'], app['cfg'] = Store(a.data), log, a
     app['sessions'] = {}
+    app['lobby_users'], app['lobby_left'] = {}, {}   # user id -> open lobby websockets / when the last one closed
     lo, hi = map(int, a.host_ports.split('-'))
     app['hosts'] = HostManager(game_dir=a.game_dir, inst_root=a.instances, ports=range(lo, hi + 1),
                                run_script=a.run_host, backend_addr=f'127.0.0.1:{a.port}', log=log,
