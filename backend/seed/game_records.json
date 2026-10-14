@@ -7682,6 +7682,35 @@
    2700
   ]
  },
+ "CERestoredItems": {
+  "Playtest021523v1_v0_0_02": [
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Actives/RespawnBeacon/ITEM_Generic_RespawnBeacon.ITEM_Generic_RespawnBeacon"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Actives/ScanSweep/ITEM_Generic_ScanSweep.ITEM_Generic_ScanSweep"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Actives/Poisonivy/ITEM_Generic_PoisonIvy.ITEM_Generic_PoisonIvy"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Actives/TankBuster/ITEM_Generic_TankBuster.ITEM_Generic_TankBuster"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Actives/ChannelBlocker/ITEM_Generic_ChannelBlocker.ITEM_Generic_ChannelBlocker"
+   }
+  ]
+ },
  "CECatalog": {
   "fangs": {
    "Sticker": [

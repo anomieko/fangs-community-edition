@@ -39,6 +39,16 @@ cosmetics_feb = augments('cosmetics-feb2023.json')
 levels = augments('levels-feb2023.json')
 
 
+# Cut content back in play: items the developers took out of the in-match pick lists although they still work.
+# restore-feb2023.json lists DT_MOBALoot rows per hero ("Generic": boons and artifacts, every hero); each is
+# verified in a match before it goes in. itempaths-feb2023.json (tools/re/itempaths.py) gives their objects.
+def restored(paths_file, restore_file):
+    paths = augments(paths_file)
+    return [{'Class': '*' if hero == 'Generic' else paths['heroes'][hero],
+             'List': 'GenericItems' if hero == 'Generic' else 'PossibleItems', 'Item': paths['items'][row]}
+            for hero, rows in augments(restore_file).items() for row in rows]
+
+
 version_data = {
     'Servers': [server], 'AvailableHeroes': heroes, 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
     'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
@@ -70,6 +80,8 @@ records = {
     'season': {}, 'Mission': {},
     'HeroLevelRewards': {f'Tier{n}': {'Xp': xp, 'Bonus': False} for n, xp in enumerate(levels['Hero'], 1)},
     'CELevels': levels,   # not read by the client
+    # Not read by the client: FangsBoot gets it from /fangsapi/*/restored-items and adds the items to the player's hero.
+    'CERestoredItems': {'Playtest021523v1_v0_0_02': restored('itempaths-feb2023.json', 'restore-feb2023.json')},
     # Not read by the client: the backend's catalog per AccelByte namespace (Feb/Dec builds use "fangs", Aug
     # "fangsbeta"). Item class = key (the categoryPath), item id = title = entitlement name.
     'CECatalog': {'fangs': {**{k: v for k, v in cosmetics_feb.items() if k != 'Skin'},

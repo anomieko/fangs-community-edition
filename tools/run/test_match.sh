@@ -14,6 +14,9 @@ WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:I
 OUTPARAM='lua local mr=FindFirstOf("BP_AC_MatchReport_C"); local a, b = {}, {}; local ok, r = pcall(function() return mr:GetMatchResults(a, b) end)'\
 ' local function d(t) local o={} for k, v in pairs(t) do local s=tostring(v); pcall(function() s=v:ToString() end); o[#o+1]=tostring(k) .. "=" .. s:sub(1, 80) end return table.concat(o, ",") end'\
 ' return "GetMatchResults ok=" .. tostring(ok) .. " ret=" .. tostring(r) .. " a={" .. d(a) .. "} b={" .. d(b) .. "}"'
+ITEMS='lua local function n(a) if type(a) == "table" then return #a end return a:GetArrayNum() end'\
+' local gi=FindFirstOf("BP_MOBAInstance_C"); local p=StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0).Pawn'\
+' return string.format("items on %s: generic=%d hero=%d offered=%d", p:GetClass():GetFName():ToString(), n(p.GenericItems), n(p.PossibleItems), n(p:GetPossibleItemsSorted()))'
 (
   sleep 40
   printf '%s\n' 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi; return "ready"' \
@@ -21,7 +24,7 @@ OUTPARAM='lua local mr=FindFirstOf("BP_AC_MatchReport_C"); local a, b = {}, {}; 
   sleep 40; echo "$WHERE" >> $A
   echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):UpdateChosenHero("Berserker"); return "picked"' >> $A
   sleep 8; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartMatch(); return "start"' >> $A
-  sleep 75; echo "$WHERE" >> $A; host_cmd "$WHERE"; host_cmd "$OUTPARAM"
+  sleep 75; echo "$WHERE" >> $A; echo "$ITEMS" >> $A; host_cmd "$WHERE"; host_cmd "$OUTPARAM"
   sleep 5; host_cmd 'lua FindFirstOf("GS_MOBA_Battle_C"):SurrenderForceTeamDefeat(2); return "surrendered team B"'
   sleep 15; echo 'shot showui' >> $A; host_cmd "$OUTPARAM"
   sleep 30; echo "$WHERE" >> $A; echo 'shot showui' >> $A
@@ -34,6 +37,7 @@ UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
   -- $R:0:"-TestUser=matcher -TestPass=x" 2>&1 | grep -v Segmentation
 wait
 echo "== client"; grep -h 'lua \|exec' work/run/$R/MOBA/Binaries/Win64/fangsctl.log | cut -c21-400
+grep -h 'restored items' work/run/$R/MOBA/Binaries/Win64/fangsboot.log | cut -c21-200
 echo "== game server"; grep -h 'lua \|match end\|hooked SendEndResults' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangs{ctl,host}.log 2>/dev/null | cut -c21-600
 echo "== backend"; grep -h '"match"' work/logs/$R-backend.jsonl | cut -c1-400
 python3 - "$PWD/work/run/$R-store.json" <<'EOF'

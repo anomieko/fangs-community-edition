@@ -1038,6 +1038,15 @@ async def users_presence(request):
     return web.json_response({'data': rows, **count})
 
 
+# Cut items back in play (seed CERestoredItems, per client build): FangsBoot adds them to the player's hero.
+# One "<pawn class or *>\t<GenericItems|PossibleItems>\t<item object path>" line each (no JSON parser in UE4SS).
+@route('GET', r'/fangsapi/[^/]+/restored-items')
+async def fangs_restored_items(request):
+    build = request.query.get('build', '')
+    rows = ((request.app['store'].data['game_records'].get('CERestoredItems') or {}).get(build)) or []
+    return web.Response(text=''.join(f"{r['Class']}\t{r['List']}\t{r['Item']}\n" for r in rows), content_type='text/plain')
+
+
 # Main-menu "players online" (FangsBoot, in place of the missions list): players with an open lobby connection,
 # which the game keeps from login to quit, or who lost it less than a minute ago (map changes, reconnects).
 # Public like the rest of the login screen's data; it is just a number.
