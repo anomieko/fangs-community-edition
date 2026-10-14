@@ -48,10 +48,15 @@ Nothing.
    output `work/art/refs/`, local only). The game also contains official paintings of the unreleased heroes
    (`docs/recon/heroes.md`): use them for portraits/cards first; generated art for the remaining slots.
    BladeMaster dropped from the unreleased group (grey mannequin, no abilities).
-2. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
+2. **Shards: old carry-and-turn-in vs current kill system** (research in progress, agent). The community wants
+   the old system back; some restored items (e.g. Relic Runner, Me Carry, Shardseeker) may belong to the old one.
+   Questions: is the old mechanic still in the Feb build (switchable from FangsHost?) or only in Aug 2022; which
+   restored and live items depend on which system. Until then the restored items stay as they are; any of them
+   can be switched off with a server-only deploy (`docs/CHANGELOG.md`).
+3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
-3. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
+4. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
 
