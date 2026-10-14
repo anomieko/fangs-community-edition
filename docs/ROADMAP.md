@@ -44,8 +44,9 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
   `backend/seed/make_seed.py` (on; off = Feb 2023 as shipped, the nine parked); sub-switch
   `OLD_SHARDS_ASPECT_SPEEDUP` (off; Shard captures speed the Aspect up). FangsBoot fixes the texts of Mask of
   Mana, Allseer, Mikado's Power Gong. Tested solo on all four arena maps with `tools/run/test_shards.sh` (switch
-  on and off); multiplayer test by the user before the deploy. Not triggered solo: Mask of Ascension's damage,
-  Vital Offering's missile to another Captain, back-cap respawning teammates.
+  on and off; server frames with it on: fps 60, slow 0 after the map load); multiplayer test by the user before
+  the deploy. Not triggered solo: Mask of Ascension's damage, Vital Offering's missile to another Captain, back-cap
+  respawning teammates. Open: the round-2 HoldingOrb tag loss (Known issues).
 
 ## In progress
 
