@@ -31,6 +31,9 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
 
 ## Done, not deployed
 
+- Easier download: public launcher build for GitHub Releases (HTTPS, nothing secret built in) that asks
+  for an invite code (`server/invite.sh`); player steps in `README.md`. Works with today's server (it updates
+  itself to the server's copy); the server's copy remembers the invite after the next deploy.
 - Mask of Mana and Vital Offering parked (they only react to channeled Health Shrines, gone from the Feb
   maps); 33 items restored.
 

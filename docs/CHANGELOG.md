@@ -15,10 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Server only (FangsBoot drops parked items from the list it fetches; no player update).
+Launchers update themselves on the next start; the parked items need no player update (FangsBoot drops parked
+items from the list it fetches).
 
 | Change | Commits | Off switch |
 |---|---|---|
+| Launcher: the server's `FangsCE.exe` remembers the server and join code in its settings, so a player can later switch to the public build without an invite. The public build (GitHub Releases, `launcher/release.sh`) asks for an invite code (`server/invite.sh`) and then updates itself to the server's copy | `1d34ff1` | revert the commit and deploy (the public release only needs deleting on GitHub) |
 | Mask of Mana and Vital Offering parked (off and out of the menus): they only react to channeled Health Shrines, which the Feb maps replaced with walk-over pickups | `345b154` | move them from `_parked_old_health_shrines` back to `Generic` in `backend/seed/restore-feb2023.json` |
 
 ## deploy-2026-10-14-1903 (`5246bf3`, Feb 2023 build)
