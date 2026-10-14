@@ -22,6 +22,9 @@ items from the list it fetches).
 |---|---|---|
 | Launcher: the server's `FangsCE.exe` remembers the server and join code in its settings, so a player can later switch to the public build without an invite. The public build (GitHub Releases, `launcher/release.sh`) asks for an invite code (`server/invite.sh`) and then updates itself to the server's copy | `1d34ff1` | revert the commit and deploy (the public release only needs deleting on GitHub) |
 | Mask of Mana and Vital Offering parked (off and out of the menus): they only react to channeled Health Shrines, which the Feb maps replaced with walk-over pickups | `345b154` | move them from `_parked_old_health_shrines` back to `Generic` in `backend/seed/restore-feb2023.json` |
+| Game servers: no more ~200 ms hitches every few seconds. FangsHost's 2 s / 3 s loops no longer scan all objects during matches (game state through the game instance, players from `PlayerArray`); finished loops idle instead of being cancelled (cancelling stopped other loops in this UE4SS build); the fps cap is re-applied after map changes; the heartbeat adds `frame_ms` (longest frame) and `slow` (frames > 50 ms). Server only (`docs/recon/server-performance.md`) | `a191a4a` | revert the commit and deploy |
+| Game servers: no movies, no CEF helper and no `-log` console window (`server/run-host.sh`): ~10-20% of a core and ~0.6 GB less per server | `b8ae8c7` | revert the commit and deploy |
+| Backend: the 30 s `perf` line covers all heartbeats in its 30 s (`fps_min`, longest `hitch_ms` / `frame_ms`, sum of `slow`, `windows`) instead of the last 3 s window | `329acb8` | revert the commit |
 
 ## deploy-2026-10-14-1903 (`5246bf3`, Feb 2023 build)
 
