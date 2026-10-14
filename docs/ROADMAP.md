@@ -58,7 +58,9 @@ Nothing.
    restored and live items depend on which system. The seven restored artifacts that are about the old shards are
    parked (`_parked_old_shards` in `backend/seed/restore-feb2023.json`, list in `docs/recon/items.md`):
    **turn them back on when the old shards are back.**
-3. **Server smoothness for full 4v4** (in progress, agent: load test with bots, hitch hunt, fixes; local only).
+3. **Server smoothness up to 12 players (6v6)** (in progress, agent: load test with bots, hitch hunt, fixes).
+   Target: no frame over ~50 ms. The user allows load tests on the VPS's game slots when nobody plays (test
+   lobbies only, read-only measurements; deploys still only with the user's OK).
    Live data 14 Oct: arena 1 player ~58 fps / longest frame ~30 ms; 2 players ~40 fps / ~180 ms (up to 254);
    4 players ~42 fps / ~200 ms. The game's net tick is 30 Hz, so the problem is the recurring ~200 ms frames
    (replication stalls = stutter), not the average. Then: verify on the VPS with bots in a quiet moment (ask
@@ -85,6 +87,7 @@ Nothing.
 ## Decisions
 
 - Deploys: ask the user every time; never while people play (`server/deploy.sh` also refuses then).
+- Load tests may use the VPS's game slots when nobody plays (user, 14 Oct); no deploys/restarts from tests.
 - Cut content: restore everything that still works (tested in a match first); hide what doesn't, so
   everything players see is usable.
 - Next deploy ships boons, artifacts and heirlooms together.
