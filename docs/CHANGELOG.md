@@ -15,11 +15,13 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Server only (FangsBoot drops parked items from the list it fetches; no player update).
+Server side, plus FangsBoot texts (players get those by restarting the launcher; older clients just keep the missing
+texts). Test before deploying: multiplayer on the arena maps (the user), `tools/run/test_shards.sh` solo.
 
 | Change | Commits | Off switch |
 |---|---|---|
-| Mask of Mana and Vital Offering parked (off and out of the menus): they only react to channeled Health Shrines, which the Feb maps replaced with walk-over pickups | `345b154` | move them from `_parked_old_health_shrines` back to `Generic` in `backend/seed/restore-feb2023.json` |
+| Old Shard system back: on the arena maps Shards are carried and turned in at a Capture Zone (own zone: the Shard's buff; enemy zone: steal the enemy's buffs, respawn dead teammates); channeled Health Shrines replace the walk-over health pickups; Payload II's Shard works; the destructible Prismatic Shard stays off. The nine artifacts made for it are restored: Mask of Glory, Swiftrunner, Mask of Speed, Shadowbringer, Allseer, Mask of Ascension, Shardseeker, Mask of Mana, Vital Offering (`345b154` parked the last two; the switch restores them). Not on: Aspect speed-up per capture (`OLD_SHARDS_ASPECT_SPEEDUP`) | `7078cae`, `472a42e` | `OLD_SHARDS = False` in `backend/seed/make_seed.py` (server only): Feb 2023 Shards and pickups, the nine parked |
+| FangsBoot: Mask of Mana and Allseer show their descriptions, Mikado's Power Gong its name and description (missing string-table entries) | `17e4bb0` | revert the commit |
 
 ## deploy-2026-10-14-1903 (`5246bf3`, Feb 2023 build)
 
