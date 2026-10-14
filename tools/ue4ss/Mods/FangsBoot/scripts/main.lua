@@ -53,6 +53,22 @@ if playerName then
     end)
 end
 
+
+-- Hero select is a draft: each round lets only certain team slots pick ("rounds": [{"clients": [0]}, ...]),
+-- written for full lobbies. When the slot whose turn it is is empty, nobody gets a Lock In button, the timer
+-- runs out and the lobby kicks everyone. One round with every slot instead: whoever is there picks at once
+-- (the server moves on when all present players have locked in). Set on the lobby game state before its
+-- BeginPlay, which is where the game reads it (server and every player).
+local ALL_PICK = '{"rounds":[{"clients":[0,1,2,3,4,5,6,7]}]}'
+local allPickHooked = pcall(RegisterBeginPlayPreHook, function(ctx)
+    local actor = ctx:get()
+    if not (actor and actor:IsValid()) or actor:GetClass():GetFName():ToString() ~= "GS_Lobby_GameState_C" then return end
+    actor.DraftOrderJSONStr = ALL_PICK
+    actor.DraftOrderBJSONStr = ALL_PICK
+    log("hero select: everyone picks at once")
+end)
+if not allPickHooked then log("hero select: BeginPlay hook unavailable - draft order unchanged") end
+
 local logoDone, loginDone = false, false
 every(500, function()
     local gi = gameInstance()
