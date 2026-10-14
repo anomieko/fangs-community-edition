@@ -47,6 +47,17 @@ local function localControllers()
     return out
 end
 
+-- Object lookups (FindFirstOf/FindAllOf) scan every object: ~3 ms each on a fast PC, several times that on
+-- a small VPS, on the game thread. Loops below avoid them where they can: the game instance never changes,
+-- and lobby-only work is skipped on other maps (currentMap comes from the 3 s heartbeat).
+local cachedGI = nil
+local function gameInstance()
+    if not (cachedGI and cachedGI:IsValid()) then cachedGI = FindFirstOf("BP_MOBAInstance_C") end
+    return cachedGI
+end
+currentMap = ""   -- "/Game/.../LE_Lobby_Map" etc., "" until the first heartbeat
+local function notOnLobby() return currentMap ~= "" and not currentMap:find("LE_Lobby_Map", 1, true) end
+
 local started, removedAt = false, nil
 every(500, function()
     if started then return end
@@ -70,7 +81,7 @@ log("loaded (host mode)")
 -- Safety net: a local player that still shows up on a loaded lobby/arena is removed (never during a level
 -- change, which can leave the server stuck between levels).
 local removedLocal = {}   -- a destroyed controller stays findable until garbage collection
-every(1000, function()
+every(2000, function()
     if not started then return end
     local gs = FindFirstOf("GameStateBase")
     local map = gs and gs:IsValid() and gs:GetFullName():match("Maps/([%w_]+)") or ""
@@ -93,22 +104,21 @@ launched = false   -- the lobby started its match (LaunchGame); the backend stop
 
 -- Server frame rate and hitches for the heartbeat, in real time (world time stops while a match is paused):
 -- frames counted per real second; a hitch shows up as a long gap between runs of this 100 ms sampler.
-local function realTime(gs) return UEHelpers.GetGameplayStatics():GetRealTimeSeconds(gs) end
+-- No object lookups here (each FindFirstOf scans every object, ~3 ms): os.clock() is wall time in this
+-- (MSVC) Lua, the frame counter is global.
 local lastSample, worstGap = nil, 0
 every(100, function()
-    local gs = FindFirstOf("GameStateBase")
-    if not (gs and gs:IsValid()) then lastSample = nil; return end
-    local t = realTime(gs)
+    local t = os.clock()
     if lastSample and t > lastSample then worstGap = math.max(worstGap, t - lastSample) end
     lastSample = t
 end)
-local frameMark = nil   -- {frames, real time, world} at the last heartbeat
-local function frameStats(gs)
+local frameMark = nil   -- {frames, wall time} at the last heartbeat
+local function frameStats()
     local frames = UEHelpers.GetKismetSystemLibrary():GetFrameCount()
-    local t, world = realTime(gs), gs:GetFullName():match("/Game/[^%.]+") or ""
+    local t = os.clock()
     local fps = nil
-    if frameMark and frameMark.world == world and t > frameMark.t then fps = (frames - frameMark.frames) / (t - frameMark.t) end
-    frameMark = { frames = frames, t = t, world = world }
+    if frameMark and t > frameMark.t then fps = (frames - frameMark.frames) / (t - frameMark.t) end
+    frameMark = { frames = frames, t = t }
     local hitch = math.max(0, worstGap - 0.1) * 1000   -- the sampler's own 100 ms isn't a hitch
     worstGap = 0
     return fps, hitch
@@ -118,10 +128,9 @@ end
 -- server ticking at 60 used most of a CPU core for nothing, taken from the matches on the same machine.
 local MATCH_FPS = tonumber(os.getenv("FANGS_TICKRATE") or "") or 60
 local fpsCap = nil
-local function capFps(map, players)
+local function capFps(gs, map, players)
     local want = (map ~= "" and not map:find("LE_Lobby_Map", 1, true)) and MATCH_FPS or (players > 0 and 30 or 15)
     if want == fpsCap then return end
-    local gs = FindFirstOf("GameStateBase")
     if not (gs and gs:IsValid()) then return end
     UEHelpers.GetKismetSystemLibrary():ExecuteConsoleCommand(gs, "t.MaxFPS " .. want, nil)
     fpsCap = want
@@ -132,11 +141,12 @@ every(3000, function()
     local map, players = "", 0
     local gs = FindFirstOf("GameStateBase")
     if gs and gs:IsValid() then map = gs:GetFullName():match("(/Game/[^%.]+)") or "" end
+    currentMap = map
     for _, p in ipairs(FindAllOf("PlayerController") or {}) do
         if p:IsValid() and not p:GetFullName():find("Default__", 1, true) and not isLocal(p) then players = players + 1 end
     end
-    pcall(capFps, map, players)
-    local ok, fps, hitch = pcall(frameStats, gs)
+    pcall(capFps, gs, map, players)
+    local ok, fps, hitch = pcall(frameStats)
     if not ok then fps, hitch = nil, 0 end
     local f = io.open("fangshost_status.json.tmp", "w")
     if f then
@@ -175,12 +185,13 @@ end
 
 local lastLobbyGM = nil
 every(1000, function()
+    if notOnLobby() or (lastLobbyGM and lastLobbyGM:IsValid()) then return end   -- nothing to do: no lookup
     local gm = FindFirstOf("BP_GM_Lobby_GameMode_C")
     if not (gm and gm:IsValid()) or gm == lastLobbyGM then return end
     local name = gm:GetFullName()
     if lastLobbyGM and lastLobbyGM:IsValid() and lastLobbyGM:GetFullName() == name then return end
     lastLobbyGM = gm
-    local gi = FindFirstOf("BP_MOBAInstance_C")
+    local gi = gameInstance()
     if gi and gi:IsValid() then gi.bUseAccelbyteBackend = true end
     configureServerSdk()
     gm:AccelByteServerLogin()
@@ -268,12 +279,12 @@ local function setLobbySize(gm, gs, n)
     gs:FlushNetDormancy(); gs.MatchSize = n
     local push = StaticFindObject("/Script/NetCore.Default__NetPushModelHelpers")
     if push and push:IsValid() then push:MarkPropertyDirtyFromRepIndex(gs, 14, FName("MatchSize")) end
-    local gi = FindFirstOf("BP_MOBAInstance_C")
+    local gi = gameInstance()
     if gi and gi:IsValid() then gi.MapPlayerCount = n end
 end
 
 local function gameMode()   -- ENUM_MapGameMode of this server's lobby (the game instance has it in every build)
-    local gi = FindFirstOf("BP_MOBAInstance_C")
+    local gi = gameInstance()
     return gi and gi:IsValid() and gi.MapGameMode or -1
 end
 
@@ -312,17 +323,20 @@ local function setLobbyMap(gs)   -- the lobby's own random pick (GetRandomMap fr
     if push and push:IsValid() then
         push:MarkPropertyDirtyFromRepIndex(gs, 18, FName("Level")); push:MarkPropertyDirtyFromRepIndex(gs, 15, FName("MapName"))
     end
-    local gi = FindFirstOf("BP_MOBAInstance_C")
+    local gi = gameInstance()
     if gi and gi:IsValid() then gi.MapGameLevel = matchMap; gi.MapName = matchMapName end
     log("lobby: map " .. matchMap .. " (" .. matchMapName .. ")")
 end
 do
     local firstJoin, size, lastKick = nil, nil, 0
+    local gm, gs = nil, nil
     every(500, function()
         if not matchSize then readMatchFile() end
-        if not matchSize then return end
+        if not matchSize or notOnLobby() then return end
         size = size or matchSize
-        local gm, gs = FindFirstOf("BP_GM_Lobby_GameMode_C"), FindFirstOf("GS_Lobby_GameState_C")
+        if not (gm and gm:IsValid() and gs and gs:IsValid()) then
+            gm, gs = FindFirstOf("BP_GM_Lobby_GameMode_C"), FindFirstOf("GS_Lobby_GameState_C")
+        end
         if not (gm and gm:IsValid() and gs and gs:IsValid()) then return end
         if gameMode() ~= 2 and gameMode() ~= 3 then return end
         local present = gm.PlayerControllersRP:GetArrayNum()

@@ -24,7 +24,11 @@ bin=$inst/MOBA/Binaries/Win64
 rm -rf "$bin/ue4ss" "$bin/dwmapi.dll"
 cp -a "$UE4SS_DIST/dwmapi.dll" "$UE4SS_DIST/ue4ss" "$bin/"
 cp -a "$FANGS_MODS/Mods/." "$bin/ue4ss/Mods/"
-cp "$FANGS_MODS/mods.txt" "$bin/ue4ss/Mods/mods.txt"
+# Game servers run only the server mods: every loaded mod costs game-thread time, and the player mod and
+# UE4SS's samples have nothing to do on a server. Prune the folder so no other way of enabling them works.
+for m in "$bin"/ue4ss/Mods/*/; do case $(basename "$m") in shared|FangsHost|FangsCtl) ;; *) rm -rf "$m" ;; esac; done
+rm -f "$bin/ue4ss/Mods/mods.json"
+cp "$FANGS_MODS/mods-server.txt" "$bin/ue4ss/Mods/mods.txt"
 cp "$FANGS_MODS/UE4SS-settings.ini" "$bin/ue4ss/UE4SS-settings.ini"
 # Custom AOBs are only needed for the Development (MOBA.exe) build; Shipping builds scan natively.
 [[ $exe == MOBA.exe ]] && cp -a "$FANGS_MODS/UE4SS_Signatures" "$bin/ue4ss/"
