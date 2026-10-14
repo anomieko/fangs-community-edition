@@ -80,8 +80,8 @@ In Feb the health pickups are the Aug Health Shrine actors (same names, same x/y
   - with the sub-switch: watch the rule state's team counters; a rise is a capture by the last carrier; raise
     `BP_RS_Phoenix_C.RelicsCapturedByTeamA/B`;
   - safety net the game lacks: a carrier whose hero goes away without dying (a player leaving) would keep the Shard
-    "taken" until the round ends, and so would a dead carrier who had lost the HoldingOrb tag (open issue below);
-    after 2 s FangsHost sends it back to a shrine (`ResetOrb`);
+    "taken" until the round ends, and so would a dead carrier the game didn't take it from; after 2 s (a destroyed
+    hero counts at once, by its "pending kill" flag) FangsHost sends it back to a shrine (`ResetOrb`);
   - no object scans while a match runs (`docs/recon/server-performance.md`): the 250 ms loop takes the rule states
     from the game mode's rule components (`gm.BP_GR_Relic_Garden2` / `BP_GR_Phoenix` `.RuleStateComp`); the
     one-time setup finds actors with `GetAllActorsOfClass`.
@@ -95,6 +95,10 @@ Solo custom match, FireMage, four artifacts equipped (slots 1, 4, 7, 8; the solo
 server logs every state change (`shardwatch.log`, condensed by `tools/run/test_shards_log.py`); the client channels
 with the F key's own handler (`InpActEvt_Channel`); the server only moves the hero; deaths come from the enemy
 turret. Evidence in `work/logs/<run>/` (local): `timeline-host-7777.txt`, screenshots, `shardtexts.log`.
+`SEQ=round2` plays round 1 only up to `PRE` (death, shrine, capture, all or none), then `CYCLES` pickup → turn-in
+cycles in round 2 (own and enemy zone in turn; `VANISH=1` adds a last pickup and removes the carrier's hero); the
+watcher logs the carrier's HoldingOrb tag and its item abilities. Each run has its own data folder
+(`work/run/<run>-data`): game servers read the backend's records from there, so runs can go in parallel.
 
 - All four arena maps, switch on (`shards-e1b`, `shards-e2` Embersong; `shards-s6b` Stormheart; `shards-c3`
   Crownwatch; `shards-p2` Payload II): Shard spawns at a shrine ~13 s after the round starts (Payload II: its own
@@ -106,7 +110,8 @@ turret. Evidence in `work/logs/<run>/` (local): `timeline-host-7777.txt`, screen
   690 HP); round 2: counters reset, Shard spawns again. Prismatic Shard hidden, health pickups gone, 42 items
   restored (9 of 9 offered to the hero), every restored item has a name and a description on the client.
 - Carrier's hero removed without dying (`shards-s6b`, as a player leaving): FangsHost sent the Shard back to a
-  shrine after 2 s (without it the Shard stays "taken" until the round ends; seen in an earlier run).
+  shrine (without it the Shard stays "taken" until the round ends; seen in an earlier run). That took 15-48 s
+  (garbage collection); with the pending-kill check 2 s (`shard-fix-2`, `shard-fix-3b`).
 - Items (granted on the server, reactions seen): Swiftrunner +22 % speed while carrying; Shadowbringer ~5 s stealth
   on pickup; Shardseeker channel 2.3 → 1.4 s on Shards and Health Shrines; Allseer (Feb code): damage buff within
   1000 of the Shard (not the speed-on-announce of its text); Mask of Speed: a stack per capture; Mask of Glory:
@@ -123,18 +128,19 @@ turret. Evidence in `work/logs/<run>/` (local): `timeline-host-7777.txt`, screen
 - Not triggered in solo: Mask of Ascension (granted; needs the hero to hit a Shard-buffed enemy), Vital Offering's
   missile to a Captain who isn't the channeler, back-cap respawning dead teammates, two-player play. Bots (custom "AI" lobbies)
   know neither Shards nor Health Shrines, in either system.
-- **Open issue (round 2+)**: now and then a carrier loses the HoldingOrb tag ~1.4 s after the pickup while the
-  Shard's HoldingOrb effect stays (`hold=f` in the timelines; seen in `shards-s6b`, `shards-final`, `shards-r2`,
-  `shards-r2b`, `shards-r2c`, `shards-r2d`: once per round-2 run, on the first, second or third pickup; never in
-  round 1). Swiftrunner's speed and Shadowbringer's stealth stop then (both drop their effect when the tag goes),
-  and such a carrier most likely can't turn the Shard in (`BP_TeamGoalChannel_Buff.CanCharacterChannel` checks the
-  tag; not confirmed) and would keep it when dying (the game drops it only from a carrier with the tag). In the
-  same runs, round-2 Shards that kept the tag were turned in at both zones. Putting the tag back with
-  `MOBAAbilitySystemComponent.SetTagCount` didn't stick (`shards-r2d`, removed). FangsHost's safety net returns
-  the Shard to a shrine 2 s after its carrier dies or leaves. Not the cause: `BP_GE_RemoveHoldingOrb` (it would
-  remove the effect too), `SetTagCount` callers in the Blueprints. Next: find what removes the tag (native or
-  Blueprint, ~1.4 s after the pickup: the channel ability's end, `BP_AC_Channel`, item abilities restarting each
-  round), confirm whether a tagless carrier can turn in, and check in multiplayer.
+- **Round-2 "HoldingOrb tag loss": a test artifact, not a game bug** (closed 2026-10-15). In six earlier runs the
+  carrier's HoldingOrb tag vanished ~1.4 s after the last pickup of round 2 while the Shard stayed "taken". Every time
+  it was the pickup right before the test's `vanish()` step and the loss came in the same second as `vanish()`
+  (FangsCtl log "hero removed"): destroying the hero clears its abilities' state at once, while the hero object stays
+  readable (and the Shard's carrier) until garbage collection, 15 s and more. Round 2 itself is clean: 45 round-2
+  pickups in nine `SEQ=round2` runs kept the tag and were all turned in, at both zones (`shard-r2-none`, `shard-r2-rr`
+  (Swiftrunner), `shard-r2-death`, `shard-r2-capture`, `shard-r2-shrine`, `shard-r2-all` (round 1 as in the full
+  test), `shard-fix-1`, `shard-fix-2`, `shard-fix-3b`; artifacts in turn: Swiftrunner, Shadowbringer, Shardseeker,
+  Mask of Speed, Mask of Glory, Allseer). What it did show: FangsHost's safety net waited for garbage collection
+  before taking the Shard back from a removed carrier (UE4SS's `IsValid()` is true until then); it now also checks the
+  hero's "pending kill" flag (`HasAnyInternalFlags(EInternalObjectFlags.PendingKill)`) and resets the Shard 2 s after
+  the hero is removed. Frame times with it (`shard-fix-2`, run alone): fps 60, `frame_ms` 17-18, `slow` 0 after the
+  map load. Switch off still as before (`shard-fix-off2`).
 
 ## Items that depend on it
 

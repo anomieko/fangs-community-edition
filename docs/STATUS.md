@@ -63,6 +63,9 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
   the lobby server re-reads `Hero` from the profile as the player's pick.
 - UE4SS (this build): a hook on a Blueprint function runs once, after the function body; changing a
   Blueprint function's out parameters from a hook has no effect on the caller.
+- UE4SS: `obj:IsValid()` stays true for a destroyed actor until garbage collection (15 s and more); check
+  `obj:HasAnyInternalFlags(EInternalObjectFlags.PendingKill)` too (`KismetSystemLibrary:IsValid(x)` didn't help:
+  most likely UE4SS's own `IsValid` method answers for the library object).
 
 - Joining a custom lobby from the lobby list: the PLAY button sets the game mode to Casual, which arms the
   lobby screen's 45 s matchmade timeout for the joiner ("Failed to Connect to Match.", then the lobby ends).
