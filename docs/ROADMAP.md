@@ -33,15 +33,14 @@ Ships with the next deploy. Decision: one deploy once heirlooms are tested too (
 - **Unreleased heroes as a separate group** (`916dbd5`): the six are owned, listed in their own Inventory
   section, behind a toggle in custom lobbies' hero select, with a notice on pick (`tools/run/test_unreleased.sh`
   passes). Needs players' FangsBoot update (launcher) and the server seed.
+- **Heirlooms back in play**: 21 hero-specific cut items whose effect code exists (15 for released heroes,
+  6 for Priest/Scythe) are in the restore list; each passed `tools/run/test_items.sh` (equipped, held by the
+  server, abilities still fire). Effects themselves to be confirmed in play. List: `docs/recon/items.md`.
 - FangsBoot: the Battle Pass/Store redirect no longer calls a Blueprint function inside its hook.
 
 ## In progress
 
-1. **Heirlooms (hero-specific cut items).** 21 candidates whose effect code exists in the Feb build:
-   15 for released heroes, 6 for unreleased ones. List and evidence: `docs/recon/items.md`.
-   Test: `tools/run/test_items.sh` (equips through the real slots, checks the server). Lancer's 3 pass;
-   the other 18 run in 12 batches (in progress). Then: add passing ones to the restore list.
-2. **Unreleased heroes.** Playable with full kits: Warlock (Withergrim), Priest (Ellis), WaterBlade (Nuali),
+1. **Unreleased heroes.** Playable with full kits: Warlock (Withergrim), Priest (Ellis), WaterBlade (Nuali),
    Scythe, Sniper. BladeMaster is a shell (no abilities); Grappler, PetSum, VampMage are stubs.
    Showcase test: `tools/run/test_hero.sh` (fires every ability, screenshots). Plan (agreed with the user):
    - separate "Unreleased" group: own row in Inventory, release/unreleased toggle in hero select,
@@ -56,10 +55,10 @@ Ships with the next deploy. Decision: one deploy once heirlooms are tested too (
    lobby shows DT names ("Priest") under the hero grid.
    Art references (in progress, agent): clean renders of every hero's 3D model from the game's own hero capture
    (`BP_CaptureHero`) as inputs for generated art; output `work/art/refs/`, script `tools/run/render_heroes.sh`.
-3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
+2. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
-4. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
+3. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
 

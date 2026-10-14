@@ -51,7 +51,9 @@ Restored (in `backend/seed/restore-feb2023.json`), each verified in a match:
   (tag-only: shrine/orb/channel Blueprints read it). Available on LE_Arena02/06 and LE_Payload03/04.
   EnergyDrink and Prescience point to missing description strings.
 
-Heirloom candidates (effect code present in Feb; not yet tested in a match):
+Heirlooms (effect code present in Feb), restored too: each was equipped through its slot in a match
+(`tools/run/test_items.sh`), the game server had it equipped and the hero's abilities still fired. Whether each
+effect has the intended numbers is not checked; confirm in play.
 - Were playable in Aug 2022 or Dec 2023: FireMageDoubleRangeLMB (Flareshot Monocle), WallOfIgnition
   (Soulflame's Blessing), CircleOfPower (Igniter's Mark), SurgingWinds (Trailblazers),
   Backstab_Passive_StealthSpeed (Anticipation), BigBoi_Skill1_AllyHeal (Vital Seeds),

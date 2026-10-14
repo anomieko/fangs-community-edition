@@ -1,3 +1,14 @@
 {
-"Generic": ["Generic_RespawnBeacon", "Generic_ScanSweep", "Generic_PoisonIvy", "Generic_TankBuster", "Generic_ChannelBlocker", "Generic_Kingslayer", "Generic_RepeatRegicide", "Generic_ShootingGallery", "Generic_MoshPit", "Generic_EnergyDrink", "Generic_RoyalTax", "Generic_ShootTheMoon", "Generic_UnstoppableForce", "Generic_BubbleBobble", "Generic_MeCarry_Garden", "Generic_RelicRunner_Garden", "Generic_RocketFuel", "Generic_Prescience", "Generic_RoleGetSwole", "Generic_LittlePush", "Generic_BobAndWeave"]
+"Generic": ["Generic_RespawnBeacon", "Generic_ScanSweep", "Generic_PoisonIvy", "Generic_TankBuster", "Generic_ChannelBlocker", "Generic_Kingslayer", "Generic_RepeatRegicide", "Generic_ShootingGallery", "Generic_MoshPit", "Generic_EnergyDrink", "Generic_RoyalTax", "Generic_ShootTheMoon", "Generic_UnstoppableForce", "Generic_BubbleBobble", "Generic_MeCarry_Garden", "Generic_RelicRunner_Garden", "Generic_RocketFuel", "Generic_Prescience", "Generic_RoleGetSwole", "Generic_LittlePush", "Generic_BobAndWeave"],
+"FireMage": ["FireMageDoubleRangeLMB", "WallOfIgnition", "CircleOfPower", "SurgingWinds"],
+"Backstab": ["Backstab_Passive_StealthSpeed"],
+"BigBoi": ["BigBoi_Skill1_AllyHeal", "BigBoi_P_BrushHeal"],
+"CatSupp": ["CatSupp_PassiveTotoAOEHPS"],
+"Gunslinger": ["Gunslinger_LRMB8Bullets"],
+"Lancer": ["BloodthirstySpear", "LancerItem19", "DuelistZone"],
+"Priest": ["Priest_Skill3_AttackSpeed"],
+"Scythe": ["Scythe_P_FlameAura", "Scythe_RMB_FreeFire", "Scythe_Skill2_Heal", "Scythe_Skill2_MoreDamage"],
+"ShieldGirl": ["LowHPShieldIncrease"],
+"Sidekick": ["Sidekick_P_WallPin", "Sidekick_Skill3_AOECC"],
+"WoodenSword": ["RowenTanglerootGauntlets"]
 }
