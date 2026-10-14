@@ -17,7 +17,7 @@ Last updated: 2026-10-14.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-14-2306` (`88eb27e`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -28,25 +28,13 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
   removed; FangsBoot lists arrive within seconds (cached); seven old-shard artifacts parked (35 items restored).
 - since 14 Oct 19:03: online list one name per line with server-granted styles (rainbow anomie); smoke test
   account not counted.
+- since 14 Oct 23:06 UTC: old carry Shards and channeled Health Shrines on the arena maps (`OLD_SHARDS` switch;
+  open round-2 bug, see Shards below), the nine shard artifacts restored, game-server stutter fix (no object scans,
+  no movies/CEF/console), launcher remembers its invite, item texts fixed.
 
 ## Done, not deployed
 
-- Easier download: public launcher build for GitHub Releases (HTTPS, nothing secret built in) that asks
-  for an invite code (`server/invite.sh`); player steps in `README.md`. Published 14 Oct as GitHub release
-  `launcher-1d34ff1` (players' link: `.../releases/latest/download/FangsCE.exe`); works with today's server (it
-  updates itself to the server's copy); the server's copy remembers the invite after the next deploy.
-- Mask of Mana and Vital Offering parked (they only react to channeled Health Shrines, gone from the Feb
-  maps); superseded by the old Shard system below, which restores them while it is on.
-- **Old Shard system back, behind one switch** (branch `shards`; `docs/recon/shards.md`): on the arena maps Shards
-  are carried and turned in at a Capture Zone again (own zone: the Shard's buff; enemy zone: steal the enemy's
-  buffs), channeled Health Shrines replace the walk-over pickups, Payload II's Shard works; the Prismatic Shard
-  stays off. The nine artifacts made for it are restored (42 items restored). Switch: `OLD_SHARDS` in
-  `backend/seed/make_seed.py` (on; off = Feb 2023 as shipped, the nine parked); sub-switch
-  `OLD_SHARDS_ASPECT_SPEEDUP` (off; Shard captures speed the Aspect up). FangsBoot fixes the texts of Mask of
-  Mana, Allseer, Mikado's Power Gong. Tested solo on all four arena maps with `tools/run/test_shards.sh` (switch
-  on and off; server frames with it on: fps 60, slow 0 after the map load); multiplayer test by the user before
-  the deploy. Not triggered solo: Mask of Ascension's damage, Vital Offering's missile to another Captain, back-cap
-  respawning teammates. Open: the round-2 HoldingOrb tag loss (Known issues).
+Nothing.
 
 ## In progress
 
@@ -67,19 +55,23 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
    output `work/art/refs/`, local only). The game also contains official paintings of the unreleased heroes
    (`docs/recon/heroes.md`): use them for portraits/cards first; generated art for the remaining slots.
    BladeMaster dropped from the unreleased group (grey mannequin, no abilities).
-2. **Server smoothness up to 12 players (6v6)** (done, not deployed: FangsHost, `server/run-host.sh`,
+2. **Server smoothness up to 12 players (6v6)** (live since `deploy-2026-10-14-2306`: FangsHost, `server/run-host.sh`,
    `backend/hosts.py`; findings and numbers in `docs/recon/server-performance.md`, load test `tools/run/test_perf.sh`).
    Cause of the ~200 ms hitches: FangsHost's 2 s / 3 s loops scanned all objects on the game thread. Locally with
    3 active players + 9 bots: before 10 frames > 50 ms in 140 s (longest 99 ms), after 0 (longest 18 ms); servers
-   also skip movies, CEF and the `-log` console. Next: deploy (user's OK), then compare the VPS `perf` lines of the
+   also skip movies, CEF and the `-log` console. Next: compare the VPS `perf` lines of the
    next real match (`frame_ms`, `slow`, `fps_min`). Open: ntsync on the VPS (capacity, needs kernel + Wine change);
    replication runs at ~20-25 Hz whatever `NetServerMaxTickRate` says, so no 60 Hz net tick from config.
    FangsBoot (players' mod) still cancels finished loops the way that sometimes stopped other loops in FangsHost:
    switch it to idling too (needs a player update; watch for menu lists that stop refreshing).
-3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
+3. **Old Shard system: round-2 bug** (in progress, agent, branch `shards` in the `fangs-shards` worktree). The
+   system is live (`OLD_SHARDS` on; `docs/recon/shards.md`); from round 2 on a carrier now and then loses the
+   HoldingOrb tag ~1.4 s after a pickup (Swiftrunner/Shadowbringer stop, probably can't turn in). Next: narrow down
+   (round 2 without artifacts, then one at a time), fix, then the user's multiplayer test.
+4. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
-4. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
+5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
 

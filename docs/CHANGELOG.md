@@ -15,9 +15,16 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-14-2306 (`88eb27e`, Feb 2023 build)
+
+Forced (`FANGS_DEPLOY_FORCE=1`): the user chose to kick the one player online so they could test the old Shards
+while the round-2 bug below is being fixed.
+
 Launchers update themselves on the next start. The old Shard system is server side; FangsBoot's item texts reach
-players when they restart the launcher (older clients keep the missing texts). Test before deploying: multiplayer on
-the arena maps (the user), `tools/run/test_shards.sh` solo.
+players when they restart the launcher (older clients keep the missing texts). Tested solo
+(`tools/run/test_shards.sh`); multiplayer on the arena maps: the user, after this deploy.
 
 | Change | Commits | Off switch |
 |---|---|---|
