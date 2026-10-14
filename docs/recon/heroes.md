@@ -42,3 +42,35 @@ angel avatar, changed Skill4 animations and VFX pack); Warlock gains a bot behav
 ability Blueprints recooked/changed (19-47 files). So Dec 2023 is only a little further along. Taking pieces
 from it means loading Dec assets in the Feb game (mod pak), asset by asset: data-only assets (animations,
 behaviour trees, effects) are candidates; ability Blueprints depend on native code that may have changed.
+
+## Menus and art for unreleased heroes (Feb 2023 build)
+
+Prototyped in UE4SS Lua on test clients (2026-10-14). Hook rule found then: **never call a Blueprint function
+inside a Blueprint-function hook callback** (the game thread hung twice); read/set properties there and defer
+calls with `ExecuteInGameThreadWithDelay(1, fn)`.
+
+- `gi.bUsePreviewHeroes` is true: menus need the hero's preview asset (`DA_PreviewHeroCollection`, 22 heroes,
+  includes Priest, WaterBlade, Sniper, Warlock, Scythe; BladeMaster has none).
+- **Inventory** (`WB_Heroes.InitHeroSelection`): one `WB_HeroButton` per `AvailableHeroes` entry that has a preview
+  asset, `bEnabled` and a preview `HeroSelectIcon` (only WaterBlade's has one); others are skipped silently.
+  A separate section = own title/note/WrapBox added to `HeroesScrollBox`, the Blueprint's unreleased cards moved
+  into it, own `WB_HeroButton` cards for the skipped ones (click: hook the card's CharacterBtn handler, then
+  deferred `SetupHeroInfo` + `ShowMoreDetails`).
+- **Hero select** (`WB_LobbyHeroSelect.SetupHeroSelect`): 30 fixed buttons filled from `gi.HeroDetailMap`; icon
+  from DT_Heroes `HeroSelectIcon`. A toggle = a 4th `WB_FilterClassButton_C` added to `FilterBtnPanel` after
+  Construct (its click handler hooked); regroup the buttons in a deferred call after `SetupHeroSelect`.
+- **Disclaimer**: a fresh `WB_Confirm_C` (not `Show Confirmation`: its shared dialog keeps other callers' OK
+  handlers). `CancelLabel=""` hides Cancel; it blocks input until OK.
+- **Premade builds** come only from DataTable `DT_Presets` (15 rows, none for unreleased heroes); rows can be added
+  at runtime with UE4SS `dt:AddRow`.
+- **Art slots** (DT_Heroes columns, read via `gi.HeroDetailMap`): `HeroSelectIcon` 256² (hero select, history),
+  `SmallHeroPortrait` 512² (HUD, kill feed), `HeroWheelBkg` 256×128, `HeroTeamBar` 512×128 (loading screen),
+  `HeroOverlay` 2048² full body (pre-round, end of match), `HeroImage` 256², `AnnouncerPortrit` 512²; preview
+  asset `HeroSelectIcon` 256² (inventory card) and `HeroOverlay` 2048² (overview page); skin `LobbyIcon`
+  2048×1024. Unreleased heroes have few of these (BladeMaster's row reuses Rowan's art); ability icons are
+  borrowed except WaterBlade's; heirloom icons: Priest and WaterBlade mostly own, Warlock/Scythe borrowed,
+  Sniper none. No skin rows, so the skin carousels are empty.
+- **Our own art at runtime**: `KismetRenderingLibrary:ImportFileAsTexture2D(gi, path)` loads a PNG (sRGB, no mips;
+  keep a reference, reload when invalid) for `SetBrushFromTexture`/brush properties. Ship PNGs with FangsBoot.
+- **Risk**: a lobby pick is saved as the player's hero; with a hero that has no preview asset the main menu needs
+  a released hero set back.

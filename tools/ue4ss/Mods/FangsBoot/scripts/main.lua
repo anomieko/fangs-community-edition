@@ -555,8 +555,11 @@ if not gameVersion():find("^alpha7") then
     every(1000, function()
         if not StaticFindObject(SELECT_TAB) then return end
         local ok, e = pcall(RegisterHook, SELECT_TAB, function(ctx, tab)   -- runs after the body
-            local t = tab:get()
-            if t == TAB_BATTLEPASS or t == TAB_STORE then ctx:get():SelectMainMenuTab(0) end
+            local t, menu = tab:get(), ctx:get()
+            -- calling a Blueprint function from inside a Blueprint hook can hang the game thread: defer it
+            if t == TAB_BATTLEPASS or t == TAB_STORE then
+                ExecuteInGameThreadWithDelay(1, function() if menu:IsValid() then menu:SelectMainMenuTab(0) end end)
+            end
         end)
         if not ok then log("menu: tab hook failed: " .. tostring(e)) end
         return true
