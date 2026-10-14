@@ -44,8 +44,10 @@ Nothing.
    Menus done (see "Done, not deployed"). Next: a bug list per hero from 2-player matches; art (PNG
    pipeline ready: `ImportFileAsTexture2D`, slots in `docs/recon/heroes.md`); premade builds (`DT_Presets` rows);
    lobby shows DT names ("Priest") under the hero grid.
-   Art references (in progress, agent): clean renders of every hero's 3D model from the game's own hero capture
-   (`BP_CaptureHero`) as inputs for generated art; output `work/art/refs/`, script `tools/run/render_heroes.sh`.
+   Art references done: transparent full-body and bust renders of all heroes (`tools/run/render_heroes.sh`,
+   output `work/art/refs/`, local only). The game also contains official paintings of the unreleased heroes
+   (`docs/recon/heroes.md`): use them for portraits/cards first; generated art for the remaining slots.
+   BladeMaster dropped from the unreleased group (grey mannequin, no abilities).
 2. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
