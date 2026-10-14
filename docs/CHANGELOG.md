@@ -17,6 +17,8 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 | Change | Commits | Off switch |
 |---|---|---|
+| Maps: custom lobbies offer Embersong, Stormheart, Crownwatch; PLAY picks from all three (Crownwatch new). Arena (`LE_Arena01_Map`, a prototype: players hang on "Waiting for players") and Payload II removed; AI custom mode hidden (it spawned no bots) | `fe80e01` | `maps` / `PLAY_MAPS` / `AvailableCustomModes` in `backend/seed/make_seed.py` |
+| Friends: when both players send each other a request, both games now show them as friends (before: one side kept an unanswerable request, no friend in the list, whispers "from ()") | `55a2f1b` | revert the commit |
 | Old Shards: a carrier whose hero is removed without dying (a player who leaves) loses the Shard to a shrine after 2 s instead of 15-48 s (FangsHost checks the hero's pending-kill flag). The "round-2 HoldingOrb tag loss" reported with `deploy-2026-10-14-2306` was a test artifact (`docs/recon/shards.md`); no game change for it | `363bba7` | revert the commit (server only) |
 
 ## deploy-2026-10-14-2306 (`88eb27e`, Feb 2023 build)

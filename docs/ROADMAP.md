@@ -80,6 +80,11 @@ Current deploy: `deploy-2026-10-14-2306` (`88eb27e`); what each deploy changed: 
 
 ## Known issues and small ideas
 
+- Underworld (`LE_UnderWorldArena`, own "stocks" mode: team lives, random spawns; Aug 2022 + Feb 2023 paks) and
+  Arena (`LE_Arena01_Map`, prototype) load on the server, but players stay on the loading screen ("Waiting for
+  players"; `RUN=... MAP=... tools/run/test_match.sh`). Off in the seed; Underworld worth a look (user wants it).
+- VS AI (custom "AI" mode) hidden: the game spawns its bots from `EditorTestClients` (one non-AI entry in the shipped
+  game). Could come back with FangsHost filling empty slots via `GS_MOBA_Battle.SpawnBot` (bots ignore Shards).
 - Test scripts other than `tools/run/test_shards.sh` share `work/run/records` (the backend's records next to
   `--data`): parallel runs with different seeds can switch each other's server-side settings. Give each run its own
   data folder as `test_shards.sh` does.
