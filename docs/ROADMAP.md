@@ -31,7 +31,8 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing.
+- Mask of Mana and Vital Offering parked (they only react to channeled Health Shrines, gone from the Feb
+  maps); 33 items restored.
 
 ## In progress
 
@@ -52,12 +53,13 @@ Nothing.
    output `work/art/refs/`, local only). The game also contains official paintings of the unreleased heroes
    (`docs/recon/heroes.md`): use them for portraits/cards first; generated art for the remaining slots.
    BladeMaster dropped from the unreleased group (grey mannequin, no abilities).
-2. **Shards: old carry-and-turn-in vs current kill system** (research in progress, agent). The community wants
-   the old system back; some restored items (e.g. Relic Runner, Me Carry, Shardseeker) may belong to the old one.
-   Questions: is the old mechanic still in the Feb build (switchable from FangsHost?) or only in Aug 2022; which
-   restored and live items depend on which system. The seven restored artifacts that are about the old shards are
-   parked (`_parked_old_shards` in `backend/seed/restore-feb2023.json`, list in `docs/recon/items.md`):
-   **turn them back on when the old shards are back.**
+2. **Shards: old carry-and-turn-in vs current kill system.** Research done (`docs/recon/shards.md`): the old
+   carry system is complete in the Feb build and the game server can switch it back on (one property at
+   BeginPlay, plus spawning the Shard on maps that lost it); tried solo, it works. Payload II is broken as
+   shipped (no Shard ever appears) and becomes a working carry map with the switch alone. Nine restored
+   artifacts are parked until then (`_parked_old_shards`, `_parked_old_health_shrines`).
+   Next, if the user wants it (about 2-3 days with tests): FangsHost switch with an on/off flag, optional Aug
+   flavour (Aspect speed-up, channeled Health Shrines), un-park the items, two-player tests, group playtest.
 3. **Server smoothness up to 12 players (6v6)** (in progress, agent: load test with bots, hitch hunt, fixes).
    Target: no frame over ~50 ms. The user allows load tests on the VPS's game slots when nobody plays (test
    lobbies only, read-only measurements; deploys still only with the user's OK).
@@ -74,8 +76,10 @@ Nothing.
 
 ## Known issues and small ideas
 
-- Restored artifacts Energy Drink and Prescience point to missing description strings (could be set at
-  runtime). Courage's bonus damage and the artifacts' objective effects are untested in matches.
+- Payload II has no Shard in the Feb build (see Shards above).
+- Energy Drink and Prescience (both parked) point to missing description strings; the texts exist under
+  `position_energydrink_desc` / `position_prescience_desc` (set at runtime when they come back). Courage's
+  bonus damage and the artifacts' objective effects are untested in matches.
 - A full party match (queue → accept → server) is untested; parties live in memory (lost on a backend
   restart).
 - Voice chat (Vivox) is unavailable.
