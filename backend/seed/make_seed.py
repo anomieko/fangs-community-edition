@@ -27,6 +27,12 @@ maps = [('Embersong', 'LE_Arena02_Map'), ('Stormheart', 'LE_Arena06_Map'), ('Are
 # DT_Heroes rows of the released heroes (the remaining rows are unfinished: no names, no owner class).
 heroes = ['Berserker', 'ShieldGirl', 'Lancer', 'Gunslinger', 'Backstab', 'FireMage', 'IceMage', 'LightningArcher',
           'DemonGirl', 'WoodenSword', 'BookMage', 'Sidekick', 'BattleMonk', 'CatSupp', 'BigBoi']
+# Heroes the developers never released, playable as a separate "Unreleased" group (FangsBoot keeps them apart in the
+# menus and shows a notice): DT_Heroes row, name (Withergrim, Ellis and Nuali are their names in the game's texts).
+unreleased = [('Warlock', 'Withergrim'), ('Priest', 'Ellis'), ('WaterBlade', 'Nuali'), ('Scythe', 'Scythe'),
+              ('Sniper', 'Sniper'), ('BladeMaster', 'BladeMaster')]
+
+
 def augments(name):
     return json.loads(Path(__file__).with_name(name).read_text())
 
@@ -60,7 +66,7 @@ def restored(paths_file, restore_file):
 
 
 version_data = {
-    'Servers': [server], 'AvailableHeroes': heroes, 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
+    'Servers': [server], 'AvailableHeroes': heroes + [h for h, _ in unreleased], 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
     'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
     # WB_CreateLobby.SelectGameMode: Duel=2, 2vs2=4, Battle=6, 4vs4=8, 5vs5=10, 6vs6=12, Trio=3, Solo=1, AI=bots
     'AvailableCustomModes': ['Battle', 'Duel', '2vs2', '4vs4', '5vs5', '6vs6', 'Trio', 'Solo', 'AI'],
@@ -70,14 +76,15 @@ version_data = {
     'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
     # The HUD and loadout screens only offer augments listed here (no EnableAugmentProgress: all unlocked).
     # Generated per build from its DT_MOBALoot and hero preview assets by tools/re/augments.py.
-    'AvailableAugments': offered_augments('augments-feb2023.json', 'itempaths-feb2023.json', 'restore-feb2023.json', heroes),
+    'AvailableAugments': offered_augments('augments-feb2023.json', 'itempaths-feb2023.json', 'restore-feb2023.json',
+                                          heroes + [h for h, _ in unreleased]),
     'AvailableSkins': cosmetics_feb['Skin'],
 }
 # Aug 2022 build: no LE_Payload04_Map in its pak, no "AI" custom mode in its create-lobby screen
 alpha7_data = {**version_data,
                'AvailableCustomModes': [m for m in version_data['AvailableCustomModes'] if m != 'AI'],
                'AvailableMaps': [m for m in version_data['AvailableMaps'] if m['Map'] != 'LE_Payload04_Map'],
-               'AvailableAugments': augments('augments-alpha7.json')}
+               'AvailableAugments': augments('augments-alpha7.json'), 'AvailableHeroes': heroes}
 del alpha7_data['AvailableSkins']   # its skin ids differ; it keeps the default skins
 records = {
     # Keyed by the client's MOBA/Content/Data/version.txt. Known builds:
@@ -92,6 +99,8 @@ records = {
     'CELevels': levels,   # not read by the client
     # Not read by the client: FangsBoot gets it from /fangsapi/*/restored-items and adds the items to the player's hero.
     'CERestoredItems': {'Playtest021523v1_v0_0_02': restored('itempaths-feb2023.json', 'restore-feb2023.json')},
+    # Not read by the client: FangsBoot gets it from /fangsapi/*/unreleased-heroes.
+    'CEUnreleasedHeroes': {'Playtest021523v1_v0_0_02': unreleased},
     # Not read by the client: the backend's catalog per AccelByte namespace (Feb/Dec builds use "fangs", Aug
     # "fangsbeta"). Item class = key (the categoryPath), item id = title = entitlement name.
     'CECatalog': {'fangs': {**{k: v for k, v in cosmetics_feb.items() if k != 'Skin'},

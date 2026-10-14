@@ -285,6 +285,35 @@ local function backendBase()   -- from the connection settings the launcher writ
     end
 end
 
+-- A plain-text list from our backend (one line per entry, tab-separated fields). Returns a function to call from
+-- a game-thread loop: it returns nil until the list has arrived (a failed request is retried after 30 s).
+local function backendList(path)
+    local req, asked, rows = nil, 0, nil
+    return function()
+        if rows then return rows end
+        if req then
+            local status = req:IsValid() and req:GetStatus() or 2   -- 0 not started, 1 processing, 2/3 failed, 4 ok
+            if status < 2 and os.time() - asked < 20 then return nil end
+            if status == 4 and req:GetResponseCode() == 200 then
+                rows = {}
+                for line in req:GetResponseContentAsString(true):ToString():gmatch("[^\n]+") do
+                    local fields = {}
+                    for f in line:gmatch("[^\t]+") do fields[#fields + 1] = f end
+                    rows[#rows + 1] = fields
+                end
+            end
+            req = nil
+        elseif os.time() - asked >= 30 then
+            asked = os.time()
+            local base = backendBase()
+            if not base then return nil end
+            req = FindFirstOf("VaRestSubsystem"):ConstructVaRestRequestExt(0, 0)   -- GET, no body
+            req:ProcessURL(base .. path)
+        end
+        return rows
+    end
+end
+
 if gameVersion():find("^alpha7") then
     local PLAY_MENU = "/Game/UI/MainMenu/WB_PlayMenu.WB_PlayMenu_C"
 
@@ -623,27 +652,8 @@ end
 -- GenericItems (the server doesn't check equipped items against them), so the backend's list for this build
 -- (/fangsapi/prod/restored-items) is added to each new hero this player controls.
 do
-    local restore, req, asked, patched = nil, nil, 0, nil
-    local function fetch()
-        if req then
-            local status = req:IsValid() and req:GetStatus() or 2   -- 0 not started, 1 processing, 2/3 failed, 4 ok
-            if status < 2 and os.time() - asked < 20 then return end
-            if status == 4 and req:GetResponseCode() == 200 then
-                restore = {}
-                for cls, list, path in req:GetResponseContentAsString(true):ToString():gmatch("([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)") do
-                    restore[#restore + 1] = { cls = cls, list = list, path = path }
-                end
-                log("restored items: " .. #restore .. " for this build")
-            end
-            req = nil
-        elseif os.time() - asked >= 30 then
-            asked = os.time()
-            local base = backendBase()
-            if not base then return end
-            req = FindFirstOf("VaRestSubsystem"):ConstructVaRestRequestExt(0, 0)   -- GET, no body
-            req:ProcessURL(base .. "/fangsapi/prod/restored-items?build=" .. gameVersion())
-        end
-    end
+    local fetch = backendList("/fangsapi/prod/restored-items?build=" .. gameVersion())
+    local restore, patched = nil, nil
     local function patch(pawn, cls)
         local added, missing = 0, 0
         for _, r in ipairs(restore) do
@@ -661,7 +671,13 @@ do
         log(string.format("restored items: %d added to %s%s", added, cls, missing > 0 and (" (" .. missing .. " not loaded)") or ""))
     end
     every(1000, function()
-        if not restore then return fetch() end
+        if not restore then
+            local rows = fetch()
+            if not rows then return end
+            restore = {}
+            for _, r in ipairs(rows) do restore[#restore + 1] = { cls = r[1], list = r[2], path = r[3] } end
+            log("restored items: " .. #restore .. " for this build")
+        end
         if #restore == 0 then return true end   -- nothing restored for this build
         local gi = gameInstance()
         if not (gi and gi:IsValid()) then return end
@@ -674,5 +690,228 @@ do
         if not cls:find("_Char_C$") then return end   -- heroes only (BP_<Hero>_Char_C)
         patched = name
         patch(pawn, cls)
+    end)
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Unreleased heroes (Feb 2023 build): heroes the developers never released (the backend's list for this build,
+-- /fangsapi/prod/unreleased-heroes) are owned like the others but kept apart: an "UNRELEASED HEROES" section in
+-- Inventory > Heroes, a toggle in custom lobbies' hero select (released heroes are the default; matchmade lobbies
+-- only show released ones) and a notice the first time one is picked in a lobby.
+-- Calling a Blueprint function inside a Blueprint hook can hang the game thread: the hooks note what happened
+-- and the work runs deferred (later()).
+if not gameVersion():find("^alpha7") then
+    local fetch = backendList("/fangsapi/prod/unreleased-heroes?build=" .. gameVersion())
+    local UNREL, ORANGE, CUSTOM = nil, { R = 1.0, G = 0.62, B = 0.18, A = 1.0 }, 4
+    -- the game's own pictures standing in for card art these heroes lack
+    local ICONS = { Warlock = "/Game/UI/Thumbnails/Warlock_Thumb.Warlock_Thumb",
+        Priest = "/Game/UI/Textures/HeroSelectPortraits/PriestPortrait.PriestPortrait",
+        Scythe = "/Game/UI/Textures/Hero3DRenders/Scythe3DFace.Scythe3DFace",
+        Sniper = "/Game/UI/Thumbnails/Sniper_Thumb.Sniper_Thumb",
+        BladeMaster = "/Game/UI/Textures/HeroSelectPortraits/RowanPortrait.RowanPortrait" }
+    local WBL = StaticFindObject("/Script/UMG.Default__WidgetBlueprintLibrary")
+    local own = {}           -- address of a card we made -> hero (its clicks are ours to handle)
+    local mode, toggle, lobby, warned, menuChecked = "released", nil, nil, {}, nil
+
+    local function later(what, fn)
+        ExecuteInGameThreadWithDelay(1, function()
+            local ok, e = pcall(fn)
+            if not ok then log("unreleased heroes (" .. what .. "): " .. tostring(e)) end
+        end)
+    end
+    local function children(panel)
+        local t = {}
+        for i = 0, panel:GetChildrenCount() - 1 do t[#t + 1] = panel:GetChildAt(i) end
+        return t
+    end
+    local function heroOf(w)
+        local ok, s = pcall(function() return w.HeroType:ToString() end)
+        return ok and s or nil
+    end
+
+    local function notice(owner, hero)
+        local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gameInstance(), 0)
+        -- our own dialog: the game's shared one keeps other callers' OK handlers
+        local w = WBL:Create(owner, StaticFindObject("/Game/UI/MainMenu/WB_Confirm.WB_Confirm_C"), pc)
+        w.Message = FText(UNREL[hero] .. " was never released by the developers.<br>Unfinished: art, sounds, "
+            .. "balance and texts may be missing or broken.")
+        w.Title = FText("UNRELEASED HERO"); w.OkLabel = FText("GOT IT"); w.CancelLabel = FText("")
+        w:SetIcon(nil); w:RefreshUI()
+        pcall(function() w.HeaderTxt:SetColorAndOpacity({ SpecifiedColor = ORANGE, ColorUseRule = 0 }) end)
+        w:AddToViewport(210); w:FocusOnButton()
+    end
+
+    -- Inventory > Heroes: the Blueprint lists every owned hero with card art; move the unreleased ones into an
+    -- own section below and add cards for those it skipped (no card art).
+    local function inventory(h)
+        local list = h.HeroButtonList
+        local scroll = list:GetParent()
+        local wrap
+        for _, w in ipairs(children(scroll)) do if w:GetFName():ToString() == "FCE_UnreleasedHeroes" then wrap = w end end
+        if not wrap then
+            local tbc = StaticFindObject("/Script/UMG.TextBlock")
+            local title = StaticConstructObject(tbc, h.WidgetTree, FName("FCE_UnreleasedTitle"))
+            title:SetFont(h.ChampionNameTxt.Font); title.Font.Size = 34
+            title:SetText(FText("UNRELEASED HEROES"))
+            pcall(function() title:SetColorAndOpacity({ SpecifiedColor = ORANGE, ColorUseRule = 0 }) end)
+            local note = StaticConstructObject(tbc, h.WidgetTree, FName("FCE_UnreleasedNote"))
+            note:SetFont(h.OwnedHeroesTxt.Font); note.Font.Size = 18
+            note:SetText(FText("Never finished or released by the developers: expect missing art, bugs and odd balance."))
+            pcall(function() note:SetAutoWrapText(true) end)
+            wrap = StaticConstructObject(StaticFindObject("/Script/UMG.WrapBox"), h.WidgetTree, FName("FCE_UnreleasedHeroes"))
+            wrap:SetInnerSlotPadding({ X = -24.0, Y = 0.0 })   -- as the released heroes' list
+            wrap:SetRenderTranslation({ X = 0.0, Y = -20.0 })
+            scroll:AddChild(title):SetPadding({ Left = 48.0, Top = 16.0, Right = 32.0, Bottom = 0.0 })
+            scroll:AddChild(note):SetPadding({ Left = 48.0, Top = 4.0, Right = 32.0, Bottom = 0.0 })
+            scroll:AddChild(wrap):SetPadding({ Left = 32.0, Top = 32.0, Right = 32.0, Bottom = 32.0 })
+        end
+        wrap:ClearChildren()
+        local have, owned = {}, 0
+        for _, w in ipairs(children(list)) do
+            local hero = heroOf(w)
+            if hero and UNREL[hero] then
+                list:RemoveChild(w); wrap:AddChild(w)
+                w.HeroNameTxt:SetText(FText(UNREL[hero]:upper()))
+                have[hero] = true
+            elseif w.Owned then
+                owned = owned + 1
+            end
+        end
+        local cls = StaticFindObject("/Game/UI/MainMenu/WB_HeroButton.WB_HeroButton_C")
+        for hero, name in pairs(UNREL) do
+            if not have[hero] then
+                local b = WBL:Create(h, cls, nil)
+                b.HeroType = hero; b.Owned = true; b.HeroLevel = 0
+                local tex = ICONS[hero] and StaticFindObject(ICONS[hero])
+                if tex and tex:IsValid() then b.HeroIcon = tex end
+                wrap:AddChild(b)
+                b.HeroNameTxt:SetText(FText(name:upper()))
+                own[b:GetAddress()] = hero
+            end
+        end
+        h.OwnedHeroesTxt:SetText(FText(tostring(owned)))
+        h.TotalHeroesTxt:SetText(FText("/" .. list:GetChildrenCount()))
+    end
+
+    -- Hero select: show either the released or the unreleased heroes (BladeMaster has no preview asset, so the
+    -- Blueprint never lists it: added here), fill the buttons from the start and re-centre the rows.
+    local function regroup(hs)
+        local entries, seen = {}, {}
+        hs.HeroButtonList:ForEach(function(_, e)
+            local b = e:get()
+            local hero = heroOf(b)
+            if b:GetVisibility() == 0 and hero and (mode == "unreleased") == (UNREL[hero] ~= nil) then
+                entries[#entries + 1] = { hero = hero, icon = b.HeroIcon, owned = b.Owned }; seen[hero] = true
+            end
+        end)
+        if mode == "unreleased" then
+            for hero in pairs(UNREL) do
+                local tex = not seen[hero] and ICONS[hero] and StaticFindObject(ICONS[hero])
+                if tex and tex:IsValid() then entries[#entries + 1] = { hero = hero, icon = tex, owned = true } end
+            end
+        end
+        hs:HideAllHeroButtons()
+        local i = 0
+        hs.HeroButtonList:ForEach(function(_, e)
+            i = i + 1
+            local en, b = entries[i], e:get()
+            if en then
+                b.HeroType = en.hero; b.HeroIndex = 0; b.HeroIcon = en.icon; b.Owned = en.owned
+                b.LobbyHeroSelectRef = hs; b:SetVisibility(0); b:UpdateToolTip()
+            end
+        end)
+        hs:CorrectHeroButtonRowCenter()
+        if toggle and toggle:IsValid() then   -- the class filters reset every filter button's look
+            toggle.FilterSelected:SetVisibility(mode == "unreleased" and 4 or 2)
+            toggle.FilterIcon:SetColorAndOpacity(mode == "unreleased" and ORANGE or { R = 1.0, G = 1.0, B = 1.0, A = 1.0 })
+        end
+    end
+
+    local hooked = {}   -- function path -> address of the UFunction hooked (classes are reloaded)
+    local function hook(path, fn)
+        local f = StaticFindObject(path)
+        if not (f and f:IsValid()) or hooked[path] == f:GetAddress() then return end
+        hooked[path] = f:GetAddress()
+        local ok, e = pcall(RegisterHook, path, function(ctx, ...)
+            local s, err = pcall(fn, ctx, ...)
+            if not s then log("unreleased heroes hook: " .. tostring(err)) end
+        end)
+        if not ok then log("unreleased heroes: can't hook " .. path .. ": " .. tostring(e)) end
+    end
+
+    every(1000, function()
+        if not UNREL then
+            local rows = fetch()
+            if not rows then return end
+            UNREL = {}
+            for _, r in ipairs(rows) do UNREL[r[1]] = r[2] or r[1] end
+            log("unreleased heroes: " .. #rows)
+        end
+        if not next(UNREL) then return true end
+        hook("/Game/UI/MainMenu/WB_Heroes.WB_Heroes_C:InitHeroSelection", function(ctx)
+            local h = ctx:get()
+            later("inventory", function() if h:IsValid() then inventory(h) end end)
+        end)
+        hook("/Game/UI/MainMenu/WB_HeroButton.WB_HeroButton_C:BndEvt__WB_HeroButton_CharacterBtn_K2Node_ComponentBoundEvent_3_OnButtonClickedEvent__DelegateSignature", function(ctx)
+            local b = ctx:get()
+            local hero = own[b:GetAddress()]
+            if not hero then return end
+            later("hero page", function()
+                local h = gameInstance().WB_MainMenuRef.WB_Collection.WB_Heroes
+                local preview = h.HeroCollection:GetPreviewHeroByName(hero)
+                if preview and preview:IsValid() then h:SetupHeroInfo(hero, false, false); h:ShowMoreDetails(hero)
+                else notice(b, hero) end
+            end)
+        end)
+        local LOBBY = "/Game/UI/Lobby/"
+        hook(LOBBY .. "WB_FilterClassButton.WB_FilterClassButton_C:BndEvt__WB_FilterClassButton_FilterButton_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature", function(ctx)
+            if not (toggle and toggle:IsValid() and ctx:get():GetAddress() == toggle:GetAddress()) then return end
+            mode = mode == "released" and "unreleased" or "released"
+            local hs = lobby
+            later("toggle", function() if hs and hs:IsValid() then hs:SetupHeroSelect(hs.SearchInput:GetText()) end end)
+        end)
+        hook(LOBBY .. "WB_LobbyHeroSelect.WB_LobbyHeroSelect_C:SetupHeroSelect", function(ctx)
+            local hs = ctx:get()
+            later("hero select", function() if hs:IsValid() then regroup(hs) end end)
+        end)
+        hook(LOBBY .. "WB_LobbyHeroButton.WB_LobbyHeroButton_C:BndEvt__CharacterBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature", function(ctx)
+            local b = ctx:get()
+            local hero = heroOf(b)
+            if hero and UNREL[hero] and not warned[hero] then
+                warned[hero] = true
+                later("notice", function() notice(b, hero) end)
+            end
+        end)
+
+        local gi = gameInstance()
+        if not (gi and gi:IsValid()) then return end
+        -- a lobby's hero select: the toggle (custom lobbies only), released heroes first
+        local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
+        local ok, hs = pcall(function() return pc.WB_LobbyHeroSelectRef end)
+        if ok and hs and hs:IsValid() and not (lobby and lobby:IsValid() and lobby:GetAddress() == hs:GetAddress()) then
+            lobby, mode, warned, toggle = hs, "released", {}, nil
+            if gi.MapGameMode == CUSTOM then
+                local b = WBL:Create(hs, StaticFindObject(LOBBY .. "WB_FilterClassButton.WB_FilterClassButton_C"), nil)
+                b.ClassFilter = 4                          -- Tank: no hero has it, no other button uses it
+                b.ClassIcon = hs.FilterSupportBtn.ClassIcon
+                hs.FilterBtnPanel:AddChild(b)
+                b:SetToolTipText(FText("Unreleased heroes"))
+                toggle = b
+            end
+            regroup(hs)
+        end
+        -- a hero without a preview asset can't be the main menu's hero (picked in a lobby): back to a released one
+        local menu = gi.WB_MainMenuRef
+        if menu and menu:IsValid() and menu:IsInViewport() and menuChecked ~= menu:GetAddress() then
+            menuChecked = menu:GetAddress()
+            local okh, saved = pcall(function() return gi.SavedPlayerInfo.Hero:ToString() end)
+            if okh and UNREL[saved] then
+                local preview = menu.WB_Collection.WB_Heroes.HeroCollection:GetPreviewHeroByName(saved)
+                if not (preview and preview:IsValid()) then
+                    menu:UpdatePlayerHero("Berserker", false)
+                    log("unreleased heroes: menu hero " .. saved .. " has no preview, back to Berserker")
+                end
+            end
+        end
     end)
 end
