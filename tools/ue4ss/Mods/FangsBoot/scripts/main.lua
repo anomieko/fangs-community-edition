@@ -63,8 +63,9 @@ local ALL_PICK = '{"rounds":[{"clients":[0,1,2,3,4,5,6,7]}]}'
 local allPickHooked = pcall(RegisterBeginPlayPreHook, function(ctx)
     local actor = ctx:get()
     if not (actor and actor:IsValid()) or actor:GetClass():GetFName():ToString() ~= "GS_Lobby_GameState_C" then return end
-    actor.DraftOrderJSONStr = ALL_PICK
-    actor.DraftOrderBJSONStr = ALL_PICK
+    -- (the Feb 2023 build already ships this order and has no separate small-lobby order)
+    pcall(function() actor.DraftOrderJSONStr = ALL_PICK end)
+    pcall(function() actor.DraftOrderBJSONStr = ALL_PICK end)
     log("hero select: everyone picks at once")
 end)
 if not allPickHooked then log("hero select: BeginPlay hook unavailable - draft order unchanged") end

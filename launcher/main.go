@@ -122,6 +122,9 @@ func run() error {
 	if m.Launcher != nil && selfUpdate(base, self, m.Launcher) {
 		return nil // the new launcher has taken over
 	}
+	if err := switchBuild(st.InstallDir, m.Build); err != nil {
+		return err
+	}
 	if err := syncFiles(base, st.InstallDir, m); err != nil {
 		return err
 	}
@@ -311,6 +314,47 @@ func safeRel(p string) bool {
 		}
 	}
 	return true
+}
+
+// ---------------------------------------------------------------- builds side by side
+
+// The install folder holds the build the server runs; other builds wait next to it as "<install> [<build>]",
+// so when the server switches builds back and forth the launcher moves folders instead of downloading again.
+var buildRx = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
+
+func installedBuild(installDir string) string {
+	b, err := os.ReadFile(filepath.Join(installDir, "MOBA", "Content", "Data", "version.txt"))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
+}
+
+func parkedDir(installDir, build string) string {
+	return strings.TrimRight(installDir, `\/`) + " [" + build + "]"
+}
+
+func switchBuild(installDir, want string) error {
+	have := installedBuild(installDir)
+	if have == "" || have == want || !buildRx.MatchString(have) || !buildRx.MatchString(want) {
+		return nil // nothing installed yet, same build, or names we don't trust as folder names: just sync
+	}
+	if _, err := os.Stat(parkedDir(installDir, have)); err == nil {
+		return fmt.Errorf("can't set build %s aside: %s already exists - move it away and start again", have, parkedDir(installDir, have))
+	}
+	if err := os.Rename(installDir, parkedDir(installDir, have)); err != nil {
+		return fmt.Errorf("can't set build %s aside (is the game still running?): %v", have, err)
+	}
+	if _, err := os.Stat(parkedDir(installDir, want)); err == nil {
+		if err := os.Rename(parkedDir(installDir, want), installDir); err != nil {
+			_ = os.Rename(parkedDir(installDir, have), installDir)
+			return fmt.Errorf("can't switch to build %s: %v", want, err)
+		}
+		fmt.Printf("  The server runs %s%s%s again: switched back to it (%s is kept next to it).\n\n", bold, want, reset, have)
+		return nil
+	}
+	fmt.Printf("  The server now runs %s%s%s. Your %s stays next to it, so switching back later is instant.\n\n", bold, want, reset, have)
+	return os.MkdirAll(installDir, 0o755)
 }
 
 func statePath(installDir string) string {
