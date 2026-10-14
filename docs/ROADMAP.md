@@ -31,8 +31,15 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
 
 ## Done, not deployed
 
-- Mask of Mana and Vital Offering parked (they only react to channeled Health Shrines, gone from the Feb
-  maps); 33 items restored.
+- **Old Shard system back, behind one switch** (branch `shards`; `docs/recon/shards.md`): on the arena maps Shards
+  are carried and turned in at a Capture Zone again (own zone: the Shard's buff; enemy zone: steal the enemy's
+  buffs), channeled Health Shrines replace the walk-over pickups, Payload II's Shard works; the Prismatic Shard
+  stays off. The nine artifacts made for it are restored (42 items restored). Switch: `OLD_SHARDS` in
+  `backend/seed/make_seed.py` (on; off = Feb 2023 as shipped, the nine parked); sub-switch
+  `OLD_SHARDS_ASPECT_SPEEDUP` (off; Shard captures speed the Aspect up). FangsBoot fixes the texts of Mask of
+  Mana, Allseer, Mikado's Power Gong. Tested solo on all four arena maps with `tools/run/test_shards.sh` (switch
+  on and off); multiplayer test by the user before the deploy. Not triggered solo: Mask of Ascension's damage,
+  Vital Offering's missile to another Captain, back-cap respawning teammates.
 
 ## In progress
 
@@ -53,33 +60,26 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
    output `work/art/refs/`, local only). The game also contains official paintings of the unreleased heroes
    (`docs/recon/heroes.md`): use them for portraits/cards first; generated art for the remaining slots.
    BladeMaster dropped from the unreleased group (grey mannequin, no abilities).
-2. **Shards: old carry-and-turn-in vs current kill system.** Research done (`docs/recon/shards.md`): the old
-   carry system is complete in the Feb build and the game server can switch it back on (one property at
-   BeginPlay, plus spawning the Shard on maps that lost it); tried solo, it works. Payload II is broken as
-   shipped (no Shard ever appears) and becomes a working carry map with the switch alone. Nine restored
-   artifacts are parked until then (`_parked_old_shards`, `_parked_old_health_shrines`).
-   Next, if the user wants it (about 2-3 days with tests): FangsHost switch with an on/off flag, optional Aug
-   flavour (Aspect speed-up, channeled Health Shrines), un-park the items, two-player tests, group playtest.
-3. **Server smoothness up to 12 players (6v6)** (in progress, agent: load test with bots, hitch hunt, fixes).
+2. **Server smoothness up to 12 players (6v6)** (in progress, agent: load test with bots, hitch hunt, fixes).
    Target: no frame over ~50 ms. The user allows load tests on the VPS's game slots when nobody plays (test
    lobbies only, read-only measurements; deploys still only with the user's OK).
    Live data 14 Oct: arena 1 player ~58 fps / longest frame ~30 ms; 2 players ~40 fps / ~180 ms (up to 254);
    4 players ~42 fps / ~200 ms. The game's net tick is 30 Hz, so the problem is the recurring ~200 ms frames
    (replication stalls = stutter), not the average. Then: verify on the VPS with bots in a quiet moment (ask
    first); maybe a 60 Hz net tick.
-4. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
+3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
-5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
+4. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
 
 ## Known issues and small ideas
 
-- Payload II has no Shard in the Feb build (see Shards above).
-- Energy Drink and Prescience (both parked) point to missing description strings; the texts exist under
-  `position_energydrink_desc` / `position_prescience_desc` (set at runtime when they come back). Courage's
-  bonus damage and the artifacts' objective effects are untested in matches.
+- Payload II has no Shard in the Feb build; fixed by the old Shard system (Done, not deployed).
+- Courage's bonus damage is untested in matches.
+- Old Shard system: in round 2 Swiftrunner's speed and Shadowbringer's stealth stop ~1.5 s after a Shard pickup
+  (round 1 fine); cause unknown, next step in `docs/recon/shards.md` (Tests).
 - A full party match (queue → accept → server) is untested; parties live in memory (lost on a backend
   restart).
 - Voice chat (Vivox) is unavailable.
@@ -96,3 +96,5 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
   everything players see is usable.
 - Next deploy ships boons, artifacts and heirlooms together.
 - Unreleased heroes: separated from released ones, with a disclaimer.
+- Old Shard system (carry-and-turn-in, channeled Health Shrines): in, behind one switch, on by default (user, 14 Oct);
+  the user tests it in multiplayer before it is deployed.

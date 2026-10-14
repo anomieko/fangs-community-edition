@@ -50,19 +50,17 @@ Restored (in `backend/seed/restore-feb2023.json`), each verified in a match:
   MeCarry_Garden, RelicRunner_Garden, RocketFuel, Prescience, RoleGetSwole, LittlePush, BobAndWeave
   (tag-only: shrine/orb/channel Blueprints read it). Available on LE_Arena02/06 and LE_Payload03/04.
   EnergyDrink and Prescience point to missing description strings (the texts exist as
-  `position_energydrink_desc` / `position_prescience_desc`).
+  `position_energydrink_desc` / `position_prescience_desc`; FangsBoot sets them).
 
-**Parked** (`_parked_old_shards` in the restore list, 2026-10-14): seven of those artifacts are about the old shard
-system (capture/carry a Shard, turn it in at a Capture Zone, channel Shards); our build kills Shards instead,
-so they stay off until the old system is back: Generic_ShootTheMoon (Mask of Glory: capturing a Shard at the
-enemy Capture Zone), Generic_RelicRunner_Garden (Swiftrunner: speed while carrying a Shard), Generic_RocketFuel
-(Mask of Speed: capturing a Shard), Generic_BubbleBobble (Shadowbringer: stealth after channeling a Shard),
-Generic_Prescience (Allseer: announced Shard, enemy channeling it), Generic_RoleGetSwole (Mask of Ascension: Shard
-effects on the target), Generic_BobAndWeave (Shardseeker: channel Shards and shrines faster).
-Also parked (`_parked_old_health_shrines`, 2026-10-14): Generic_EnergyDrink (Mask of Mana) and Generic_RoyalTax
-(Vital Offering) only react to channeled Health Shrines, which Feb replaced with walk-over pickups on every map
-but Payload II. The other seven are about Captains or the Aspect (Generic_MeCarry_Garden is "Vigorcloak":
-+heals/shields). Details and how to bring the old system back: `docs/recon/shards.md`.
+**Old Shard system items** (restore-list keys `_old_shards`, `_old_health_shrines`): restored while the old Shard
+system is on (`OLD_SHARDS` in `backend/seed/make_seed.py`, default on), parked when it is off; `docs/recon/shards.md`.
+Seven need carried Shards: Generic_ShootTheMoon (Mask of Glory: capturing a Shard at the enemy Capture Zone),
+Generic_RelicRunner_Garden (Swiftrunner: speed while carrying a Shard), Generic_RocketFuel (Mask of Speed: capturing a
+Shard), Generic_BubbleBobble (Shadowbringer: stealth after channeling a Shard), Generic_Prescience (Allseer: near the
+Shard), Generic_RoleGetSwole (Mask of Ascension: Shard effects on the target), Generic_BobAndWeave (Shardseeker: channel
+Shards and shrines faster). Two need channeled Health Shrines: Generic_EnergyDrink (Mask of Mana) and Generic_RoyalTax
+(Vital Offering). The other seven arena artifacts are about Captains or the Aspect (Generic_MeCarry_Garden is
+"Vigorcloak": +heals/shields). Missing texts (Mask of Mana, Allseer, Mikado's Power Gong) are set by FangsBoot.
 
 Heirlooms (effect code present in Feb), restored too: each was equipped through its slot in a match
 (`tools/run/test_items.sh`), the game server had it equipped and the hero's abilities still fired. Whether each
@@ -74,9 +72,9 @@ effect has the intended numbers is not checked; confirm in play.
   (Lancer, Hiari Charm).
 - Never in a pool we have: BigBoi_P_BrushHeal (Outrage), LancerItem19 ("Item 19"), DuelistZone (Lancer,
   artifact tier), LowHPShieldIncrease (ShieldGirl, Crownsguard Commendation), Sidekick_P_WallPin (Kunai
-  Feathers), Sidekick_Skill3_AOECC (Mikado's Power Gong, no name string), RowenTanglerootGauntlets
-  (WoodenSword); unreleased heroes: Priest_Skill3_AttackSpeed, Scythe_P_FlameAura, Scythe_RMB_FreeFire,
-  Scythe_Skill2_Heal, Scythe_Skill2_MoreDamage.
+  Feathers), Sidekick_Skill3_AOECC (Mikado's Power Gong, no texts in Feb: FangsBoot sets Aug's name and a
+  description), RowenTanglerootGauntlets (WoodenSword); unreleased heroes: Priest_Skill3_AttackSpeed,
+  Scythe_P_FlameAura, Scythe_RMB_FreeFire, Scythe_Skill2_Heal, Scythe_Skill2_MoreDamage.
 
 Not restorable:
 - No code reacts to them in Aug 2022, Feb 2023 or Dec 2023: 9 Gunslinger heirlooms incl. PAllyHeal,
