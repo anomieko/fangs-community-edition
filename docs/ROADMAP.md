@@ -80,6 +80,9 @@ Current deploy: `deploy-2026-10-14-2306` (`88eb27e`); what each deploy changed: 
 
 ## Known issues and small ideas
 
+- Test scripts other than `tools/run/test_shards.sh` share `work/run/records` (the backend's records next to
+  `--data`): parallel runs with different seeds can switch each other's server-side settings. Give each run its own
+  data folder as `test_shards.sh` does.
 - Payload II has no Shard in the Feb build; fixed by the old Shard system (live, `OLD_SHARDS`).
 - Courage's bonus damage is untested in matches.
 - A full party match (queue → accept → server) is untested; parties live in memory (lost on a backend
