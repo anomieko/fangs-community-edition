@@ -3,7 +3,7 @@
 # the match; the game server then ends it (the game's surrender: team B defeated). Checks that FangsHost saved
 # the result and the backend turned it into match history, levels and wins (and screenshots the end screen and
 # the profile). Own backend data and game-server directory, so local play is untouched.
-# Usage: CLIENT_DIR=clients/<build> [HERO=<DT_Heroes row>] tools/run/test_match.sh
+# Usage: CLIENT_DIR=clients/<build> [HERO=<DT_Heroes row>] [MAP=<level, default LE_Arena02_Map>] tools/run/test_match.sh
 #   HERO: play that hero (default Berserker); one the seed doesn't offer (an unreleased hero) is added to this
 #   test's own copy of the seed. The test then also lists the hero's abilities and screenshots the match.
 set -u
@@ -35,7 +35,7 @@ ABILITIES='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local p=StaticFindObje
 (
   sleep 40
   printf '%s\n' 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi; return "ready"' \
-    'lua FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu:CreateLobbyAndJoin("Match Test", "The Garden of Vermilia", FText("LE_Arena02_Map"), 1); return "create"' >> $A
+    'lua FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu:CreateLobbyAndJoin("Match Test", "The Garden of Vermilia", FText("'"${MAP:-LE_Arena02_Map}"'"), 1); return "create"' >> $A
   sleep 40; echo "$WHERE" >> $A
   # as the hero select does: the profile's hero (what the lobby server reads) and the lobby pick
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("'"$HERO"'", false);'\

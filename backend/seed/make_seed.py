@@ -22,8 +22,12 @@ server = {
 }
 # Arena maps in the Feb 2023 pak. Names as the game's own FANGS_LOC_EN (map_*_title); the client
 # localizes known maps itself, the names here show for matchmade games and unlocalized maps.
-maps = [('Embersong', 'LE_Arena02_Map'), ('Stormheart', 'LE_Arena06_Map'), ('Arena', 'LE_Arena01_Map'),
-        ('Crownwatch', 'LE_Payload03_Map'), ('Payload II', 'LE_Payload04_Map')]
+# Not offered (the user, 15 Oct 2026): LE_Arena01_Map "Arena", an early prototype (no baked lighting, the base game
+# mode's older Shard rules), and LE_Payload04_Map "Payload II" (Feb 2023 pak only; plays with OLD_SHARDS). Not yet:
+# LE_UnderWorldArena "Underworld" (Aug 2022 and Feb 2023 paks; own mode: team lives ("stocks"), random spawns).
+# Arena and Underworld load on the server, but players stay on the loading screen ("Waiting for players").
+maps = [('Embersong', 'LE_Arena02_Map'), ('Stormheart', 'LE_Arena06_Map'), ('Crownwatch', 'LE_Payload03_Map')]
+PLAY_MAPS = ('LE_Arena02_Map', 'LE_Arena06_Map', 'LE_Payload03_Map')   # PLAY (matchmade games)
 # DT_Heroes rows of the released heroes (the remaining rows are unfinished: no names, no owner class).
 heroes = ['Berserker', 'ShieldGirl', 'Lancer', 'Gunslinger', 'Backstab', 'FireMage', 'IceMage', 'LightningArcher',
           'DemonGirl', 'WoodenSword', 'BookMage', 'Sidekick', 'BattleMonk', 'CatSupp', 'BigBoi']
@@ -92,22 +96,23 @@ def restored(paths_file, restore_file):
 version_data = {
     'Servers': [server], 'AvailableHeroes': heroes + [h for h, _ in unreleased], 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
     'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
-    # WB_CreateLobby.SelectGameMode: Duel=2, 2vs2=4, Battle=6, 4vs4=8, 5vs5=10, 6vs6=12, Trio=3, Solo=1, AI=bots
-    'AvailableCustomModes': ['Battle', 'Duel', '2vs2', '4vs4', '5vs5', '6vs6', 'Trio', 'Solo', 'AI'],
+    # WB_CreateLobby.SelectGameMode: Duel=2, 2vs2=4, Battle=6, 4vs4=8, 5vs5=10, 6vs6=12, Trio=3, Solo=1, AI=bots.
+    # AI is left out: its bots come from the developers' editor test list (EditorTestClients), which holds no bot in
+    # the shipped game, so an AI lobby was a match against nobody (docs/recon/server-performance.md).
+    'AvailableCustomModes': ['Battle', 'Duel', '2vs2', '4vs4', '5vs5', '6vs6', 'Trio', 'Solo'],
     'AvailableMaps': [{'Name': n, 'Map': m, 'Custom': True} for n, m in maps],
     # matchmade games: the lobby server picks one at random (GS_Lobby_GameState.GetRandomMap)
-    'CasualMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
-    'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in ('LE_Arena02_Map', 'LE_Arena06_Map')],
+    'CasualMaps': [{'Name': n, 'Map': m} for n, m in maps if m in PLAY_MAPS],
+    'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in PLAY_MAPS],
     # The HUD and loadout screens only offer augments listed here (no EnableAugmentProgress: all unlocked).
     # Generated per build from its DT_MOBALoot and hero preview assets by tools/re/augments.py.
     'AvailableAugments': offered_augments('augments-feb2023.json', 'itempaths-feb2023.json', 'restore-feb2023.json',
                                           heroes + [h for h, _ in unreleased]),
     'AvailableSkins': cosmetics_feb['Skin'],
 }
-# Aug 2022 build: no LE_Payload04_Map in its pak, no "AI" custom mode in its create-lobby screen
+# Aug 2022 build: no "AI" custom mode in its create-lobby screen
 alpha7_data = {**version_data,
                'AvailableCustomModes': [m for m in version_data['AvailableCustomModes'] if m != 'AI'],
-               'AvailableMaps': [m for m in version_data['AvailableMaps'] if m['Map'] != 'LE_Payload04_Map'],
                'AvailableAugments': augments('augments-alpha7.json'), 'AvailableHeroes': heroes}
 del alpha7_data['AvailableSkins']   # its skin ids differ; it keeps the default skins
 records = {
