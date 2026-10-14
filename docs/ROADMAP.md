@@ -29,12 +29,15 @@ Current deploy: `deploy-2026-10-14-2306` (`88eb27e`); what each deploy changed: 
 - since 14 Oct 19:03: online list one name per line with server-granted styles (rainbow anomie); smoke test
   account not counted.
 - since 14 Oct 23:06 UTC: old carry Shards and channeled Health Shrines on the arena maps (`OLD_SHARDS` switch;
-  open round-2 bug, see Shards below), the nine shard artifacts restored, game-server stutter fix (no object scans,
+  see Shards below), the nine shard artifacts restored, game-server stutter fix (no object scans,
   no movies/CEF/console), launcher remembers its invite, item texts fixed.
 
 ## Done, not deployed
 
-Nothing.
+- Old Shard system: the "round-2 HoldingOrb tag loss" was a test artifact (the test removed the carrier's hero
+  right after that pickup); no game bug. FangsHost's safety net now returns a removed carrier's Shard after 2 s
+  instead of after garbage collection (15-48 s); `tools/run/test_shards.sh` got a round-2 mode (`SEQ=round2`) and
+  its own data folder per run (branch `shards`, `docs/recon/shards.md`).
 
 ## In progress
 
@@ -64,10 +67,10 @@ Nothing.
    replication runs at ~20-25 Hz whatever `NetServerMaxTickRate` says, so no 60 Hz net tick from config.
    FangsBoot (players' mod) still cancels finished loops the way that sometimes stopped other loops in FangsHost:
    switch it to idling too (needs a player update; watch for menu lists that stop refreshing).
-3. **Old Shard system: round-2 bug** (in progress, agent, branch `shards` in the `fangs-shards` worktree). The
-   system is live (`OLD_SHARDS` on; `docs/recon/shards.md`); from round 2 on a carrier now and then loses the
-   HoldingOrb tag ~1.4 s after a pickup (Swiftrunner/Shadowbringer stop, probably can't turn in). Next: narrow down
-   (round 2 without artifacts, then one at a time), fix, then the user's multiplayer test.
+3. **Old Shard system** (live since `deploy-2026-10-14-2306`; `docs/recon/shards.md`). The round-2 bug is closed:
+   a test artifact, 45 round-2 pickups in nine runs all kept the HoldingOrb tag and were turned in; the fix to the
+   leave safety net is in "Done, not deployed" (branch `shards`). Next: the user's multiplayer test (not triggered
+   solo: Mask of Ascension's damage, Vital Offering's missile to another Captain, back-cap respawning teammates).
 4. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
@@ -77,12 +80,8 @@ Nothing.
 
 ## Known issues and small ideas
 
-- Payload II has no Shard in the Feb build; fixed by the old Shard system (Done, not deployed).
+- Payload II has no Shard in the Feb build; fixed by the old Shard system (live, `OLD_SHARDS`).
 - Courage's bonus damage is untested in matches.
-- Old Shard system, open: from round 2 on a carrier now and then loses the HoldingOrb tag ~1.4 s after a pickup (the
-  Shard's effect stays): Swiftrunner's speed and Shadowbringer's stealth stop, and such a carrier most likely can't
-  turn the Shard in (Capture Zones check the tag). FangsHost sends the Shard back if that carrier dies or leaves.
-  Cause unknown; next steps in `docs/recon/shards.md` (Tests).
 - A full party match (queue → accept → server) is untested; parties live in memory (lost on a backend
   restart).
 - Voice chat (Vivox) is unavailable.

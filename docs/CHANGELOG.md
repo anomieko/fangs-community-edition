@@ -15,7 +15,9 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Commits | Off switch |
+|---|---|---|
+| Old Shards: a carrier whose hero is removed without dying (a player who leaves) loses the Shard to a shrine after 2 s instead of 15-48 s (FangsHost checks the hero's pending-kill flag). The "round-2 HoldingOrb tag loss" reported with `deploy-2026-10-14-2306` was a test artifact (`docs/recon/shards.md`); no game change for it | `363bba7` | revert the commit (server only) |
 
 ## deploy-2026-10-14-2306 (`88eb27e`, Feb 2023 build)
 
