@@ -46,17 +46,39 @@ cosmetics_feb = augments('cosmetics-feb2023.json')
 levels = augments('levels-feb2023.json')
 
 
+# THE switch for the old Shard system (docs/recon/shards.md). True: on the arena maps Shards are carried and turned in
+# at a Capture Zone and Health Shrines are channeled again, as in Aug 2022 (FangsHost on the game servers reads
+# CEOldShards below), and the nine artifacts made for them are restored ("_old_shards", "_old_health_shrines" in the
+# restore list). False: the Feb 2023 game as shipped (Shards are destroyed, walk-over health pickups) and those nine
+# artifacts are parked. Server only: change, deploy.
+OLD_SHARDS = True
+# With the old Shards on: Shard captures also speed the Aspect up for the capturing team (Feb 2023's leftover formula:
+# x1.5 per capture, reset every round). 'off' (the Feb 2023 game: nothing raises the count); 'mask_of_speed' (Aug 2022:
+# only captures by a carrier with Mask of Speed, which was "Rocket Fuel" then); 'every_capture'.
+OLD_SHARDS_ASPECT_SPEEDUP = 'off'
+OLD_SHARD_GROUPS = ('_old_shards', '_old_health_shrines')   # restore-list keys restored only while OLD_SHARDS
+
+
 # Cut content back in play: items the developers took out of the in-match pick lists although they still work.
 # restore-feb2023.json lists DT_MOBALoot rows per hero ("Generic": boons and artifacts, every hero); each is
-# verified in a match before it goes in. Keys starting with "_" are parked lists, not restored (e.g.
-# "_parked_old_shards": artifacts made for the old carry-and-turn-in shards, back once that system is). itempaths-feb2023.json (tools/re/itempaths.py) gives their objects.
+# verified in a match before it goes in. Keys starting with "_" are not restored (parked), except OLD_SHARD_GROUPS
+# while OLD_SHARDS (Generic items). itempaths-feb2023.json (tools/re/itempaths.py) gives their objects.
+def restore_groups(restore_file):
+    """(hero, rows) of the restore list that are on: hero lists, plus the old-shard groups while OLD_SHARDS."""
+    for hero, rows in augments(restore_file).items():
+        if hero in OLD_SHARD_GROUPS and OLD_SHARDS:
+            yield 'Generic', rows
+        elif not hero.startswith('_'):
+            yield hero, rows
+
+
 def offered_augments(all_file, paths_file, restore_file, heroes):
     """AvailableAugments: the items the game's own in-match pools offer (these heroes and the shared one) plus the
     restored ones. The menus list every item they are sent, so the full table would show cut, unfinished and
     other-map items, some even under the wrong hero (an item's owner class can be a leftover)."""
     pools = augments(paths_file)['pools']
     keep = {row for h in ['Generic', *heroes] for row in pools.get(h, [])}
-    keep |= {row for hero, rows in augments(restore_file).items() if not hero.startswith('_') for row in rows}
+    keep |= {row for _, rows in restore_groups(restore_file) for row in rows}
     return [a for a in augments(all_file) if a['Item'] in keep]
 
 
@@ -64,7 +86,7 @@ def restored(paths_file, restore_file):
     paths = augments(paths_file)
     return [{'Class': '*' if hero == 'Generic' else paths['heroes'][hero],
              'List': 'GenericItems' if hero == 'Generic' else 'PossibleItems', 'Item': paths['items'][row]}
-            for hero, rows in augments(restore_file).items() if not hero.startswith('_') for row in rows]
+            for hero, rows in restore_groups(restore_file) for row in rows]
 
 
 version_data = {
@@ -101,6 +123,8 @@ records = {
     'CELevels': levels,   # not read by the client
     # Not read by the client: FangsBoot gets it from /fangsapi/*/restored-items and adds the items to the player's hero.
     'CERestoredItems': {'Playtest021523v1_v0_0_02': restored('itempaths-feb2023.json', 'restore-feb2023.json')},
+    # Not read by the client: FangsHost (game servers) reads it from the backend's records: the old Shard system on/off.
+    'CEOldShards': {'Enabled': OLD_SHARDS, 'AspectSpeedup': OLD_SHARDS_ASPECT_SPEEDUP},
     # Not read by the client: FangsBoot gets it from /fangsapi/*/unreleased-heroes.
     'CEUnreleasedHeroes': {'Playtest021523v1_v0_0_02': unreleased},
     # Not read by the client: name styles in the main menu's online list (FangsBoot), lowercase name -> style.
