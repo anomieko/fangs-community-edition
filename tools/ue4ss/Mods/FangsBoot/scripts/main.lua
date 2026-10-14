@@ -769,6 +769,42 @@ do
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- Restored items whose name or description points to a string-table entry this build doesn't have: Mask of Mana and
+-- Allseer (their texts exist under other keys) and Mikado's Power Gong (no text in Feb 2023; Aug 2022's, in the Feb
+-- style). The item assets are patched in memory each time they are (re)loaded.
+do
+    local POSITIONAL = "/Game/UI/Localization/LOC_EN_AUGMENTS_POSITIONAL.LOC_EN_AUGMENTS_POSITIONAL"
+    local FIX = {
+        { "/Game/Items/Characters/Generic/Garden/EnergyDrink/ITEM_Generic_EnergyDrink.ITEM_Generic_EnergyDrink",
+          desc = { POSITIONAL, "position_energydrink_desc" } },
+        { "/Game/Items/Characters/Generic/Garden/Prescience/ITEM_Generic_Prescience.ITEM_Generic_Prescience",
+          desc = { POSITIONAL, "position_prescience_desc" } },
+        { "/Game/Gameplay/Abilities/Player/SideKick/Skill3/Items/ITEM_Sidekick_Skill3_AOECC.ITEM_Sidekick_Skill3_AOECC",
+          name = "Mikado's Power Gong",
+          desc = "<RichText.TooltipKeyWords>#LOC_EN_ABILITIES_SIDEKICK|sidekick_ult_title# [ULT]</><br><br>Activating "
+              .. "<RichText.TooltipKeyWords>#LOC_EN_ABILITIES_SIDEKICK|sidekick_ult_title#</> knocks nearby enemies into the "
+              .. "air, and enemies near you are continually <RichText.TooltipEffects>slowed by 25%</>." },
+    }
+    local patched, KTL = {}, nil
+    local function text(v)   -- {string table, key} or plain text
+        if type(v) == "table" then return KTL:TextFromStringTable(FName(v[1]), v[2]) end
+        return FText(v)
+    end
+    every(2000, function()
+        KTL = KTL or StaticFindObject("/Script/Engine.Default__KismetTextLibrary")
+        for _, f in ipairs(FIX) do
+            local item = StaticFindObject(f[1])
+            if item and item:IsValid() and patched[f[1]] ~= item:GetAddress() then
+                patched[f[1]] = item:GetAddress()
+                if f.name then item.ItemName = text(f.name) end
+                if f.desc then item.ItemDescription = text(f.desc) end
+                log("item texts: " .. f[1]:match("([^.]+)$") .. ": " .. item.ItemDescription:ToString():sub(1, 40))
+            end
+        end
+    end)
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- Unreleased heroes (Feb 2023 build): heroes the developers never released (the backend's list for this build,
 -- /fangsapi/prod/unreleased-heroes) are owned like the others but kept apart: an "UNRELEASED HEROES" section in
 -- Inventory > Heroes, a toggle in custom lobbies' hero select (released heroes are the default; matchmade lobbies
