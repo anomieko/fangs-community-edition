@@ -80,7 +80,11 @@ In Feb the health pickups are the Aug Health Shrine actors (same names, same x/y
   - with the sub-switch: watch the rule state's team counters; a rise is a capture by the last carrier; raise
     `BP_RS_Phoenix_C.RelicsCapturedByTeamA/B`;
   - safety net the game lacks: a carrier whose hero goes away without dying (a player leaving) would keep the Shard
-    "taken" until the round ends; after 2 s FangsHost sends it back to a shrine (`ResetOrb`).
+    "taken" until the round ends, and so would a dead carrier who had lost the HoldingOrb tag (open issue below);
+    after 2 s FangsHost sends it back to a shrine (`ResetOrb`);
+  - no object scans while a match runs (`docs/recon/server-performance.md`): the 250 ms loop takes the rule states
+    from the game mode's rule components (`gm.BP_GR_Relic_Garden2` / `BP_GR_Phoenix` `.RuleStateComp`); the
+    one-time setup finds actors with `GetAllActorsOfClass`.
 - **FangsBoot** (players): Mask of Mana and Allseer point to missing string-table keys; FangsBoot sets their
   descriptions to `position_energydrink_desc` / `position_prescience_desc` (`KismetTextLibrary.TextFromStringTable`)
   and gives Mikado's Power Gong (no texts in Feb) its Aug name and a description, whenever the assets load.
@@ -109,17 +113,28 @@ turret. Evidence in `work/logs/<run>/` (local): `timeline-host-7777.txt`, screen
   Life, Aether and Spirit buffs on a back-cap; Mask of Mana: Energy 0 → 1250 (50 % of max) per Health Shrine
   channel; Vital Offering: 12 s heal on the Captain per Health Shrine channel; Aspect speed-up sub-switch:
   `mask_of_speed` counted Mask of Speed captures only, `every_capture` every capture, reset in round 2.
+- Server frame times with the switch on (`shards-perf2`, Embersong, after merging the server-performance fix): the
+  backend's 30 s `perf` lines for the arena show fps 60, `frame_ms` 17-19 and `slow` 0 in every window but the first
+  (the map load: `frame_ms` 320, `slow` 1). Switch off for comparison (`shards-perf-off`): first window 166 ms /
+  `slow` 2, then 18-24 ms / 0.
 - Switch off (`shards-off`, Embersong): destructible rule state, Prismatic Shard at a shrine ~13 s after the round
   starts, its kill gives the Prismatic buffs (damage, heal/shield power, Energy), back ~35 s later; 4 walk-over
   pickups; 33 items restored, none of the nine offered.
 - Not triggered in solo: Mask of Ascension (granted; needs the hero to hit a Shard-buffed enemy), Vital Offering's
-  missile to a Captain who isn't the channeler, back-cap respawning dead teammates, two-player play. **Open issue**:
-  in round 2 (3 of 3 runs that picked a Shard up there: `shards-s6b`, `shards-final`, `shards-r2`) Swiftrunner's
-  speed and Shadowbringer's stealth stopped ~1.5 s after the pickup (round 1: until the capture / ~5 s), once
-  Swiftrunner didn't react at all; both abilities are still granted on the server in round 2 (`shards-r2`). Cause
-  unknown (both drop their effect when the HoldingOrb tag goes or the ability ends); next step: log the item
-  abilities' activations and HoldingOrb tag count in round 2, and check in multiplayer. Bots (custom "AI" lobbies) know neither Shards nor Health Shrines, in
-  either system.
+  missile to a Captain who isn't the channeler, back-cap respawning dead teammates, two-player play. Bots (custom "AI" lobbies)
+  know neither Shards nor Health Shrines, in either system.
+- **Open issue (round 2+)**: now and then a carrier loses the HoldingOrb tag ~1.4 s after the pickup while the
+  Shard's HoldingOrb effect stays (`hold=f` in the timelines; seen in `shards-s6b`, `shards-final`, `shards-r2`,
+  `shards-r2b`, `shards-r2c`, `shards-r2d`: once per round-2 run, on the first, second or third pickup; never in
+  round 1). Swiftrunner's speed and Shadowbringer's stealth stop then (both drop their effect when the tag goes),
+  and such a carrier most likely can't turn the Shard in (`BP_TeamGoalChannel_Buff.CanCharacterChannel` checks the
+  tag; not confirmed) and would keep it when dying (the game drops it only from a carrier with the tag). In the
+  same runs, round-2 Shards that kept the tag were turned in at both zones. Putting the tag back with
+  `MOBAAbilitySystemComponent.SetTagCount` didn't stick (`shards-r2d`, removed). FangsHost's safety net returns
+  the Shard to a shrine 2 s after its carrier dies or leaves. Not the cause: `BP_GE_RemoveHoldingOrb` (it would
+  remove the effect too), `SetTagCount` callers in the Blueprints. Next: find what removes the tag (native or
+  Blueprint, ~1.4 s after the pickup: the channel ability's end, `BP_AC_Channel`, item abilities restarting each
+  round), confirm whether a tagless carrier can turn in, and check in multiplayer.
 
 ## Items that depend on it
 

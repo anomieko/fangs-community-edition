@@ -4,9 +4,8 @@
 FCE_SHARDS = FCE_SHARDS or {}
 local T = FCE_SHARDS
 
-local function valid(o) return o ~= nil and type(o) ~= "number" and type(o) ~= "string" and o.IsValid ~= nil and o:IsValid() end
-local function name(o) return valid(o) and o:GetClass():GetFName():ToString() or "nil" end
-local function all(className, exact)
+local function valid(o) return type(o) == "userdata" and o.IsValid ~= nil and o:IsValid() end
+local function all(className, exact)   -- an object scan: 10+ ms in an arena
     local out = {}
     for _, o in ipairs(FindAllOf(className) or {}) do
         if o:IsValid() and not o:GetFullName():find("Default__", 1, true)
@@ -15,6 +14,7 @@ local function all(className, exact)
     return out
 end
 local function first(className, exact) return all(className, exact)[1] end
+local function name(o) return valid(o) and o:GetClass():GetFName():ToString() or "nil" end
 local function at(a) local l = a:K2_GetActorLocation(); return string.format("%.0f,%.0f,%.0f", l.X, l.Y, l.Z) end
 local function statics() return StaticFindObject("/Script/Engine.Default__GameplayStatics") end
 local logf = nil
@@ -44,30 +44,30 @@ local function attrs(char)
     end)
     return ok and s or "attrs ?"
 end
-local function hero() return first("BP_PlayerChar_C") end
 
 -- ---------------------------------------------------------------------------------------------- server
--- Objects are looked up (object scans: 10+ ms each in an arena, a hitch for everyone) only when the cache misses
--- one, at most every 5 s; the watch loop itself only reads properties. Rule states come from the game mode.
-local C = { t = -100 }
-local function refresh(force)
-    if not force and os.clock() - C.t < 5 then return end
-    C.t = os.clock()
-    C.gm = first("BP_GM_MOBA_GameMode_C")
-    C.gs = first("GS_MOBA_Battle_C")
-    C.hero = hero()
-    C.shrines = all("BP_HealingOrb_C", true)
-    C.pickups = #all("BP_PickupActor_C", true)
-    C.prismatic = first("BP_BuffActor_C", true)
-    C.turrets = all("BP_Turret_C", true)
-    C.zones = all("BP_TeamGoalChannel_Buff_C", true)
-    C.ga = {}
-    for _, c in ipairs({ "BP_GA_RelicRunner_C", "BP_GA_BubbleBobble_C" }) do C.ga[c] = all(c, true) end
+-- Objects are found with object scans (10+ ms each in an arena), one per watch tick at most, so no server frame gets
+-- near 50 ms: the cache fills in the first seconds of the watch; afterwards only a missing hero is looked up again.
+-- Rule states come from the game mode's rule components.
+local C = {}
+local LOOKUPS = {
+    { "gm", function() return first("BP_GM_MOBA_GameMode_C") end },
+    { "gs", function() return first("GS_MOBA_Battle_C") end },
+    { "hero", function() return first("BP_PlayerChar_C") end },
+    { "shrines", function() return all("BP_HealingOrb_C", true) end },
+    { "pickups", function() return #all("BP_PickupActor_C", true) end },
+    { "prismatic", function() return first("BP_BuffActor_C", true) or false end },
+    { "turrets", function() return all("BP_Turret_C", true) end },
+    { "zones", function() return all("BP_TeamGoalChannel_Buff_C", true) end },
+}
+local function lookupStep()   -- one object scan: the next missing entry
+    for _, l in ipairs(LOOKUPS) do
+        local k, v = l[1], C[l[1]]
+        local missing = v == nil or ((k == "gm" or k == "gs" or k == "hero") and not valid(v))
+        if missing then C[k] = l[2](); return end
+    end
 end
-local function cached()
-    if not (valid(C.gm) and valid(C.gs) and valid(C.hero)) then refresh(false) end
-    return C
-end
+local function cached() return C end
 local function rules()
     local rs, ph
     pcall(function() rs = C.gm.BP_GR_Relic_Garden2.RuleStateComp end)
@@ -100,16 +100,9 @@ function T.state()
     if valid(c.prismatic) then out[#out + 1] = string.format("prismatic dead %s at %s", tostring(c.prismatic.Dead), at(c.prismatic)) end
     if valid(ph) then out[#out + 1] = string.format("aspect boost A %d B %d", ph.RelicsCapturedByTeamA, ph.RelicsCapturedByTeamB) end
     if valid(p) then
-        local ga = {}   -- item abilities that react to carrying: instances and whether they are active
-        for cls, list in pairs(c.ga or {}) do
-            local n, act = 0, 0
-            for _, a in ipairs(list) do if valid(a) then n = n + 1; local ok, v = pcall(function() return a:IsActive() end); if ok and v then act = act + 1 end end end
-            if n > 0 then ga[#ga + 1] = string.format("%s %d/%d", cls:sub(7, -3), act, n) end
-        end
-        table.sort(ga)
         local holding = false
         pcall(function() holding = p.AbilitySystemComponent:HasMatchingGameplayTag({ TagName = FName("HoldingOrb") }) end)
-        out[#out + 1] = string.format("items active [%s] holding %s", table.concat(ga, ", "), tostring(holding))
+        out[#out + 1] = "holding " .. tostring(holding)
         out[#out + 1] = string.format("hero %s %s %s GEs [%s]", name(p), at(p), attrs(p), table.concat(effects(p), ","))
     end
     return table.concat(out, "; ")
@@ -118,9 +111,9 @@ end
 function T.watch(file)   -- log every change, every 400 ms, until the server ends
     if T.watching then return "already watching" end
     T.watching, T.t0 = true, os.clock()
-    refresh(true)
     local last = ""
     LoopInGameThreadWithDelay(400, function()
+        pcall(lookupStep)
         local ok, s = pcall(T.state)
         if not ok then s = "error " .. tostring(s) end
         -- position and hp change constantly; log them only with another change

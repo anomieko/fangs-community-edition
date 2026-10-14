@@ -31,7 +31,7 @@ return function(env)
                  speedup = json:match('"AspectSpeedup"%s*:%s*"([%w_]+)"') or "off", source = "CEOldShards" }
     end
 
-    local function valid(o) return o ~= nil and type(o) ~= "number" and o.IsValid ~= nil and o:IsValid() end
+    local function valid(o) return type(o) == "userdata" and o.IsValid ~= nil and o:IsValid() end
     local GS, KSL = nil, nil
     local function loadClass(path)
         local c = StaticFindObject(path)
@@ -67,12 +67,18 @@ return function(env)
         GS = GS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
         local res = {}
         GS:GetAllActorsOfClass(context, class, res)
+        local function add(o)
+            if not valid(o) then pcall(function() o = o:get() end) end   -- an array element or its wrapper
+            if valid(o) and o:GetClass():GetFName():ToString() == className then out[#out + 1] = o end
+        end
         local list = res.OutActors
-        if list and list.ForEach then
-            list:ForEach(function(_, e)
-                local o = e:get()
-                if valid(o) and o:GetClass():GetFName():ToString() == className then out[#out + 1] = o end
-            end)
+        if list == nil and res[1] ~= nil then list = res end
+        if type(list) == "table" then
+            for _, o in pairs(list) do add(o) end
+        elseif list ~= nil then
+            pcall(function() list:ForEach(function(_, e) add(e) end) end)
+        else   -- this UE4SS gave no array back: one object scan instead (match start only)
+            for _, o in ipairs(FindAllOf(className) or {}) do add(o) end
         end
         return out
     end
@@ -88,12 +94,13 @@ return function(env)
             shard = class and spawn(gm, class, xform(l.X, l.Y, l.Z, 0, 0.9))
             log("old shards: " .. map .. ": Shard " .. (valid(shard) and "spawned" or "NOT spawned"))
         end
+        local zones, pickups = actors(gm, "BP_TeamGoalChannel_Buff_C"), actors(gm, "BP_PickupActor_C")
+        log(string.format("old shards: %s: %d Capture Zones, %d health pickups", map, #zones, #pickups))
         if valid(shard) then   -- the Capture Zones look the Shard up once, at their BeginPlay
-            for _, zone in ipairs(actors(gm, "BP_TeamGoalChannel_Buff_C")) do
+            for _, zone in ipairs(zones) do
                 if not valid(zone.RelicRef_0) then zone.RelicRef_0 = shard end
             end
         end
-        local pickups = actors(gm, "BP_PickupActor_C")
         if #pickups > 0 then
             local class, spots = loadClass(HEALTH_SHRINE), AUG_SHRINES[map]
             if not spots then
