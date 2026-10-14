@@ -15,6 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-14-1855 (`478b254`, Feb 2023 build)
+
+Players need to restart the launcher for the FangsBoot changes; the rest is server-side.
+
 | Change | Commits | Off switch |
 |---|---|---|
 | FangsBoot: the lobby list's Casual → Custom correction only touches Casual (never Training or other modes) | `170d298` | revert the commit |
