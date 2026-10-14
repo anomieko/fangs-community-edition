@@ -28,3 +28,17 @@ All five with kits have a textured, animated model and move/dash with their abil
 - **WaterBlade (Nuali)**: dash works; Skill1 shows a golden rune circle (likely borrowed); few other effects.
 Some abilities didn't activate in the solo test (cooldowns/costs or needing a target): Warlock RMB and
 Skill3, Priest passive and Skill3, WaterBlade Skill3 (wall) and ammo, Scythe Skill3 (storm), Sniper Skill3.
+
+## Newer builds
+
+The newest FANGS build is the one we have as reference: the Closed Playtest `main_v0_0_444` (app 1831080,
+build 12965227, 20 Dec 2023, manifest 5738023829398519305; public branch per the Steam client's app cache,
+2026-10-14). The main app's last public build is 11250319 (20 May 2023, depot 1717991 manifest
+8969676660192098141): older than that playtest and after the Feb 2023 cuts.
+
+Unreleased heroes, Feb 2023 → Dec 2023 (pak file lists): Priest +30 files (new RMB animations for him and his
+angel avatar, changed Skill4 animations and VFX pack); Warlock gains a bot behaviour tree
+(`AI/Characters/Warlock/BT_Warlock_BehaviorTree`); WaterBlade, Scythe, Sniper, PetSum, VampMage: same files,
+ability Blueprints recooked/changed (19-47 files). So Dec 2023 is only a little further along. Taking pieces
+from it means loading Dec assets in the Feb game (mod pak), asset by asset: data-only assets (animations,
+behaviour trees, effects) are candidates; ability Blueprints depend on native code that may have changed.
