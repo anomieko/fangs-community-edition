@@ -17,13 +17,15 @@ Last updated: 2026-10-14.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-14-1821` (`273d2d1`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-14-1855` (`478b254`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
 - since 14 Oct 18:11: cut items back in play (5 boons, 16 arena artifacts, 21 heirlooms), menus list only usable
   items, unreleased heroes as a separate group (Inventory section, hero-select toggle, notice);
 - since 14 Oct 18:21: lobby creation no longer fails when an owner's retry races a booting server.
+- since 14 Oct 18:55: main menu lists who is online and free game servers; currencies hidden; BladeMaster
+  removed; FangsBoot lists arrive within seconds (cached); seven old-shard artifacts parked (35 items restored).
 
 ## Done, not deployed
 
