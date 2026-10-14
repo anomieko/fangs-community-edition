@@ -64,9 +64,12 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
 - UE4SS (this build): a hook on a Blueprint function runs once, after the function body; changing a
   Blueprint function's out parameters from a hook has no effect on the caller.
 
+- Joining a custom lobby from the lobby list: the PLAY button sets the game mode to Casual, which arms the
+  lobby screen's 45 s matchmade timeout for the joiner ("Failed to Connect to Match.", then the lobby ends).
+  FangsBoot keeps it Custom; `fangsboot.log` records why a player leaves a lobby.
+- In a match, team = client index (lobby seat) % 2: even seats are team A, odd seats team B.
+
 ## Next
 
 1. Play tests with friends on the VPS.
-2. A player is occasionally dropped from a two-player lobby a few seconds into hero select (FangsBoot logs
-   why a client leaves a lobby; see `fangsboot.log`).
-3. Voice chat (Vivox) is not available; TLS/domain for the server.
+2. Voice chat (Vivox) is not available; TLS/domain for the server.
