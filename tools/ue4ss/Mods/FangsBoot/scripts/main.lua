@@ -550,3 +550,24 @@ do
         end
     end)
 end
+
+-- ---------------------------------------------------------------------------------------------
+-- Friends (Feb 2023 build). The game connects to the lobby while logging in, so when the main menu's social
+-- panel is built the connection is already up and it takes its "reconnected" path, which skips fetching the
+-- friend list, friend requests, presence and the party (WB_Social_Accelbyte: Construct -> bConnectedBefore).
+-- Once per session, run its first-connection path instead. Later menus (after a game) reuse the lists.
+if not gameVersion():find("^alpha7") then
+    every(1000, function()
+        local gi = gameInstance()
+        local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
+        if not (menu and menu:IsValid() and menu:IsInViewport()) then return end
+        local social = menu.WB_Social_Accelbyte
+        if not (social and social:IsValid()) then return end
+        if social.bConnectedBefore then
+            social.bConnectedBefore = false
+            social:OnConnectedToLobbySocket()
+            log("friends: fetching friends, requests, presence and party")
+        end
+        return true
+    end)
+end

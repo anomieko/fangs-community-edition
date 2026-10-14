@@ -15,6 +15,12 @@ The client then joins the game server like a custom lobby. The lobby server seat
 token: payload (standard base64, not base64url) assign.extensions.team.ticketToTeamIndex[sub] -> team.
 The game server is told the match size and a random map from FANGSConfig CasualMaps (fangshost_match.json,
 see FangsHost); the lobby is otherwise hard-wired to 8 players and gets no map.
+
+Parties (social.py): the party leader's QueueJoinRequest opens a ticket for the whole party and its Queued
+answer carries msg.partyToken; the leader's client hands the token to the members (signaling), who queue with
+{"partyToken": T}. A party ticket is matched once every member has joined (or after PARTY_WAIT s, without the
+missing ones), always as a whole and on one team. If anyone of a party leaves or rejects, the whole ticket is
+dropped (the others go idle; the clients' own party logic makes them leave the queue too).
 """
 import asyncio, base64, json, random, time, uuid
 
@@ -22,6 +28,7 @@ from aiohttp import web, WSMsgType
 
 AUTH_PREFIX = 'Bearer secret-token:accelbyte/'
 STARTING_EXPIRY_MS = 240_000   # keeps the accept dialog open while the game server boots
+PARTY_WAIT = 20                # seconds a party ticket waits for members who haven't queued
 
 
 def _b64(obj):
@@ -33,11 +40,34 @@ def assignment_token(ticket, team):
     return f"{_b64({'alg': 'none', 'typ': 'JWT'})}.{_b64(payload)}.fangs"
 
 
+class Ticket:
+    """One player, or a party that queues together."""
+
+    def __init__(self, leader, expected=()):
+        self.token = uuid.uuid4().hex
+        self.leader, self.expected, self.joined = leader, list(expected) or [leader], [leader]
+        self.queued_at = time.time()
+
+    @property
+    def party(self):
+        return len(self.expected) > 1
+
+    def ready(self, now):
+        return set(self.joined) >= set(self.expected) or now - self.queued_at >= PARTY_WAIT
+
+
 class Match:
-    def __init__(self, players, queued_at, accept_secs):
+    def __init__(self, tickets, accept_secs, size):
         self.id = uuid.uuid4().hex
-        self.players = list(players)
-        self.queued_at = dict(queued_at)        # to put players back in line if the match falls through
+        self.tickets = list(tickets)            # to put them back in line if the match falls through
+        self.players = [p for t in tickets for p in t.joined]
+        self.team = {}                          # user id -> 0/1; a party is never split
+        count = [0, 0]
+        for t in sorted(tickets, key=lambda t: -len(t.joined)):
+            side = 0 if count[0] <= count[1] else 1
+            for p in t.joined:
+                self.team[p] = side
+            count[side] += len(t.joined)
         self.accepted = set()
         self.deadline = time.time() + accept_secs + 2   # the client rejects by itself at accept_secs
         self.starting = False
@@ -47,7 +77,8 @@ class Matchmaker:
     def __init__(self, app, *, size=8, wait=15.0, accept_secs=15):
         self.app, self.size, self.wait, self.accept_secs = app, size, wait, accept_secs
         self.clients = {}    # user id -> websocket
-        self.queue = {}      # user id -> time queued
+        self.tickets = {}    # token -> Ticket waiting in line
+        self.ticket_of = {}  # user id -> token (while in line)
         self.matches = {}    # match id -> Match (until the players got their server)
         self.match_of = {}   # user id -> match id
 
@@ -67,8 +98,9 @@ class Matchmaker:
 
     async def report(self, uid):
         m = self.matches.get(self.match_of.get(uid))
-        if uid in self.queue:
-            await self.status(uid, 'Queued')
+        t = self.tickets.get(self.ticket_of.get(uid))
+        if t:
+            await self.status(uid, 'Queued', **({'partyToken': t.token} if t.party and uid == t.leader else {}))
         elif m:
             left = STARTING_EXPIRY_MS if m.starting else max(0, int((m.deadline - 2 - time.time()) * 1000))
             await self.status(uid, 'Matched', match={'id': m.id, 'expiresInMillis': left})
@@ -110,8 +142,24 @@ class Matchmaker:
         if t == 'ClientStatusRequest':
             await self.report(uid)
         elif t == 'QueueJoinRequest':
-            if uid not in self.match_of:
-                self.queue.setdefault(uid, time.time())
+            self.log('queue join', user=uid, msg=json.dumps(msg)[:1000])
+            if uid not in self.match_of and uid not in self.ticket_of:
+                token = str(msg.get('partyToken') or '')
+                if token:                       # a party member following the leader
+                    ticket = self.tickets.get(token)
+                    if ticket is None or uid not in ticket.expected:
+                        return await self.status(uid, 'Idle', id=uid)
+                    ticket.joined.append(uid)
+                    self.ticket_of[uid] = token
+                else:
+                    social = self.app.get('social')
+                    party = social.party_members(uid) if social is not None else [uid]
+                    if party[0] != uid:          # only the leader queues a party
+                        party = [uid]
+                    ticket = Ticket(uid, party)
+                    self.tickets[ticket.token], self.ticket_of[uid] = ticket, ticket.token
+                    if ticket.party:
+                        self.log('party queued', user=uid, party=party, token=ticket.token)
             await self.report(uid)
         elif t in ('ClientResetRequest', 'RejectMatchRequest'):
             await self.leave(uid, 'left' if t == 'ClientResetRequest' else 'rejected')
@@ -121,8 +169,21 @@ class Matchmaker:
 
     # ------------------------------------------------------------ queue / matches
 
+    async def drop_ticket(self, ticket, reason, keep=()):
+        """Take a ticket out of line; its players go idle (except those in keep)."""
+        self.tickets.pop(ticket.token, None)
+        for p in ticket.joined:
+            self.ticket_of.pop(p, None)
+        if ticket.party:
+            self.log('party ticket dropped', token=ticket.token, reason=reason)
+        for p in ticket.joined:
+            if p not in keep:
+                await self.status(p, 'Idle', id=p)
+
     async def leave(self, uid, reason):
-        self.queue.pop(uid, None)
+        ticket = self.tickets.get(self.ticket_of.get(uid))
+        if ticket:
+            await self.drop_ticket(ticket, reason, keep={uid})
         m = self.matches.get(self.match_of.get(uid))
         if not m:
             return
@@ -132,17 +193,31 @@ class Matchmaker:
         else:
             await self.cancel(m, drop={uid}, reason=reason)
 
+    async def party_changed(self, party_id, left):
+        """Someone left (or was kicked from) a party: its ticket in line is off."""
+        for ticket in [t for t in self.tickets.values() if left in t.expected]:
+            await self.drop_ticket(ticket, 'party changed')
+        m = self.matches.get(self.match_of.get(left))
+        if m and not m.starting and any(left in t.expected and t.party for t in m.tickets):
+            await self.cancel(m, drop={left}, reason='party changed')
+
     async def cancel(self, m, drop, reason):
-        """Match fell through: dropped players go idle, the others go back in line."""
+        """Match fell through: dropped players (and their party) go idle, the others go back in line."""
         self.matches.pop(m.id, None)
         self.log('cancel', match=m.id, reason=reason, dropped=sorted(drop))
         for p in m.players:
             self.match_of.pop(p, None)
-            if p in drop:
+        for ticket in m.tickets:
+            if drop & set(ticket.joined):
+                for p in ticket.joined:
+                    await self.status(p, 'Idle', id=p)
                 continue
-            self.queue[p] = m.queued_at.get(p, time.time())
-            await self.status(p, 'Idle', id=p)       # closes the accept dialog
-            await self.status(p, 'Queued')
+            self.tickets[ticket.token] = ticket          # keeps its place in line
+            for p in ticket.joined:
+                self.ticket_of[p] = ticket.token
+                await self.status(p, 'Idle', id=p)       # closes the accept dialog
+            for p in ticket.joined:
+                await self.report(p)
 
     async def accept(self, uid, mid):
         m = self.matches.get(mid)
@@ -183,10 +258,10 @@ class Matchmaker:
             return
         address = f"{self.app['cfg'].public_ip}:{host.port}"
         self.matches.pop(m.id, None)
-        for i, p in enumerate(list(m.players)):
+        for p in list(m.players):
             self.match_of.pop(p, None)
             await self.send(p, 'ServerAssignmentResponse',
-                            {'assignment': address, 'token': assignment_token(uuid.uuid4().hex, i % 2)})
+                            {'assignment': address, 'token': assignment_token(uuid.uuid4().hex, m.team.get(p, 0))})
         self.log('assigned', match=m.id, server=address, players=m.players)
 
     async def run(self):
@@ -201,16 +276,22 @@ class Matchmaker:
         now = time.time()
         for m in [m for m in self.matches.values() if not m.starting and now > m.deadline]:
             await self.cancel(m, drop=set(m.players) - m.accepted, reason='not accepted in time')
-        line = sorted(self.queue.items(), key=lambda kv: kv[1])
-        if not line or (len(line) < self.size and now - line[0][1] < self.wait):
+        picked, count = [], 0
+        for ticket in sorted(self.tickets.values(), key=lambda t: t.queued_at):
+            if ticket.ready(now) and count + len(ticket.joined) <= self.size:
+                picked.append(ticket)
+                count += len(ticket.joined)
+        if not picked or (count < self.size and now - picked[0].queued_at < self.wait):
             return
         if not self.app['hosts'].free_ports():
             return   # all game server slots busy: keep everyone queued
-        picked = dict(line[:self.size])
-        m = Match(picked, picked, self.accept_secs)
+        m = Match(picked, self.accept_secs, self.size)
         self.matches[m.id] = m
+        for ticket in picked:
+            self.tickets.pop(ticket.token, None)
+            for p in ticket.joined:
+                self.ticket_of.pop(p, None)
         for p in m.players:
-            self.queue.pop(p, None)
             self.match_of[p] = m.id
             await self.status(p, 'Matched', match={'id': m.id, 'expiresInMillis': self.accept_secs * 1000})
-        self.log('matched', match=m.id, players=m.players)
+        self.log('matched', match=m.id, players=m.players, teams=m.team)
