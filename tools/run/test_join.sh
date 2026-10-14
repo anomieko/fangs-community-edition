@@ -21,6 +21,11 @@ NET_SERVER='lua local out={} for _, d in ipairs(FindAllOf("IpNetDriver") or {}) 
 NET_CLIENT='lua local lp=FindFirstOf("LocalPlayer"); local sc="none" for _, d in ipairs(FindAllOf("IpNetDriver") or {}) do'\
 ' if d:IsValid() and d.ServerConnection and d.ServerConnection:IsValid() then sc=tostring(d.ServerConnection.CurrentNetSpeed) end end'\
 ' return string.format("client net: configured=%d connection=%s", lp.ConfiguredInternetSpeed, sc)'
+# Lock In along the UI: the button's own visibility check (whose turn it is in the draft), then its click
+LOCKIN_BTN='lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=pc.WB_LobbyHeroSelectRef; local gs=FindFirstOf("GS_Lobby_GameState_C");'\
+' local vis=h:ShowSelectHeroBtn(); local seat=pc.PlayerState.ChosenSlot;'\
+' if vis == 0 then h:BndEvt__ReadyBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature() end'\
+' return string.format("lock in button %s (seat %d, draft step %d, order %s)", vis == 0 and "VISIBLE, clicked" or "HIDDEN", seat, gs.GS_HeroSelectStep, gs.DraftOrderJSONStr:ToString():gsub("%s", ""))'
 pick() {
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("'"$2"'", false); pcall(function() pc:UpdateChosenHero("'"$2"'") end); return "clicked '"$2"'"' >> "$1"
 }
@@ -45,12 +50,19 @@ pick() {
 ' return "bob sees " .. #t .. " lobbies: " .. table.concat(t, ", ") .. " (search page " .. pm.LobbyJoinSwitcher:GetActiveWidgetIndex() .. ", replay button visibility " .. tostring(pm.Button_477:GetVisibility()) .. ")"' >> $B
   echo 'lua local pm=FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu; if pm.LobbyList:GetChildrenCount() == 0 then return "bob: nothing to click" end'\
 ' pm.LobbyList:GetChildAt(0):BndEvt__SelectSessionBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature(); return "bob: clicked the lobby"' >> $B
-  sleep 40
+  sleep 30
+  if [[ -n ${SLOTS:-} ]]; then   # sides/seats, e.g. SLOTS="4 6": nobody in seat 0, whose turn the game's draft starts with
+    read -r sa sb <<< "$SLOTS"
+    echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SelectTeamSlotOnServer('$sa'); return "alice: seat '$sa'"' >> $A
+    echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SelectTeamSlotOnServer('$sb'); return "bob: seat '$sb'"' >> $B
+  fi
+  sleep 10
   echo "$LOBBY" >> $A; echo "$LOBBY" >> $B
   echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "alice: launch"' >> $A
   sleep 12; pick $A Lancer; pick $B Berserker
   sleep 4
-  for f in $A $B; do echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):SetChosenHero(); return "locked in"' >> $f; done
+  for f in $A $B; do echo "$LOCKIN_BTN" >> $f; done
+
   for _ in 1 2 3 4; do sleep 20; echo "$WHERE" >> $A; echo "$WHERE" >> $B; done
   if [[ -n ${PROBE:-} ]]; then   # live network rates, server frame times and CPU, mid-match
     for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do echo "$NET_SERVER" >> $h/fangsctl_cmd.txt; done
