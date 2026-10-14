@@ -28,6 +28,22 @@ chat, match history, levels and a leaderboard work; all heroes and cosmetics are
 Target game build: **15 February 2023 (Steam build 10554626)**.
 See **[docs/STATUS.md](docs/STATUS.md)** and **[docs/SERVER.md](docs/SERVER.md)**.
 
+## Playing (Windows)
+
+You need an **invite code** from whoever runs your community server (it starts with `FCE-`).
+
+1. Download **[FangsCE.exe](https://github.com/anomieko/fangs-community-edition/releases/latest/download/FangsCE.exe)**
+   (a small launcher; it downloads the game from your server, not from here). If the browser says the file
+   isn't commonly downloaded, choose **Keep**.
+2. Start it. Windows may say "Windows protected your PC" because the launcher isn't code-signed: click
+   **More info → Run anyway**.
+3. Pick an install folder and a player name, then paste your invite code. The launcher installs the game,
+   keeps it updated and starts it; next time just start `FangsCE.exe` again.
+
+If Windows Security removes a file (often `dwmapi.dll`, the mod loader), add the install folder under
+Windows Security → Virus & threat protection → Exclusions, then start the launcher again: it puts back
+whatever is missing.
+
 ## How it works
 
 | Piece | Path | Role |
@@ -66,5 +82,7 @@ tools/run/test_lobby.sh
 ```
 
 - Server: `server/` (Docker image, hardening script, deploy script) — see [docs/SERVER.md](docs/SERVER.md).
-- Players (Windows): `player/build-full-client.sh` / `player/build-package.sh` → launcher `FangsCE.bat`.
+- Players (Windows): launcher `launcher/` (`FangsCE.exe`): the server's copy has the server built in
+  (`server/deploy.sh`); the public one (`launcher/release.sh`, GitHub Releases) asks for an invite code
+  (`server/invite.sh`).
 - Players (Linux): `tools/play/local.sh <name>`.

@@ -17,9 +17,9 @@ runs on the same stack; the Dec 2023 Closed Playtest (`main_v0_0_444`) is kept a
   a static background where the menu video can't play (Wine).
 - Server: hardened Debian 13 VPS + Docker image (`server/`, `docs/SERVER.md`); one standby game server
   is kept booted so lobbies start instantly; failed server starts are retried.
-- Players: Windows launcher `FangsCE.exe` (`launcher/`): asks for install dir and name, downloads and
-  verifies the game from the server (resumable, only changed files, signed file list), updates itself,
-  starts the game. Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
+- Players: Windows launcher `FangsCE.exe` (`launcher/`): asks for install dir and name (and, in the public
+  build from GitHub Releases, an invite code), downloads and verifies the game from the server (resumable,
+  only changed files, signed file list), updates itself, starts the game. Linux players: `tools/play/local.sh` (Wine + DXVK; local backend or `SERVER=...`).
 
 ## History
 
