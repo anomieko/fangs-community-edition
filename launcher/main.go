@@ -6,6 +6,9 @@
 //
 //	go build -ldflags "-X main.server=<host:port> -X main.joinCode=<code>" -o FangsCE.exe
 //
+// or, in the public build (GitHub Releases, nothing baked in), come from an invite code the player pastes on
+// the first start (server/invite.sh makes it); both are kept in the settings.
+//
 // Server side: <server>/download/<join code>/manifest.json lists the files (player/build-manifest.py),
 // <server>/download/<join code>/files/<path> serves them, <server>/download/<join code>/FangsCE.exe is the
 // current launcher (it replaces itself when that changes).
@@ -20,6 +23,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -62,11 +66,11 @@ type manifestFile struct {
 }
 
 type manifest struct {
-	Build    string         `json:"build"`
-	Exe      string         `json:"exe"`
-	EngineIni string        `json:"engine_ini"`
-	Launcher *manifestFile  `json:"launcher"`
-	Files    []manifestFile `json:"files"`
+	Build     string         `json:"build"`
+	Exe       string         `json:"exe"`
+	EngineIni string         `json:"engine_ini"`
+	Launcher  *manifestFile  `json:"launcher"`
+	Files     []manifestFile `json:"files"`
 }
 
 type installedFile struct {
@@ -79,6 +83,8 @@ type settings struct {
 	InstallDir string `json:"install_dir"`
 	Name       string `json:"name"`
 	Secret     string `json:"secret"`
+	Server     string `json:"server,omitempty"`
+	JoinCode   string `json:"join_code,omitempty"`
 }
 
 var stdin = bufio.NewReader(os.Stdin)
@@ -97,7 +103,6 @@ func main() {
 func run() error {
 	self, _ := os.Executable()
 	_ = os.Remove(self + ".old") // left behind by a self-update
-	base := fmt.Sprintf("http://%s/download/%s/", server, url.PathEscape(joinCode))
 
 	cfgPath := settingsPath()
 	st, err := loadSettings(cfgPath)
@@ -109,6 +114,10 @@ func run() error {
 	} else {
 		fmt.Printf("  Welcome back, %s%s%s!\n\n", bold, st.Name, reset)
 	}
+	if err := useInvite(cfgPath, &st); err != nil {
+		return err
+	}
+	base := downloadBase()
 
 	fmt.Printf("  %sChecking for updates...%s\n", dim, reset)
 	m, err := fetchManifest(base + "manifest.json")
@@ -191,6 +200,73 @@ func firstRun(cfgPath string) (settings, error) {
 	}
 	fmt.Printf("\n  Nice to meet you, %s%s%s! Your name is tied to this PC (%s).\n\n", bold, name, reset, cfgPath)
 	return st, nil
+}
+
+// ---------------------------------------------------------------- invite
+
+// An invite code says where the server is and carries the community join code:
+// "FCE-" + base32("<host:port>/<join code>"). A pasted download link (http://<host:port>/download/<code>/...)
+// works too. The signed file list still decides what gets installed, so a wrong invite can't install anything.
+var (
+	hostRx = regexp.MustCompile(`^[A-Za-z0-9.-]{1,253}(:[0-9]{1,5})?$`)
+	codeRx = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
+	b32    = base32.StdEncoding.WithPadding(base32.NoPadding)
+)
+
+func parseInvite(s string) (srv, code string, ok bool) {
+	s = strings.TrimSpace(s)
+	if u, err := url.Parse(s); err == nil && u.Host != "" {
+		if parts := strings.Split(strings.Trim(u.Path, "/"), "/"); len(parts) >= 2 && parts[0] == "download" {
+			srv, code = u.Host, parts[1]
+		}
+	} else if rest, found := strings.CutPrefix(strings.ToUpper(s), "FCE-"); found {
+		if b, err := b32.DecodeString(strings.NewReplacer("-", "", " ", "").Replace(rest)); err == nil {
+			srv, code, _ = strings.Cut(string(b), "/")
+		}
+	}
+	return srv, code, hostRx.MatchString(srv) && codeRx.MatchString(code)
+}
+
+func makeInvite(srv, code string) string { return "FCE-" + b32.EncodeToString([]byte(srv+"/"+code)) }
+
+func downloadBase() string {
+	return fmt.Sprintf("http://%s/download/%s/", server, url.PathEscape(joinCode))
+}
+
+// useInvite: a launcher with the server baked in remembers it (so the public build works later without an
+// invite); the public build uses the remembered one or asks for an invite code until the server accepts it.
+func useInvite(cfgPath string, st *settings) error {
+	if joinCode != "" {
+		if st.Server != server || st.JoinCode != joinCode {
+			st.Server, st.JoinCode = server, joinCode
+			_ = saveSettings(cfgPath, *st)
+		}
+		return nil
+	}
+	if st.JoinCode != "" {
+		server, joinCode = st.Server, st.JoinCode
+		return nil
+	}
+	fmt.Println("  You need an invite code to play - ask whoever invited you (it starts with FCE-).")
+	for {
+		srv, code, ok := parseInvite(ask("Paste your invite code", ""))
+		if !ok {
+			fmt.Printf("  %sThat isn't an invite code - copy the whole thing (FCE-...).%s\n", yellow, reset)
+			continue
+		}
+		server, joinCode = srv, code
+		if _, err := fetchSmall(downloadBase() + "manifest.json"); err != nil {
+			if strings.HasPrefix(err.Error(), "server answered") {
+				fmt.Printf("  %sThe server doesn't accept that invite code (%v) - check it or ask for a new one.%s\n", yellow, err, reset)
+			} else {
+				fmt.Printf("  %sCan't reach the server for that invite (%v) - try again in a moment.%s\n", yellow, err, reset)
+			}
+			continue
+		}
+		st.Server, st.JoinCode = srv, code
+		fmt.Printf("  %sInvite accepted.%s\n\n", green, reset)
+		return saveSettings(cfgPath, *st)
+	}
 }
 
 // ---------------------------------------------------------------- settings

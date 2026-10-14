@@ -21,6 +21,7 @@ class Host:
         self.had_players = False
         self.empty_since = None
         self.perf_logged = 0.0
+        self.perf = None         # FangsHost heartbeats since the last perf line (see HostManager._perf)
 
     @property
     def log_path(self):
@@ -220,11 +221,8 @@ class HostManager:
             self.collect_results(host)
             st = host.status
             players = st.get('players', 0)
-            if players and time.time() - host.perf_logged >= 30:   # how busy servers are doing (frame times)
-                host.perf_logged = time.time()
-                self.log({'host': host.id, 'perf': {k: st.get(k) for k in
-                          ('map', 'players', 'fps_cap', 'fps', 'hitch_ms')}})
             if players:
+                self._perf(host, st)
                 host.had_players, host.empty_since = True, None
             elif host.empty_since is None:
                 host.empty_since = time.time()
@@ -235,6 +233,25 @@ class HostManager:
             if host.session_id is not None and not host.had_players and time.time() - host.started > self.unused_timeout:
                 await self.stop(host, 'nobody joined'); return
         await self.stop(host, f'process exited ({host.proc.returncode})')
+
+    def _perf(self, host, st):
+        """How busy servers are doing: one line per 30 s while players are on, over all of FangsHost's 3 s heartbeats
+        in it: fps (lowest window), hitch_ms / frame_ms (longest gap / frame), slow (frames over 50 ms)."""
+        p = host.perf
+        if p is None or p['map'] != st.get('map'):
+            p = host.perf = {'map': st.get('map'), 'time': p and p['time'], 'n': 0, 'fps': None, 'hitch_ms': 0, 'frame_ms': 0, 'slow': 0}
+        if st.get('time') != p['time']:          # a new heartbeat (the file is read every 2 s, written every 3 s)
+            p['time'], p['n'] = st.get('time'), p['n'] + 1
+            p['fps'] = min(p['fps'], st.get('fps') or 0) if p['fps'] is not None else st.get('fps')
+            for k in ('hitch_ms', 'frame_ms'):
+                p[k] = max(p[k], st.get(k) or 0)
+            p['slow'] += st.get('slow') or 0
+        if time.time() - host.perf_logged >= 30:
+            host.perf_logged = time.time()
+            self.log({'host': host.id, 'perf': {'map': p['map'], 'players': st.get('players'), 'fps_cap': st.get('fps_cap'),
+                      'fps': st.get('fps'), 'fps_min': p['fps'], 'hitch_ms': p['hitch_ms'], 'frame_ms': p['frame_ms'],
+                      'slow': p['slow'], 'windows': p['n']}})
+            host.perf = {**p, 'n': 0, 'fps': None, 'hitch_ms': 0, 'frame_ms': 0, 'slow': 0}
 
     async def stop(self, host, reason):
         if not self.is_live(host):
