@@ -1069,11 +1069,25 @@ async def fangs_unreleased_heroes(request):
 # Public like the rest of the login screen's data; it is just a number.
 @route('GET', r'/fangsapi/[^/]+/online-players')
 async def fangs_online_players(request):
-    app, now = request.app, time.time()
+    return web.Response(text=str(online_count(request.app)), content_type='text/plain')
+
+
+def online_count(app):
+    now = time.time()
     for uid, t in list(app['lobby_left'].items()):
         if now - t > 60 or uid in app['lobby_users']:
             del app['lobby_left'][uid]
-    return web.Response(text=str(len(app['lobby_users']) + len(app['lobby_left'])), content_type='text/plain')
+    return len(app['lobby_users']) + len(app['lobby_left'])
+
+
+# Main menu, newer FangsBoot: "<players online>\t<free game servers>\t<game servers>". A game server is in use while
+# a lobby or match has it; a free one is booted (or booting) standby or an unused slot.
+@route('GET', r'/fangsapi/[^/]+/server-status')
+async def fangs_server_status(request):
+    hosts = request.app['hosts']
+    used = sum(1 for h in hosts.hosts.values() if h.session_id is not None)
+    total = len(hosts.ports)
+    return web.Response(text=f'{online_count(request.app)}\t{max(total - used, 0)}\t{total}', content_type='text/plain')
 
 
 # ---------------------------------------------------------------- plumbing
