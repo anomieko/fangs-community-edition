@@ -200,7 +200,13 @@ end
 
 local lastLobbyGM = nil
 every(1000, function()
-    if notOnLobby() or (lastLobbyGM and lastLobbyGM:IsValid()) then return end   -- nothing to do: no lookup
+    if notOnLobby() then return end
+    if lastLobbyGM and lastLobbyGM:IsValid() then   -- already set up: no lookup
+        -- Every 300 s (CheckUnReserveTime) the lobby shuts itself down when it has no owner - an empty standby
+        -- too, which then had to be booted again next to running matches. The backend stops unused servers.
+        if lastLobbyGM.PlayerControllersRP:GetArrayNum() == 0 then lastLobbyGM.UnreserveElapsedTime = 0 end
+        return
+    end
     local gm = FindFirstOf("BP_GM_Lobby_GameMode_C")
     if not (gm and gm:IsValid()) or gm == lastLobbyGM then return end
     local name = gm:GetFullName()
