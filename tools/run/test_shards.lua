@@ -108,7 +108,8 @@ function T.tp(what)   -- move the hero next to: shard | own | enemy (Capture Zon
     end
     if not valid(target) then return "tp: no " .. what end
     local l = target:K2_GetActorLocation()
-    p:K2_SetActorLocation({ X = l.X + 120, Y = l.Y, Z = l.Z + 100 }, false, {}, true)
+    local dy = what == "turret" and (l.Y > 0 and -500 or 500) or 0   -- in front of the turret, towards the middle
+    p:K2_SetActorLocation({ X = l.X + (dy == 0 and 120 or 0), Y = l.Y + dy, Z = l.Z + 100 }, false, {}, true)
     return "tp " .. what .. " " .. at(target)
 end
 
@@ -135,6 +136,13 @@ function T.hitPrismatic()   -- the Feb 2023 destructible Shard: what its damage 
     if not valid(ba) then return "no prismatic shard" end
     ba:Damaged(p, true)
     return "prismatic shard hit: dead " .. tostring(ba.Dead)
+end
+
+function T.vanish()   -- the hero goes away without dying (as when a player leaves)
+    local p = hero()
+    if not valid(p) then return "no hero" end
+    p:K2_DestroyActor()
+    return "hero removed"
 end
 
 function T.endRound(team)
