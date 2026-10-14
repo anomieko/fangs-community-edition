@@ -5,8 +5,9 @@ work (the game is x86 Windows code running under Wine).
 
 ## Sizing
 
-Each running match is one headless game process: ~3 GB RAM and up to ~1 CPU core. The backend itself
-is tiny. `HOST_PORTS` sets how many game servers can run at once (one UDP port each); 8 GB RAM → 2.
+Each running match is one headless game process: ~2.5 GB RAM (plus ~0.1 GB of Wine helpers) and, for a full
+match, roughly one vCPU of a small VPS; an idle standby a few % of one. The backend itself is tiny. Load test:
+`tools/run/test_perf.sh` (`docs/recon/server-performance.md`). `HOST_PORTS` sets how many game servers can run at once (one UDP port each); 8 GB RAM → 2.
 One of them is normally a booted standby, so a lobby or match starts instantly.
 
 ## Signed updates

@@ -64,13 +64,15 @@ Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: 
    artifacts are parked until then (`_parked_old_shards`, `_parked_old_health_shrines`).
    Next, if the user wants it (about 2-3 days with tests): FangsHost switch with an on/off flag, optional Aug
    flavour (Aspect speed-up, channeled Health Shrines), un-park the items, two-player tests, group playtest.
-3. **Server smoothness up to 12 players (6v6)** (in progress, agent: load test with bots, hitch hunt, fixes).
-   Target: no frame over ~50 ms. The user allows load tests on the VPS's game slots when nobody plays (test
-   lobbies only, read-only measurements; deploys still only with the user's OK).
-   Live data 14 Oct: arena 1 player ~58 fps / longest frame ~30 ms; 2 players ~40 fps / ~180 ms (up to 254);
-   4 players ~42 fps / ~200 ms. The game's net tick is 30 Hz, so the problem is the recurring ~200 ms frames
-   (replication stalls = stutter), not the average. Then: verify on the VPS with bots in a quiet moment (ask
-   first); maybe a 60 Hz net tick.
+3. **Server smoothness up to 12 players (6v6)** (done, not deployed: FangsHost, `server/run-host.sh`,
+   `backend/hosts.py`; findings and numbers in `docs/recon/server-performance.md`, load test `tools/run/test_perf.sh`).
+   Cause of the ~200 ms hitches: FangsHost's 2 s / 3 s loops scanned all objects on the game thread. Locally with
+   3 active players + 9 bots: before 10 frames > 50 ms in 140 s (longest 99 ms), after 0 (longest 18 ms); servers
+   also skip movies, CEF and the `-log` console. Next: deploy (user's OK), then compare the VPS `perf` lines of the
+   next real match (`frame_ms`, `slow`, `fps_min`). Open: ntsync on the VPS (capacity, needs kernel + Wine change);
+   replication runs at ~20-25 Hz whatever `NetServerMaxTickRate` says, so no 60 Hz net tick from config.
+   FangsBoot (players' mod) still cancels finished loops the way that sometimes stopped other loops in FangsHost:
+   switch it to idling too (needs a player update; watch for menu lists that stop refreshing).
 4. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
