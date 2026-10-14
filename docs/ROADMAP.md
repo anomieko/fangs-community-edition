@@ -51,8 +51,9 @@ Nothing.
 2. **Shards: old carry-and-turn-in vs current kill system** (research in progress, agent). The community wants
    the old system back; some restored items (e.g. Relic Runner, Me Carry, Shardseeker) may belong to the old one.
    Questions: is the old mechanic still in the Feb build (switchable from FangsHost?) or only in Aug 2022; which
-   restored and live items depend on which system. Until then the restored items stay as they are; any of them
-   can be switched off with a server-only deploy (`docs/CHANGELOG.md`).
+   restored and live items depend on which system. The seven restored artifacts that are about the old shards are
+   parked (`_parked_old_shards` in `backend/seed/restore-feb2023.json`, list in `docs/recon/items.md`):
+   **turn them back on when the old shards are back.**
 3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).

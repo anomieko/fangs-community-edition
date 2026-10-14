@@ -1047,10 +1047,6 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_BobAndWeave",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_RepeatRegicide",
      "Owner": "Generic"
     },
@@ -1083,19 +1079,11 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_ShootTheMoon",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_FlyPhoenixFly",
      "Owner": "Generic"
     },
     {
      "Item": "Generic_UnstoppableForce",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_BubbleBobble",
      "Owner": "Generic"
     },
     {
@@ -1107,15 +1095,7 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_RelicRunner_Garden",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_Revolution",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_RocketFuel",
      "Owner": "Generic"
     },
     {
@@ -1132,14 +1112,6 @@
     },
     {
      "Item": "Generic_ProtectTheBloodline",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_Prescience",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_RoleGetSwole",
      "Owner": "Generic"
     },
     {
@@ -3540,10 +3512,6 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_BobAndWeave",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_RepeatRegicide",
      "Owner": "Generic"
     },
@@ -3576,19 +3544,11 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_ShootTheMoon",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_FlyPhoenixFly",
      "Owner": "Generic"
     },
     {
      "Item": "Generic_UnstoppableForce",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_BubbleBobble",
      "Owner": "Generic"
     },
     {
@@ -3600,15 +3560,7 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_RelicRunner_Garden",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_Revolution",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_RocketFuel",
      "Owner": "Generic"
     },
     {
@@ -3625,14 +3577,6 @@
     },
     {
      "Item": "Generic_ProtectTheBloodline",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_Prescience",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_RoleGetSwole",
      "Owner": "Generic"
     },
     {
@@ -7272,17 +7216,7 @@
    {
     "Class": "*",
     "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/ShootTheMoon/ITEM_Generic_ShootTheMoon.ITEM_Generic_ShootTheMoon"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
     "Item": "/Game/Items/Characters/Generic/Garden/UnstoppableForce/ITEM_Generic_UnstoppableForce.ITEM_Generic_UnstoppableForce"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/BubbleBobble/ITEM_Generic_BubbleBobble.ITEM_Generic_BubbleBobble"
    },
    {
     "Class": "*",
@@ -7292,32 +7226,7 @@
    {
     "Class": "*",
     "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/AllMaps/RelicRunner/ITEM_Generic_RelicRunnerGarden.ITEM_Generic_RelicRunnerGarden"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/RocketFuel/ITEM_Generic_RocketFuel.ITEM_Generic_RocketFuel"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/Prescience/ITEM_Generic_Prescience.ITEM_Generic_Prescience"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/RoleGetSwole/ITEM_Generic_RoleGetSwole.ITEM_Generic_RoleGetSwole"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
     "Item": "/Game/Items/Characters/Generic/Garden/LittlePush/ITEM_Generic_LittlePush.ITEM_Generic_LittlePush"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/BobAndWeave/ITEM_Generic_BobAndWeave.ITEM_Generic_BobAndWeave"
    },
    {
     "Class": "BP_FireMage_Char_C",
