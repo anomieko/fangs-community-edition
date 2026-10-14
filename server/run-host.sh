@@ -21,6 +21,12 @@ if [[ ! -e $inst/MOBA/Binaries/Win64/$exe || "$(cat "$inst/.game-stamp" 2>/dev/n
   echo "$stamp" > "$inst/.game-stamp"
 fi
 bin=$inst/MOBA/Binaries/Win64
+# A game server has no use for the game's movies or its web browser: one it starts anyway decodes a movie all the
+# time on other threads (~10-20% of a core per server measured locally), and the browser's helper processes (CEF,
+# UnrealCEFSubProcess.exe; -nocef doesn't stop them in this build) hold ~0.3 GB per server. Only the view's links
+# go; the game install stays as it is.
+find "$inst/MOBA/Content/Movies" -name '*.mp4' -delete 2>/dev/null || true
+rm -f "$inst/Engine/Binaries/Win64/UnrealCEFSubProcess.exe"
 rm -rf "$bin/ue4ss" "$bin/dwmapi.dll"
 cp -a "$UE4SS_DIST/dwmapi.dll" "$UE4SS_DIST/ue4ss" "$bin/"
 cp -a "$FANGS_MODS/Mods/." "$bin/ue4ss/Mods/"
@@ -65,6 +71,8 @@ cd "$bin"
 export WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi=n,b"
 # FANGS_HOST_DISPLAY: shared X display (the server container's); otherwise a private Xvfb per game server
 if [[ -n ${FANGS_HOST_DISPLAY:-} ]]; then export DISPLAY=$FANGS_HOST_DISPLAY; x=(); else x=(xvfb-run -a -e "$inst/xvfb.log" -s '-screen 0 640x480x24'); fi
+# (no -log: it only opens a console window, a conhost.exe with ~0.3 GB per server; readiness comes from
+# FangsHost's status file, and Development builds write MOBA.log anyway)
 exec "${x[@]}" wine "$exe" /Game/Environment/Maps/LE_Loading_Map \
-  -FangsHost -port="$port" ${FANGS_BACKEND:+-FangsBackend=$FANGS_BACKEND} -nullrhi -nosound -unattended -nosplash -log \
+  -FangsHost -port="$port" ${FANGS_BACKEND:+-FangsBackend=$FANGS_BACKEND} -nullrhi -nosound -unattended -nosplash \
   -ExecCmds="t.MaxFPS ${FANGS_TICKRATE:-60}" "$@"
