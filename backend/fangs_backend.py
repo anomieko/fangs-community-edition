@@ -1072,16 +1072,26 @@ async def fangs_online_players(request):
     return web.Response(text=str(online_count(request.app)), content_type='text/plain')
 
 
-def online_count(app):
+SERVICE_USERS = {'smoketest'}   # server/deploy.sh's smoke test logs in like a player: not "online"
+
+
+def online_users(app):
+    """Users with an open lobby connection or one closed less than a minute ago, without service accounts."""
     now = time.time()
     for uid, t in list(app['lobby_left'].items()):
         if now - t > 60 or uid in app['lobby_users']:
             del app['lobby_left'][uid]
-    return len(app['lobby_users']) + len(app['lobby_left'])
+    users = (app['store'].user_by_id(uid) for uid in [*app['lobby_users'], *app['lobby_left']])
+    return [u for u in users if u and u['display_name'].lower() not in SERVICE_USERS]
+
+
+def online_count(app):
+    return len(online_users(app))
 
 
 # Main menu, newer FangsBoot: "<players online>\t<free game servers>\t<game servers>", then (only for a logged-in
-# player) the online players' names (without the #1234 tag), one per line. A game server is in use while a lobby or match has it; a free
+# player) the online players' names (without the #1234 tag), one per line; with ?v=2 a name can carry a style the
+# server grants ("<name>\t<style>", seed CENameStyles: lowercase name -> style, e.g. "rainbow"). A game server is in use while a lobby or match has it; a free
 # one is booted (or booting) standby or an unused slot.
 @route('GET', r'/fangsapi/[^/]+/server-status')
 async def fangs_server_status(request):
@@ -1090,8 +1100,10 @@ async def fangs_server_status(request):
     total = len(hosts.ports)
     lines = [f'{online_count(app)}\t{max(total - used, 0)}\t{total}']
     if caller(request).get('user_id'):
-        users = (app['store'].user_by_id(uid) for uid in [*app['lobby_users'], *app['lobby_left']])
-        lines += sorted((u['display_name'] for u in users if u), key=str.lower)   # names as chosen, no #1234
+        styles = (app['store'].data['game_records'].get('CENameStyles') or {}) if request.query.get('v') == '2' else {}
+        for name in sorted((u['display_name'] for u in online_users(app)), key=str.lower):   # as chosen, no #1234
+            style = styles.get(name.lower())
+            lines.append(f'{name}\t{style}' if style else name)
     return web.Response(text='\n'.join(lines) + '\n', content_type='text/plain')
 
 

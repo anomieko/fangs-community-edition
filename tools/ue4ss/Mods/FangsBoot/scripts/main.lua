@@ -506,8 +506,9 @@ if not gameVersion():find("^alpha7") then
     local COLLAPSED = 1
     local STATIC_BKG = "/Game/UI/Textures/Client/HeroSelect/HeroMasteryBkg.HeroMasteryBkg"
 
-    local cleaned, shownAt, bkgFixed, onlineText, namesText = nil, 0, false, nil, nil
-    local MAX_NAMES = 15
+    local cleaned, shownAt, bkgFixed, onlineText, namesBox, tree = nil, 0, false, nil, nil, nil
+    local MAX_NAMES, MUTED = 15, { R = 0.78, G = 0.82, B = 0.86, A = 0.85 }
+    local rainbow, made = {}, 0   -- letters of names with the "rainbow" style (animated below); widgets made
     local function fixBackground(menu)
         local player = menu.BkgMediaPlayer
         if player and player:IsValid() and player:IsPlaying() then return true end
@@ -539,16 +540,55 @@ if not gameVersion():find("^alpha7") then
             local column = cards:GetParent()
             onlineText = column:GetChildAt(0):GetChildAt(0)
             onlineText:SetText(FText("PLAYERS ONLINE"))
-            -- the names: small, muted, below the header's line
-            namesText = StaticConstructObject(StaticFindObject("/Script/UMG.TextBlock"), pm.WB_Missions.WidgetTree,
-                FName("FCE_OnlineNames"))
-            namesText:SetFont(onlineText.Font); namesText.Font.Size = 13
-            pcall(function() namesText:SetColorAndOpacity({ SpecifiedColor = { R = 0.78, G = 0.82, B = 0.86, A = 0.85 }, ColorUseRule = 0 }) end)
-            column:AddChild(namesText):SetPadding({ Left = 2.0, Top = 6.0, Right = 0.0, Bottom = 0.0 })
+            -- the names: small, muted lines below the header's line (the free game servers last)
+            tree = pm.WB_Missions.WidgetTree
+            namesBox = StaticConstructObject(StaticFindObject("/Script/UMG.VerticalBox"), tree, FName("FCE_OnlineNames"))
+            column:AddChild(namesBox):SetPadding({ Left = 2.0, Top = 6.0, Right = 0.0, Bottom = 0.0 })
         end)
         if not ok then log("menu: missions list: " .. tostring(e)) end
         log("menu: cleaned up")
     end
+
+    local function label(text)
+        made = made + 1
+        local t = StaticConstructObject(StaticFindObject("/Script/UMG.TextBlock"), tree, FName("FCE_Online" .. made))
+        t:SetFont(onlineText.Font); t.Font.Size = 13
+        pcall(function() t:SetColorAndOpacity({ SpecifiedColor = MUTED, ColorUseRule = 0 }) end)
+        t:SetText(FText(text))
+        return t
+    end
+    local function showNames(names, servers)   -- names: {name, style}
+        namesBox:ClearChildren()
+        rainbow = {}
+        for _, n in ipairs(names) do
+            if n.style == "rainbow" then   -- one block per letter, coloured by the loop below
+                made = made + 1
+                local row = StaticConstructObject(StaticFindObject("/Script/UMG.HorizontalBox"), tree, FName("FCE_Online" .. made))
+                for i = 1, #n.name do
+                    local l = label(n.name:sub(i, i))
+                    row:AddChild(l); rainbow[#rainbow + 1] = l
+                end
+                namesBox:AddChild(row)
+            else
+                namesBox:AddChild(label(n.name))
+            end
+        end
+        namesBox:AddChild(label(servers)):SetPadding({ Left = 0.0, Top = 10.0, Right = 0.0, Bottom = 0.0 })
+    end
+    local function hsv(h)   -- hue 0..1 at full saturation and value
+        local i, f = math.floor(h * 6), h * 6 - math.floor(h * 6)
+        local q, t = 1 - f, f
+        local rgb = ({ { 1, t, 0 }, { q, 1, 0 }, { 0, 1, t }, { 0, q, 1 }, { t, 0, 1 }, { 1, 0, q } })[i % 6 + 1]
+        return { R = rgb[1], G = rgb[2], B = rgb[3], A = 1.0 }
+    end
+    local phase = 0
+    every(100, function()
+        if #rainbow == 0 then return end
+        phase = (phase + 0.02) % 1
+        for i, l in ipairs(rainbow) do
+            if l:IsValid() then pcall(function() l:SetColorAndOpacity({ SpecifiedColor = hsv((phase + i * 0.11) % 1), ColorUseRule = 0 }) end) end
+        end
+    end)
 
     local vr, req, asked = nil, nil, 0
     local function updateOnline()
@@ -559,16 +599,16 @@ if not gameVersion():find("^alpha7") then
             local first, rest = (text or ""):match("^([^\n]*)\n?(.*)$")
             local n, free, total = (first or ""):match("^(%d+)\t(%d+)\t(%d+)")
             n, free, total = tonumber(n), tonumber(free), tonumber(total)
-            if n and namesText and namesText:IsValid() then
+            if n and namesBox and namesBox:IsValid() then
                 local names = {}
-                for name in rest:gmatch("[^\n]+") do
-                    if #names < MAX_NAMES then names[#names + 1] = name end
+                for line in rest:gmatch("[^\n]+") do
+                    local name, style = line:match("^([^\t]+)\t?(.*)$")
+                    if #names < MAX_NAMES then names[#names + 1] = { name = name, style = style } end
                 end
-                if n > #names and #names > 0 then names[#names + 1] = "+" .. (n - #names) .. " more" end
-                if #names == 0 then names[1] = n .. (n == 1 and " player" or " players") end
-                local servers = free == 0 and ("all " .. total .. " game servers busy")
-                    or (free .. " of " .. total .. " game servers free")
-                namesText:SetText(FText(table.concat(names, "\n") .. "\n\n" .. servers))
+                if n > #names and #names > 0 then names[#names + 1] = { name = "+" .. (n - #names) .. " more" } end
+                if #names == 0 then names[1] = { name = n .. (n == 1 and " player" or " players") } end
+                showNames(names, free == 0 and ("all " .. total .. " game servers busy")
+                    or (free .. " of " .. total .. " game servers free"))
             end
             req = nil
         elseif os.time() - asked >= 15 then
@@ -579,7 +619,7 @@ if not gameVersion():find("^alpha7") then
             req = vr:ConstructVaRestRequestExt(0, 0)   -- GET, no body
             -- logged in: the names are only sent to players (the counts to anyone)
             pcall(function() req:SetHeader("Authorization", "Bearer " .. FindFirstOf("AccelByte"):GetUserClientToken():ToString()) end)
-            req:ProcessURL(base .. "/fangsapi/prod/server-status")
+            req:ProcessURL(base .. "/fangsapi/prod/server-status?v=2")
         end
     end
 
