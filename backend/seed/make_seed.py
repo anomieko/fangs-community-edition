@@ -29,8 +29,9 @@ heroes = ['Berserker', 'ShieldGirl', 'Lancer', 'Gunslinger', 'Backstab', 'FireMa
           'DemonGirl', 'WoodenSword', 'BookMage', 'Sidekick', 'BattleMonk', 'CatSupp', 'BigBoi']
 # Heroes the developers never released, playable as a separate "Unreleased" group (FangsBoot keeps them apart in the
 # menus and shows a notice): DT_Heroes row, name (Withergrim, Ellis and Nuali are their names in the game's texts).
+# BladeMaster is left out: a grey mannequin without abilities (DT_Heroes still enables it).
 unreleased = [('Warlock', 'Withergrim'), ('Priest', 'Ellis'), ('WaterBlade', 'Nuali'), ('Scythe', 'Scythe'),
-              ('Sniper', 'Sniper'), ('BladeMaster', 'BladeMaster')]
+              ('Sniper', 'Sniper')]
 
 
 def augments(name):

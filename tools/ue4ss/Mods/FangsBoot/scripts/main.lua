@@ -493,9 +493,10 @@ end
 
 -- ---------------------------------------------------------------------------------------------
 -- Main menu (Feb 2023 build). Dead services off: the Battle Pass and Store tabs, the battle-pass currency and
--- the "Join our Discord" banner. The missions list (no missions any more) becomes the number of players online
--- and of free game servers (backend /fangsapi/prod/server-status, every 15 s while the menu is on screen). Tabs
--- are collapsed, never removed: SelectMainMenuTab picks the tab buttons by their position.
+-- the "Join our Discord" banner, the currencies (realm gold, soul cores: nothing to spend them on). The missions
+-- list (no missions any more) becomes "PLAYERS ONLINE" with the online players' names and the number of free game
+-- servers below (backend /fangsapi/prod/server-status, every 15 s while the menu is on screen). Tabs are
+-- collapsed, never removed: SelectMainMenuTab picks the tab buttons by their position.
 -- Pages other than Home (Leaderboard, Collection > Artifacts, ...) have no background of their own: they show
 -- the 4K splash video (ClientBkg). Where it doesn't play (Wine without the codec) the image renders white;
 -- then a dark static background replaces it.
@@ -505,7 +506,8 @@ if not gameVersion():find("^alpha7") then
     local COLLAPSED = 1
     local STATIC_BKG = "/Game/UI/Textures/Client/HeroSelect/HeroMasteryBkg.HeroMasteryBkg"
 
-    local cleaned, shownAt, bkgFixed, onlineText = nil, 0, false, nil
+    local cleaned, shownAt, bkgFixed, onlineText, namesText = nil, 0, false, nil, nil
+    local MAX_NAMES = 15
     local function fixBackground(menu)
         local player = menu.BkgMediaPlayer
         if player and player:IsValid() and player:IsPlaying() then return true end
@@ -529,12 +531,20 @@ if not gameVersion():find("^alpha7") then
         hide("battle pass tab", menu.BattlePassTab); hide("store tab", menu.ShopTab)
         hide("battle pass currency", menu.BpcTipBtn); hide("missions button", menu.MissionBtn)
         hide("discord banner", pm.PromoButton)
+        hide("realm gold", menu.HardCurrencyTipBtn); hide("soul cores", menu.SoftCurrencyTipBtn)
         -- WB_Missions: VerticalBox_1 > [HorizontalBox_0 > "MISSIONS" header, Image_106 line, ScaleBox_0 > cards]
         local ok, e = pcall(function()
             local cards = pm.WB_Missions.MissionsSizeBox:GetParent()
             cards:SetVisibility(COLLAPSED)
-            onlineText = cards:GetParent():GetChildAt(0):GetChildAt(0)
+            local column = cards:GetParent()
+            onlineText = column:GetChildAt(0):GetChildAt(0)
             onlineText:SetText(FText("PLAYERS ONLINE"))
+            -- the names: small, muted, below the header's line
+            namesText = StaticConstructObject(StaticFindObject("/Script/UMG.TextBlock"), pm.WB_Missions.WidgetTree,
+                FName("FCE_OnlineNames"))
+            namesText:SetFont(onlineText.Font); namesText.Font.Size = 13
+            pcall(function() namesText:SetColorAndOpacity({ SpecifiedColor = { R = 0.78, G = 0.82, B = 0.86, A = 0.85 }, ColorUseRule = 0 }) end)
+            column:AddChild(namesText):SetPadding({ Left = 2.0, Top = 6.0, Right = 0.0, Bottom = 0.0 })
         end)
         if not ok then log("menu: missions list: " .. tostring(e)) end
         log("menu: cleaned up")
@@ -546,12 +556,19 @@ if not gameVersion():find("^alpha7") then
             local status = req:IsValid() and req:GetStatus() or 2   -- 0 not started, 1 processing, 2/3 failed, 4 ok
             if status < 2 and os.time() - asked < 20 then return end
             local text = status == 4 and req:GetResponseCode() == 200 and req:GetResponseContentAsString(true):ToString()
-            local n, free, total = (text or ""):match("^(%d+)\t(%d+)\t(%d+)")
+            local first, rest = (text or ""):match("^([^\n]*)\n?(.*)$")
+            local n, free, total = (first or ""):match("^(%d+)\t(%d+)\t(%d+)")
             n, free, total = tonumber(n), tonumber(free), tonumber(total)
-            if n and onlineText and onlineText:IsValid() then
-                local servers = free == 0 and ("ALL " .. total .. " GAME SERVERS BUSY")
-                    or (free .. " OF " .. total .. " GAME SERVERS FREE")
-                onlineText:SetText(FText(n .. (n == 1 and " PLAYER ONLINE" or " PLAYERS ONLINE") .. "\n" .. servers))
+            if n and namesText and namesText:IsValid() then
+                local names = {}
+                for name in rest:gmatch("[^\n]+") do
+                    if #names < MAX_NAMES then names[#names + 1] = name end
+                end
+                if n > #names and #names > 0 then names[#names + 1] = "+" .. (n - #names) .. " more" end
+                if #names == 0 then names[1] = n .. (n == 1 and " player" or " players") end
+                local servers = free == 0 and ("all " .. total .. " game servers busy")
+                    or (free .. " of " .. total .. " game servers free")
+                namesText:SetText(FText(table.concat(names, "\n") .. "\n\n" .. servers))
             end
             req = nil
         elseif os.time() - asked >= 15 then
@@ -560,6 +577,8 @@ if not gameVersion():find("^alpha7") then
             if not base then return end
             if not (vr and vr:IsValid()) then vr = FindFirstOf("VaRestSubsystem") end
             req = vr:ConstructVaRestRequestExt(0, 0)   -- GET, no body
+            -- logged in: the names are only sent to players (the counts to anyone)
+            pcall(function() req:SetHeader("Authorization", "Bearer " .. FindFirstOf("AccelByte"):GetUserClientToken():ToString()) end)
             req:ProcessURL(base .. "/fangsapi/prod/server-status")
         end
     end

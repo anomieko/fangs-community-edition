@@ -47,8 +47,7 @@
     "Priest",
     "WaterBlade",
     "Scythe",
-    "Sniper",
-    "BladeMaster"
+    "Sniper"
    ],
    "UnlockAllHeroes": true,
    "UnlockAllSkins": true,
@@ -2541,8 +2540,7 @@
     "Priest",
     "WaterBlade",
     "Scythe",
-    "Sniper",
-    "BladeMaster"
+    "Sniper"
    ],
    "UnlockAllHeroes": true,
    "UnlockAllSkins": true,
@@ -7449,10 +7447,6 @@
    [
     "Sniper",
     "Sniper"
-   ],
-   [
-    "BladeMaster",
-    "BladeMaster"
    ]
   ]
  },
