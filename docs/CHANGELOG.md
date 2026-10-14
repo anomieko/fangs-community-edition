@@ -17,7 +17,7 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 | Change | Commits | Off switch |
 |---|---|---|
-| FangsBoot: the lobby list's Casual → Custom correction only touches Casual (never Training or other modes) | see git log | revert the commit |
+| FangsBoot: the lobby list's Casual → Custom correction only touches Casual (never Training or other modes) | `170d298` | revert the commit |
 
 ## deploy-2026-10-14-1821 (`273d2d1`, Feb 2023 build)
 
