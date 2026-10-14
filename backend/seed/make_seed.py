@@ -103,6 +103,8 @@ records = {
     'CERestoredItems': {'Playtest021523v1_v0_0_02': restored('itempaths-feb2023.json', 'restore-feb2023.json')},
     # Not read by the client: FangsBoot gets it from /fangsapi/*/unreleased-heroes.
     'CEUnreleasedHeroes': {'Playtest021523v1_v0_0_02': unreleased},
+    # Not read by the client: name styles in the main menu's online list (FangsBoot), lowercase name -> style.
+    'CENameStyles': {'anomie': 'rainbow'},
     # Not read by the client: the backend's catalog per AccelByte namespace (Feb/Dec builds use "fangs", Aug
     # "fangsbeta"). Item class = key (the categoryPath), item id = title = entitlement name.
     'CECatalog': {'fangs': {**{k: v for k, v in cosmetics_feb.items() if k != 'Skin'},
