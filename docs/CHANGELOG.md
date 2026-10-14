@@ -15,7 +15,11 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Server only (FangsBoot drops parked items from the list it fetches; no player update).
+
+| Change | Commits | Off switch |
+|---|---|---|
+| Mask of Mana and Vital Offering parked (off and out of the menus): they only react to channeled Health Shrines, which the Feb maps replaced with walk-over pickups | (this commit) | move them from `_parked_old_health_shrines` back to `Generic` in `backend/seed/restore-feb2023.json` |
 
 ## deploy-2026-10-14-1903 (`5246bf3`, Feb 2023 build)
 
