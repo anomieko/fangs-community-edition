@@ -15,6 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-14-1903 (`5246bf3`, Feb 2023 build)
+
+Players need to restart the launcher for the rainbow / one-line names (others keep plain names).
+
 | Change | Commits | Off switch |
 |---|---|---|
 | Online list: the deploy's smoke test account no longer counts as online | `9b971cb` | remove `smoketest` from `SERVICE_USERS` |

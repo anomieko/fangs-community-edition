@@ -17,7 +17,7 @@ Last updated: 2026-10-14.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-14-1855` (`478b254`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-14-1903` (`5246bf3`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -26,6 +26,8 @@ Current deploy: `deploy-2026-10-14-1855` (`478b254`); what each deploy changed: 
 - since 14 Oct 18:21: lobby creation no longer fails when an owner's retry races a booting server.
 - since 14 Oct 18:55: main menu lists who is online and free game servers; currencies hidden; BladeMaster
   removed; FangsBoot lists arrive within seconds (cached); seven old-shard artifacts parked (35 items restored).
+- since 14 Oct 19:03: online list one name per line with server-granted styles (rainbow anomie); smoke test
+  account not counted.
 
 ## Done, not deployed
 
