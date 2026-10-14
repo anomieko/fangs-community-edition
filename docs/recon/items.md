@@ -51,6 +51,15 @@ Restored (in `backend/seed/restore-feb2023.json`), each verified in a match:
   (tag-only: shrine/orb/channel Blueprints read it). Available on LE_Arena02/06 and LE_Payload03/04.
   EnergyDrink and Prescience point to missing description strings.
 
+**Parked** (`_parked_old_shards` in the restore list, 2026-10-14): seven of those artifacts are about the old shard
+system (capture/carry a Shard, turn it in at a Capture Zone, channel Shards); our build kills Shards instead,
+so they stay off until the old system is back: Generic_ShootTheMoon (Mask of Glory: capturing a Shard at the
+enemy Capture Zone), Generic_RelicRunner_Garden (Swiftrunner: speed while carrying a Shard), Generic_RocketFuel
+(Mask of Speed: capturing a Shard), Generic_BubbleBobble (Shadowbringer: stealth after channeling a Shard),
+Generic_Prescience (Allseer: announced Shard, enemy channeling it), Generic_RoleGetSwole (Mask of Ascension: Shard
+effects on the target), Generic_BobAndWeave (Shardseeker: channel Shards and shrines faster). The other nine are
+about Captains, the Aspect or health shrines (Generic_MeCarry_Garden is "Vigorcloak": +heals/shields).
+
 Heirlooms (effect code present in Feb), restored too: each was equipped through its slot in a match
 (`tools/run/test_items.sh`), the game server had it equipped and the hero's abilities still fired. Whether each
 effect has the intended numbers is not checked; confirm in play.
