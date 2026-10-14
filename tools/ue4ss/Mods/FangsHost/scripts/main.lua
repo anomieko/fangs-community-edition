@@ -12,18 +12,20 @@ end
 
 -- Runs fn on the game thread every `ms` milliseconds until it returns true. (LoopAsync + ExecuteInGameThread
 -- ran Lua on two threads at once, which now and then crashed the game inside UE4SS's Lua VM: exit code 3.)
+-- A loop whose work is done stays registered but idle: cancelling one (CancelDelayedAction) now and then stopped
+-- another loop of this mod for good in this UE4SS build (seen with the 10 ms frame-time loop).
 local function every(ms, fn)
-    local handle, failures = nil, 0
-    handle = LoopInGameThreadWithDelay(ms, function()
+    local failures, finished = 0, false
+    return LoopInGameThreadWithDelay(ms, function()
+        if finished then return end
         local ok, done = pcall(fn)   -- an error must not end the loop (objects vanish during map changes)
         if not ok then
             failures = failures + 1
             if failures <= 3 then log("loop error (" .. ms .. " ms loop): " .. tostring(done)) end
-        elseif done == true and handle and IsValidDelayedActionHandle(handle) then
-            CancelDelayedAction(handle)
+        elseif done == true then
+            finished = true
         end
     end)
-    return handle
 end
 
 local ok, cl = pcall(function() return UEHelpers.GetKismetSystemLibrary():GetCommandLine():ToString() end)
@@ -47,9 +49,10 @@ local function localControllers()
     return out
 end
 
--- Object lookups (FindFirstOf/FindAllOf) scan every object: ~3 ms each on a fast PC, several times that on
--- a small VPS, on the game thread. Loops below avoid them where they can: the game instance never changes,
--- and lobby-only work is skipped on other maps (currentMap comes from the 3 s heartbeat).
+-- Object lookups (FindFirstOf/FindAllOf) scan every object, on the game thread: in a 12-hero arena ~10 ms each on
+-- a fast PC, several times that on the VPS: a visible hitch for every player each time. Loops that run during matches must not
+-- use them: the game instance never changes, the game state comes through it (gameState()), lobby-only work is
+-- skipped on other maps (currentMap comes from the 3 s heartbeat).
 -- Game build (MOBA/Content/Data/version.txt): the Aug 2022 build is "alpha7...", the Feb 2023 build "Playtest...".
 local IS_AUG2022 = (function()
     local f = io.open("../../Content/Data/version.txt", "r")
@@ -62,6 +65,13 @@ local cachedGI = nil
 local function gameInstance()
     if not (cachedGI and cachedGI:IsValid()) then cachedGI = FindFirstOf("BP_MOBAInstance_C") end
     return cachedGI
+end
+-- The current world's game state, through the game instance (no object scan, and right after a map change too).
+local function gameState()
+    local gi = gameInstance()
+    if not (gi and gi:IsValid()) then return nil end
+    local ok, gs = pcall(function() return gi:GetWorld().GameState end)
+    return ok and gs and gs:IsValid() and gs or nil
 end
 currentMap = ""   -- "/Game/.../LE_Lobby_Map" etc., "" until the first heartbeat
 local function notOnLobby() return currentMap ~= "" and not currentMap:find("LE_Lobby_Map", 1, true) end
@@ -103,12 +113,19 @@ end)
 if not allPickHooked then log("hero select: BeginPlay hook unavailable - draft order unchanged") end
 
 -- Safety net: a local player that still shows up on a loaded lobby/arena is removed (never during a level
--- change, which can leave the server stuck between levels).
+-- change, which can leave the server stuck between levels). It would come with a map change, so this looks (an
+-- object scan) twice per map, 4 and 15 s after it loaded - not all match long.
 local removedLocal = {}   -- a destroyed controller stays findable until garbage collection
+local watchedMap, watchedSince, checks = nil, 0, 0
 every(2000, function()
     if not started then return end
-    local gs = FindFirstOf("GameStateBase")
-    local map = gs and gs:IsValid() and gs:GetFullName():match("Maps/([%w_]+)") or ""
+    local gs = gameState()
+    local full = gs and gs:GetFullName() or ""
+    if full ~= watchedMap then watchedMap, watchedSince, checks = full, os.time(), 0 end
+    local age = os.time() - watchedSince
+    if checks >= 2 or age < (checks == 0 and 4 or 15) then return end
+    checks = checks + 1
+    local map = full:match("Maps/([%w_]+)") or ""
     if map == "" or map == "LE_Loading_Map" or map == "LE_MainMenu_Map" then return end
     for _, pc in ipairs(localControllers()) do
         local name = pc:GetFullName()
@@ -136,6 +153,21 @@ every(100, function()
     if lastSample and t > lastSample then worstGap = math.max(worstGap, t - lastSample) end
     lastSample = t
 end)
+-- Frame times (what players feel: a long server frame delays everyone's updates): a 10 ms loop sees the frame counter
+-- move on; frame time = time between the first runs in two frames (ms resolution). Per heartbeat window: the longest
+-- frame and how many took over 50 ms.
+local ft = { frame = nil, start = 0, longest = 0, slow = 0 }
+every(10, function()
+    local t, frame = os.clock(), UEHelpers.GetKismetSystemLibrary():GetFrameCount()
+    if frame ~= ft.frame then
+        if ft.frame then
+            local d = (t - ft.start) / math.max(1, frame - ft.frame)
+            if d > ft.longest then ft.longest = d end
+            if d > 0.050 then ft.slow = ft.slow + 1 end
+        end
+        ft.frame, ft.start = frame, t
+    end
+end)
 local frameMark = nil   -- {frames, wall time} at the last heartbeat
 local function frameStats()
     local frames = UEHelpers.GetKismetSystemLibrary():GetFrameCount()
@@ -145,16 +177,19 @@ local function frameStats()
     frameMark = { frames = frames, t = t }
     local hitch = math.max(0, worstGap - 0.1) * 1000   -- the sampler's own 100 ms isn't a hitch
     worstGap = 0
-    return fps, hitch
+    local longest, slow = ft.longest * 1000, ft.slow
+    ft.longest, ft.slow = 0, 0
+    return fps, hitch, longest, slow
 end
 
 -- Frame-rate cap by what the server is doing: a full tick (FANGS_TICKRATE, 60) only in matches. An empty
 -- server ticking at 60 used most of a CPU core for nothing, taken from the matches on the same machine.
 local MATCH_FPS = tonumber(os.getenv("FANGS_TICKRATE") or "") or 60
 local LOBBY_FPS = tonumber(os.getenv("FANGS_LOBBY_FPS") or "") or 30
-local fpsCap = nil
+local fpsCap, fpsMap = nil, nil
 local function capFps(gs, map, players)
     local want = (map ~= "" and not map:find("LE_Lobby_Map", 1, true)) and MATCH_FPS or (players > 0 and LOBBY_FPS or 15)
+    if map ~= fpsMap then fpsCap, fpsMap = nil, map end   -- loading a map resets t.MaxFPS (the arena to 60)
     if want == fpsCap then return end
     if not (gs and gs:IsValid()) then return end
     UEHelpers.GetKismetSystemLibrary():ExecuteConsoleCommand(gs, "t.MaxFPS " .. want, nil)
@@ -162,22 +197,29 @@ local function capFps(gs, map, players)
     log("tick: " .. want .. " fps (" .. (map:match("[^/]+$") or "?") .. ", " .. players .. " players)")
 end
 
+local PlayerControllerClass = nil
 every(3000, function()
     local map, players = "", 0
-    local gs = FindFirstOf("GameStateBase")
-    if gs and gs:IsValid() then map = gs:GetFullName():match("(/Game/[^%.]+)") or "" end
-    currentMap = map
-    for _, p in ipairs(FindAllOf("PlayerController") or {}) do
-        if p:IsValid() and not p:GetFullName():find("Default__", 1, true) and not isLocal(p) then players = players + 1 end
+    local gs = gameState()
+    if gs then
+        map = gs:GetFullName():match("(/Game/[^%.]+)") or ""
+        -- players: remote player controllers, through the game state's player states (bots have AI controllers)
+        PlayerControllerClass = PlayerControllerClass or StaticFindObject("/Script/Engine.PlayerController")
+        gs.PlayerArray:ForEach(function(_, e)
+            local ps = e:get()
+            local pc = ps:IsValid() and ps.Owner
+            if pc and pc:IsValid() and pc:IsA(PlayerControllerClass) and not isLocal(pc) then players = players + 1 end
+        end)
     end
+    currentMap = map
     pcall(capFps, gs, map, players)
-    local ok, fps, hitch = pcall(frameStats)
-    if not ok then fps, hitch = nil, 0 end
+    local ok, fps, hitch, longest, slow = pcall(frameStats)
+    if not ok then fps, hitch, longest, slow = nil, 0, 0, 0 end
     local f = io.open("fangshost_status.json.tmp", "w")
     if f then
         f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "launched": %s, "fps_cap": %d, '
-            .. '"fps": %.1f, "hitch_ms": %.0f, "time": %d}', map, players, tostring(configLoaded),
-            tostring(launched), fpsCap or 0, fps or 0, hitch or 0, os.time()))
+            .. '"fps": %.1f, "hitch_ms": %.0f, "frame_ms": %.0f, "slow": %d, "time": %d}', map, players, tostring(configLoaded),
+            tostring(launched), fpsCap or 0, fps or 0, hitch or 0, longest or 0, slow or 0, os.time()))
         f:close(); os.remove("fangshost_status.json"); os.rename("fangshost_status.json.tmp", "fangshost_status.json")
     end
 end)
