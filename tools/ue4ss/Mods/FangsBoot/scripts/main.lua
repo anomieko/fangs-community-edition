@@ -481,8 +481,8 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Main menu (Feb 2023 build). Dead services off: the Battle Pass and Store tabs, the battle-pass currency and
 -- the "Join our Discord" banner. The missions list (no missions any more) becomes the number of players online
--- (backend /fangsapi/prod/online-players, every 30 s while the menu is on screen). Tabs are collapsed, never
--- removed: SelectMainMenuTab picks the tab buttons by their position.
+-- and of free game servers (backend /fangsapi/prod/server-status, every 15 s while the menu is on screen). Tabs
+-- are collapsed, never removed: SelectMainMenuTab picks the tab buttons by their position.
 -- Pages other than Home (Leaderboard, Collection > Artifacts, ...) have no background of their own: they show
 -- the 4K splash video (ClientBkg). Where it doesn't play (Wine without the codec) the image renders white;
 -- then a dark static background replaces it.
@@ -532,19 +532,22 @@ if not gameVersion():find("^alpha7") then
         if req then
             local status = req:IsValid() and req:GetStatus() or 2   -- 0 not started, 1 processing, 2/3 failed, 4 ok
             if status < 2 and os.time() - asked < 20 then return end
-            local n = status == 4 and req:GetResponseCode() == 200
-                and tonumber(req:GetResponseContentAsString(true):ToString())
+            local text = status == 4 and req:GetResponseCode() == 200 and req:GetResponseContentAsString(true):ToString()
+            local n, free, total = (text or ""):match("^(%d+)\t(%d+)\t(%d+)")
+            n, free, total = tonumber(n), tonumber(free), tonumber(total)
             if n and onlineText and onlineText:IsValid() then
-                onlineText:SetText(FText(n .. (n == 1 and " PLAYER ONLINE" or " PLAYERS ONLINE")))
+                local servers = free == 0 and ("ALL " .. total .. " GAME SERVERS BUSY")
+                    or (free .. " OF " .. total .. " GAME SERVERS FREE")
+                onlineText:SetText(FText(n .. (n == 1 and " PLAYER ONLINE" or " PLAYERS ONLINE") .. "\n" .. servers))
             end
             req = nil
-        elseif os.time() - asked >= 30 then
+        elseif os.time() - asked >= 15 then
             asked = os.time()
             local base = backendBase()
             if not base then return end
             if not (vr and vr:IsValid()) then vr = FindFirstOf("VaRestSubsystem") end
             req = vr:ConstructVaRestRequestExt(0, 0)   -- GET, no body
-            req:ProcessURL(base .. "/fangsapi/prod/online-players")
+            req:ProcessURL(base .. "/fangsapi/prod/server-status")
         end
     end
 
