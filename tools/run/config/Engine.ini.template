@@ -28,12 +28,13 @@ LobbyServerUrl="http://@BACKEND@/lobby/"
 CloudSaveServerUrl="http://@BACKEND@/cloudsave"
 SessionBrowserServerUrl="http://@BACKEND@/sessionbrowser"
 
-; Network rate caps (bytes/s). The game shipped with 40000 for both sides; replication is cut once a
-; connection hits its cap (choppy movement in big fights). Server and client both apply these.
+; Network rate caps (bytes/s): the game's own values, stated so a test can change them (FANGS_NET_RATE in
+; server/run-host.sh). 100000 was tried: on the Feb 2023 build a player was then dropped a few seconds into
+; hero select in about half of two-player lobbies (which ends the lobby); with 40000, 0 of 4.
 [/Script/OnlineSubsystemUtils.IpNetDriver]
-MaxClientRate=100000
-MaxInternetClientRate=100000
+MaxClientRate=40000
+MaxInternetClientRate=40000
 
 [/Script/Engine.Player]
-ConfiguredInternetSpeed=100000
-ConfiguredLanSpeed=100000
+ConfiguredInternetSpeed=40000
+ConfiguredLanSpeed=40000

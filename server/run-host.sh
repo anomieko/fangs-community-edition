@@ -36,6 +36,8 @@ cp "$FANGS_MODS/UE4SS-settings.ini" "$bin/ue4ss/UE4SS-settings.ini"
 if [[ -n ${FANGS_BACKEND:-} ]]; then   # server-side AccelByte calls (server login, player records)
   mkdir -p "$inst/MOBA/Saved/Config/WindowsNoEditor"
   sed "s/@BACKEND@/$FANGS_BACKEND/g" "$REPO/tools/run/config/Engine.ini.template" > "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini"
+  # FANGS_NET_RATE: other per-player rate cap than the template's (bytes/s)
+  [[ -n ${FANGS_NET_RATE:-} ]] && sed -i -E "s/^(Max(Internet)?ClientRate)=.*/\1=$FANGS_NET_RATE/" "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini"
 fi
 rm -f "$inst/MOBA/Saved/Logs/MOBA.log"
 

@@ -43,7 +43,7 @@ end
 -- everyone in the lobby and match. Use the FangsCE player name instead (re-applied after every map change,
 -- where the game sets the computer name again).
 local playerName = commandLine():match("%-TestUser=([%w_%-]+)")
-if playerName then
+if playerName and not commandLine():find("-FangsKeepName", 1, true) then
     every(2000, function()
         local gi = gameInstance()
         if not (gi and gi:IsValid()) then return end
@@ -69,6 +69,21 @@ local allPickHooked = pcall(RegisterBeginPlayPreHook, function(ctx)
     log("hero select: everyone picks at once")
 end)
 if not allPickHooked then log("hero select: BeginPlay hook unavailable - draft order unchanged") end
+
+-- Why a connection to a game server ended, in fangsboot.log (players can send it along with a problem report)
+local NET_FAILURES = { [0] = "NetDriverAlreadyExists", "NetDriverCreateFailure", "NetDriverListenFailure", "ConnectionLost",
+    "ConnectionTimeout", "FailureReceived", "OutdatedClient", "OutdatedServer", "PendingConnectionFailure",
+    "NetGuidMismatch", "NetChecksumMismatch" }
+every(2000, function()
+    local path = "/Game/BluePrints/BP_MOBAInstance.BP_MOBAInstance_C:HandleNetworkError"
+    if not StaticFindObject(path) then return end
+    local ok, err = pcall(RegisterHook, path, function(ctx, failure, isServer)
+        local f = failure:get()
+        log("network error: " .. (NET_FAILURES[f] or tostring(f)))
+    end)
+    log(ok and "logging network errors" or ("network error hook failed: " .. tostring(err)))
+    return true
+end)
 
 local logoDone, loginDone = false, false
 every(500, function()
