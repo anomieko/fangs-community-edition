@@ -101,7 +101,9 @@ class HostManager:
         now = now or time.time()
         if host.session_id is None or not host.ready.is_set() or host.status.get('players', 0):
             return None
-        return now - (host.empty_since or now) if host.had_players else now - host.started - 90
+        # players drop out for a few seconds on the way from lobby to arena: give a server that had players
+        # 20 s before it counts as empty, a new one 90 s for its players to arrive
+        return now - (host.empty_since or now) - 20 if host.had_players else now - host.started - 90
 
     async def _reclaim(self):
         """Every slot is taken: stop the server that has been empty the longest, if any."""
@@ -109,7 +111,7 @@ class HostManager:
         empty = [(t, h) for h in self.hosts.values() if (t := self.empty_for(h, now)) is not None and t > 0]
         if empty:
             t, host = max(empty, key=lambda e: e[0])
-            await self.stop(host, f'slot needed, empty for {t:.0f} s')
+            await self.stop(host, f'slot needed, empty for {t + 20:.0f} s' if host.had_players else 'slot needed, nobody came')
 
     def replenish(self):
         """Top up the idle standby servers (in the background)."""
@@ -131,7 +133,7 @@ class HostManager:
 
     async def _start(self, standby=False):
         for attempt in range(1, self.attempts + 1):
-            ports = self.free_ports()
+            ports = await self._free_port_soon()
             if not ports:
                 raise RuntimeError('no free game server slots')
             port = ports[0]
@@ -147,6 +149,13 @@ class HostManager:
                     return host
                 await self.stop(host, f'died while starting (attempt {attempt})')
         raise RuntimeError('game server failed to start')
+
+    async def _free_port_soon(self, wait=30):
+        """Free ports; when there are none but a stopped server is still shutting down, wait for its port."""
+        deadline = time.time() + wait
+        while not self.free_ports() and self._releasing and time.time() < deadline:
+            await asyncio.sleep(0.5)
+        return self.free_ports()
 
     async def _ready_or_exit(self, host):
         waiter = asyncio.create_task(host.ready.wait())
