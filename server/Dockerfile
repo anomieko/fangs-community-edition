@@ -34,7 +34,7 @@ RUN echo "$UE4SS_SHA256  /tmp/ue4ss.zip" | sha256sum -c - \
  && mkdir -p third_party/ue4ss/dist && unzip -q /tmp/ue4ss.zip -d third_party/ue4ss/dist && rm /tmp/ue4ss.zip
 
 COPY backend/fangs_backend.py backend/hosts.py backend/matchmaker.py backend/
-COPY backend/seed/make_seed.py backend/seed/augments-*.json backend/seed/
+COPY backend/seed/make_seed.py backend/seed/augments-*.json backend/seed/cosmetics-*.json backend/seed/
 COPY server/run-host.sh server/entrypoint.sh server/
 COPY tools/ue4ss tools/ue4ss
 COPY tools/run/config tools/run/config

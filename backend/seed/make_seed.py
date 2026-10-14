@@ -31,6 +31,11 @@ def augments(name):
     return json.loads(Path(__file__).with_name(name).read_text())
 
 
+# Every skin, sticker, sigil, banner, title and mount of a build (tools/re/cosmetics.py); the backend puts them all
+# in its catalog and entitles everyone to them. The lobby only lists skins named in AvailableSkins.
+cosmetics_feb = augments('cosmetics-feb2023.json')
+
+
 version_data = {
     'Servers': [server], 'AvailableHeroes': heroes, 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
     'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
@@ -43,12 +48,14 @@ version_data = {
     # The HUD and loadout screens only offer augments listed here (no EnableAugmentProgress: all unlocked).
     # Generated per build from its DT_MOBALoot and hero preview assets by tools/re/augments.py.
     'AvailableAugments': augments('augments-feb2023.json'),
+    'AvailableSkins': cosmetics_feb['Skin'],
 }
 # Aug 2022 build: no LE_Payload04_Map in its pak, no "AI" custom mode in its create-lobby screen
 alpha7_data = {**version_data,
                'AvailableCustomModes': [m for m in version_data['AvailableCustomModes'] if m != 'AI'],
                'AvailableMaps': [m for m in version_data['AvailableMaps'] if m['Map'] != 'LE_Payload04_Map'],
                'AvailableAugments': augments('augments-alpha7.json')}
+del alpha7_data['AvailableSkins']   # its skin ids differ; it keeps the default skins
 records = {
     # Keyed by the client's MOBA/Content/Data/version.txt. Known builds:
     #   main_v0_0_444            Closed Playtest, Dec 2023 (app 1831080)
@@ -58,6 +65,10 @@ records = {
                     **{v: version_data for v in ('main_v0_0_444', 'Playtest021523v1_v0_0_02')},
                     'alpha7.0.7.51': alpha7_data},
     'season': {}, 'HeroLevelRewards': {}, 'Mission': {},
+    # Not read by the client: the backend's catalog per AccelByte namespace (Feb/Dec builds use "fangs", Aug
+    # "fangsbeta"). Item class = key (the categoryPath), item id = title = entitlement name.
+    'CECatalog': {'fangs': {**{k: v for k, v in cosmetics_feb.items() if k != 'Skin'},
+                            'Skin': [s['Item'] for s in cosmetics_feb['Skin']]}},
     'Justice': {'justiceSchema': '1.1', 'subsystemEnabled': False, 'pollTimeSeconds': 600, 'resetTimeHours': 24,
                 'afkPenaltyEnabled': False, 'crashPenaltyEnabled': False, 'dodgePenaltyEnabled': False,
                 'leavingPenaltyEnabled': False, 'partyPenaltyEnabled': False,
