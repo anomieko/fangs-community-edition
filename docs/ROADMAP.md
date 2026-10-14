@@ -58,10 +58,15 @@ Nothing.
    restored and live items depend on which system. The seven restored artifacts that are about the old shards are
    parked (`_parked_old_shards` in `backend/seed/restore-feb2023.json`, list in `docs/recon/items.md`):
    **turn them back on when the old shards are back.**
-3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
+3. **Server smoothness for full 4v4** (in progress, agent: load test with bots, hitch hunt, fixes; local only).
+   Live data 14 Oct: arena 1 player ~58 fps / longest frame ~30 ms; 2 players ~40 fps / ~180 ms (up to 254);
+   4 players ~42 fps / ~200 ms. The game's net tick is 30 Hz, so the problem is the recurring ~200 ms frames
+   (replication stalls = stutter), not the average. Then: verify on the VPS with bots in a quiet moment (ask
+   first); maybe a 60 Hz net tick.
+4. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
-4. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
+5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
 
