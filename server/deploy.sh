@@ -7,6 +7,9 @@
 #
 # Uploads the game files (once; later runs only send changes) and the server code, installs
 # Docker if needed, starts the server with docker compose and runs the smoke test against it.
+# Every game build has its own folder on the server (builds/<version.txt>), so switching between builds
+# is a deploy with the other game dir and no new upload. UPLOAD_ONLY=1: only upload the game files (e.g. a
+# build to switch to later), leave the running server alone.
 # Open in any firewall in front of the server: TCP 8080, UDP 11032, UDP 7777-7786.
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -14,6 +17,8 @@ target=${1:?usage: deploy.sh <ssh-target> <game-dir> [public-host]}
 game=$(realpath "${2:?game dir}")
 public=${3:-${target#*@}}
 remote=/opt/fangs-ce
+build=$(tr -d '\r\n' < "$game/MOBA/Content/Data/version.txt")
+[[ $build =~ ^[A-Za-z0-9._-]+$ ]] || { echo "unexpected version.txt in $game: '$build'" >&2; exit 1; }
 code=${FANGS_JOIN_CODE:?set FANGS_JOIN_CODE (players need it; it is baked into the player package)}
 ssh_() { ssh -o StrictHostKeyChecking=accept-new "$target" "$@"; }
 rsync_() { rsync --rsync-path="sudo rsync" "$@"; }
@@ -22,11 +27,18 @@ echo "==> preparing $target"
 ssh_ 'set -e; export DEBIAN_FRONTEND=noninteractive
       command -v docker >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq docker.io docker-cli docker-compose rsync >/dev/null; }
       command -v rsync >/dev/null || sudo apt-get install -y -qq rsync >/dev/null; sudo systemctl enable --now docker >/dev/null 2>&1 || true
-      sudo mkdir -p '"$remote"'/game '"$remote"'/repo'
+      sudo mkdir -p '"$remote"'/builds '"$remote"'/repo
+      # older layout: one game/ folder - keep it as the build it is
+      if [ -f '"$remote"'/game/MOBA/Content/Data/version.txt ]; then
+        old=$(tr -d "\r\n" < '"$remote"'/game/MOBA/Content/Data/version.txt)
+        [ -e '"$remote"'/builds/"$old" ] || { sudo mv '"$remote"'/game '"$remote"'/builds/"$old"; echo "   kept the installed game as builds/$old"; }
+        [ -e '"$remote"'/game ] || sudo ln -s builds/"$old" '"$remote"'/game   # until .env points at builds/
+      fi'
 
-echo "==> uploading game files (first time ~14 GB; later runs only send changes)"
+echo "==> uploading game files for $build (first time 8-14 GB; later runs only send changes)"
 rsync_ -a --delete --info=progress2 --exclude 'MOBA/Saved/' \
-  "$game/" "$target:$remote/game/"
+  "$game/" "$target:$remote/builds/$build/"
+if [[ -n ${UPLOAD_ONLY:-} ]]; then echo "==> uploaded $build (server not changed)"; exit 0; fi
 
 echo "==> uploading server code"
 ue4ss_zip=$REPO/third_party/ue4ss/dl/UE4SS_v3.0.1-1170-g9e7fed53.zip   # see server/Dockerfile
@@ -52,7 +64,7 @@ fi
 
 echo "==> building and starting (public address: $public)"
 # settings for compose live in a root-only .env next to the compose file (also used on reboot/updates)
-printf 'GAME_DIR=%s\nPUBLIC_HOST=%s\nFANGS_JOIN_CODE=%s\nHOST_PORTS=%s\n' "$remote/game" "$public" "$code" "${HOST_PORTS:-7777-7778}" \
+printf 'GAME_DIR=%s\nPUBLIC_HOST=%s\nFANGS_JOIN_CODE=%s\nHOST_PORTS=%s\n' "$remote/builds/$build" "$public" "$code" "${HOST_PORTS:-7777-7778}" \
   | ssh_ "sudo install -m 600 /dev/stdin $remote/repo/server/.env"
 ssh_ "set -e; cd $remote/repo/server
       compose() { if sudo docker compose version >/dev/null 2>&1; then sudo docker compose \"\$@\"; else sudo docker-compose \"\$@\"; fi; }
