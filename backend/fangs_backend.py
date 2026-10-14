@@ -1047,6 +1047,14 @@ async def fangs_restored_items(request):
     return web.Response(text=''.join(f"{r['Class']}\t{r['List']}\t{r['Item']}\n" for r in rows), content_type='text/plain')
 
 
+# Unreleased heroes of a client build (seed CEUnreleasedHeroes): FangsBoot keeps them apart in the menus.
+# One "<DT_Heroes row>\t<name>" line each.
+@route('GET', r'/fangsapi/[^/]+/unreleased-heroes')
+async def fangs_unreleased_heroes(request):
+    rows = ((request.app['store'].data['game_records'].get('CEUnreleasedHeroes') or {}).get(request.query.get('build', ''))) or []
+    return web.Response(text=''.join(f'{row}\t{name}\n' for row, name in rows), content_type='text/plain')
+
+
 # Main-menu "players online" (FangsBoot, in place of the missions list): players with an open lobby connection,
 # which the game keeps from login to quit, or who lost it less than a minute ago (map changes, reconnects).
 # Public like the rest of the login screen's data; it is just a number.
