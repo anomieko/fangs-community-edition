@@ -108,13 +108,25 @@ return function(env)
         end)
         return found
     end
-    local track = nil   -- this match: { gm, mode, rs, phoenix, a, b, carrier }
+    -- Also a safety net the game lacks: a carrier whose hero goes away without dying (a player who leaves) would keep
+    -- the Shard "taken" until the round ends; after 2 s the Shard goes back to a shrine, as when a carrier dies.
+    local track = nil   -- this match: { gm, mode, rs, phoenix, a, b, carrier, lost }
     every(250, function()
         if not track then return end
         if not valid(track.gm) then track = nil; return end
         if not valid(track.rs) then track.rs = FindFirstOf("BP_RS_Relic_C"); if not valid(track.rs) then return end end
-        if not valid(track.phoenix) then track.phoenix = FindFirstOf("BP_RS_Phoenix_C"); if not valid(track.phoenix) then return end end
         local rs = track.rs
+        if rs.IsOrbTaken and not valid(rs.ShrineOrbCarrier) then
+            track.lost = (track.lost or 0) + 1
+            if track.lost == 8 then
+                rs:ResetOrb(true)
+                log("old shards: the carrier is gone - Shard back to a shrine")
+            end
+        else
+            track.lost = nil
+        end
+        if track.mode == "off" then return end
+        if not valid(track.phoenix) then track.phoenix = FindFirstOf("BP_RS_Phoenix_C"); if not valid(track.phoenix) then return end end
         if rs.IsOrbTaken and valid(rs.ShrineOrbCarrier) then track.carrier = rs.ShrineOrbCarrier end
         local a, b = rs.TeamARelics, rs.TeamBRelics
         for team, now in pairs({ [1] = a, [2] = b }) do
@@ -143,7 +155,7 @@ return function(env)
         if not valid(rs) then return log("old shards: BP_RS_Relic not loaded - Feb 2023 Shards stay") end
         gm.BP_GR_Relic_Garden2.RuleStateClasss = rs   -- property only: no game functions inside a hook
         log("old shards: on (" .. cfg.source .. ", Aspect speed-up " .. cfg.speedup .. ")")
-        track = cfg.speedup ~= "off" and { gm = gm, mode = cfg.speedup, a = 0, b = 0 } or nil
+        track = { gm = gm, mode = cfg.speedup, a = 0, b = 0 }
         ExecuteInGameThreadWithDelay(200, function()
             local ok, err = pcall(setup, gm)
             if not ok then log("old shards: setup error: " .. tostring(err)) end
