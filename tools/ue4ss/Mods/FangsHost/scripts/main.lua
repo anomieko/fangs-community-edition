@@ -292,13 +292,24 @@ local function installShim()
             pc:OnRefreshPlayerInfoOnServerSuccess(true, {}, json); log("refreshed profile " .. uid)
         end)
     end) and all
+    -- Level and ratings for the lobby's player info. The backend only stores them once a player has finished a
+    -- match: before that, the defaults it serves to clients (a failure here stops the lobby's player setup).
     all = hook(LOBBY_PC .. ":GetServerPlayerMastery", function(ctx)
         local pc = ctx:get()
-        later(function() pc:OnServerRetrieveMasteryFailure(18022, "no mastery record") end)
+        later(function()
+            local uid = pc.UserBackendId:ToString()
+            local json = readRecord("players/" .. uid .. "/PROFILE_MASTERY_KEY") or '{"Level":1,"XPToNext":0}'
+            pc:OnServerRetrieveMasterySuccess("PROFILE_MASTERY_KEY", { JSONValue = json })
+        end)
     end) and all
     all = hook(LOBBY_PC .. ":GetServerPlayerRatings", function(ctx)
         local pc = ctx:get()
-        later(function() pc:OnServerRetrieveRatingsFailure(18022, "no ratings record") end)
+        later(function()
+            local uid = pc.UserBackendId:ToString()
+            local json = readRecord("players/" .. uid .. "/PROFILE_RATINGS_KEY")
+                or '{"casual_rating":{"mu":25,"sigma":8.33333},"ranked_rating":{"mu":25,"sigma":8.33333}}'
+            pc:OnServerRetrieveRatingsSuccess("PROFILE_RATINGS_KEY", { JSONValue = json })
+        end)
     end) and all
     return all
 end
@@ -454,4 +465,42 @@ every(1000, function()
         shimDone = true; log("server CloudSave shim installed (data: " .. tostring(dataDir) .. ")")
     end
     return shimDone
+end)
+
+-- ---------------------------------------------------------------------------------------------
+-- Match results. The game's own end-of-match chain (ratings service, CloudSave history and mastery) is dead in
+-- this build: its server CloudSave calls are compiled out. When a match ends, save the game's own match-history
+-- entry (BP_AC_MatchReport GetMatchResults: mode, map, time and every round's per-player stats) with the
+-- winner as <Win64>/fangshost_result-<time>.json; the backend turns it into history, mastery and ratings.
+local GM_MOBA = "/Game/BluePrints/Gameplay/BP_GM_MOBA_GameMode.BP_GM_MOBA_GameMode_C"
+local function outString(v)   -- an out parameter as UE4SS hands it back
+    if type(v) == "string" then return v end
+    if type(v) == "table" then
+        for _, x in pairs(v) do local s = outString(x); if s then return s end end
+        return nil
+    end
+    local ok, s = pcall(function() return v:ToString() end)
+    return ok and s or nil
+end
+local function saveMatchResult(ctx)
+    local gm = ctx:get()
+    local gs, mr = gm.GameState, gm.BP_AC_MatchReport
+    local out1, out2 = {}, {}
+    local ret = mr:GetMatchResults(out1, out2)
+    local json = outString(out1) or outString(ret)
+    if not (json and json:sub(1, 1) == "{") then return log("match end: no match results (" .. tostring(json) .. ")") end
+    local name = string.format("fangshost_result-%d.json", os.time())
+    local f = io.open(name .. ".tmp", "w")
+    if not f then return log("match end: can't write " .. name) end
+    f:write(string.format('{"winning_team":%d,"rounds_a":%d,"rounds_b":%d,"game_mode":%d,"match_time":%.1f,"results":%s}',
+        gs.WinningTeam, gs.TeamARoundsWon, gs.TeamBRoundsWon, gs.GameMode, gs.TotalMatchTime, json))
+    f:close(); os.rename(name .. ".tmp", name)
+    log(string.format("match end: team %d won %d-%d, results saved (%d bytes)", gs.WinningTeam, gs.TeamARoundsWon,
+        gs.TeamBRoundsWon, #json))
+end
+every(2000, function()
+    return hook(GM_MOBA .. ":SendEndResults", function(ctx)
+        local ok, e = pcall(saveMatchResult, ctx)
+        if not ok then log("match end: " .. tostring(e)) end
+    end)
 end)

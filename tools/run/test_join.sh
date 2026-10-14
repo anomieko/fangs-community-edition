@@ -3,11 +3,26 @@
 # Custom -> Join with the mode button (whose lobby search is an internal Blueprint call), must see alice's
 # lobby, clicks it and joins; alice launches; both pick a hero, lock in and must end up in the arena.
 # Own backend data and host dir, so local play is untouched.
+# END=1 (Feb 2023 build): alice (with a Lancer skin equipped) and bob on opposite teams; the server ends the
+# match (surrender) and the test checks the skin in the match and both players' history, levels and ratings.
 # Usage: CLIENT_DIR=clients/<build> tools/run/test_join.sh
 set -u
 cd "$(dirname "$0")/../.."
 R=${RUN:-join}
 rm -rf work/run/$R-hosts work/run/$R-store.json
+if [[ -n ${END:-} ]]; then
+  SLOTS=${SLOTS:-0 1}   # the match puts even seats in team A, odd ones in team B
+  python3 - "$PWD/work/run/$R-store.json" <<'PY'
+import json, sys, uuid
+skin = next(s['Item'] for s in json.load(open('backend/seed/cosmetics-feb2023.json'))['Skin'] if s['Owner'] == 'Lancer')
+uid = uuid.uuid5(uuid.NAMESPACE_DNS, 'fangs:alice').hex
+json.dump({'player_records': {uid: {'PROFILE_INFO_KEY': {
+    'Username': 'alice', 'Version': 'main_v0_0_444', 'AccountType': 'Player', 'Hero': 'Lancer', 'Region': 'Local',
+    'Sigil': 'sigil_alpha_reward', 'Stickers': [], 'GameplayTutorialComplete': 3,
+    'Cosmetics': {'Banner': 'banner_redplayfangs', 'Title': 'title_aspectwarrior', 'Lancer': skin}}}}}, open(sys.argv[1], 'w'))
+print('alice wears', skin)
+PY
+fi
 A=work/run/$R-alice/MOBA/Binaries/Win64/fangsctl_cmd.txt; B=work/run/$R-bob/MOBA/Binaries/Win64/fangsctl_cmd.txt
 LOBBY='lua local gs=FindFirstOf("GS_Lobby_GameState_C"); if not (gs and gs:IsValid()) then return "lobby: not in a lobby" end'\
 ' local t={} gs.PlayerArray:ForEach(function(_, e) t[#t+1]=e:get():GetPlayerName():ToString() end)'\
@@ -86,6 +101,28 @@ pick() {
       echo "probe cpu $(basename "$(dirname "$(dirname "$(dirname "$cwd")")")"): $(( (t1 - t0) * 100 / 10 / $(getconf CLK_TCK) ))% of a core"
     done
   fi
+  if [[ -n ${END:-} ]]; then   # skins as the server sees them, then the game's own surrender ends the match
+    for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do
+      echo 'lua local t={} for _, p in ipairs(FindAllOf("BP_PlayerChar_C") or {}) do if p:IsValid() and p.PlayerState:IsValid() then'\
+' t[#t+1]=p.PlayerState:GetPlayerName():ToString() .. "=" .. p["Current SkinID"]:ToString() end end return "server skins: " .. table.concat(t, ", ")' >> $h/fangsctl_cmd.txt
+      echo 'lua FindFirstOf("GS_MOBA_Battle_C"):SurrenderForceTeamDefeat(2); return "surrendered team B"' >> $h/fangsctl_cmd.txt
+    done
+    sleep 15; echo 'shot showui' >> $A; echo 'shot showui' >> $B
+    sleep 5
+    for f in $A $B; do
+      echo 'lua local w=FindFirstOf("WB_GameResult_C"); if not (w and w:IsValid()) then return "no end screen" end'\
+' pcall(function() w:BndEvt__WB_GameResult_VictoryNextBtn_K2Node_ComponentBoundEvent_1_OnButtonClickedEvent__DelegateSignature() end)'\
+' pcall(function() w:BndEvt__WB_GameResult_DefeatNextBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature() end)'\
+' return "pressed continue"' >> $f
+    done
+    sleep 30
+    for f in $A $B; do
+      echo 'lua local m=FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef; if m and m:IsValid() and m:IsInViewport() then m:SelectMainMenuTab(2) return "career tab" end return "not in the menu"' >> $f
+    done
+    sleep 8; echo 'shot showui' >> $A; echo 'shot showui' >> $B
+    sleep 2; for f in $A $B; do echo 'lua FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:SelectMainMenuTab(3) return "leaderboard tab"' >> $f; done
+    sleep 8; echo 'shot showui' >> $A; echo 'shot showui' >> $B
+  fi
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
   BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts" \
@@ -97,3 +134,20 @@ grep -h 'lobby:' work/run/$R-bob/MOBA/Binaries/Win64/fangsboot.log | sed 's/^/bo
 grep -h 'lua \(ok\|error\): server net' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | sed 's/^/host: /' | cut -c1-200
 grep -h 'tick:' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangshost.log 2>/dev/null | sed 's/^/host: /'
 grep -h 'server lobby' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangsctl.log 2>/dev/null | grep -v ': none' | sed 's/^/host: /' | cut -c1-260
+if [[ -n ${END:-} ]]; then
+  grep -h 'server skins\|surrendered\|match end' work/run/$R-hosts/host-*/MOBA/Binaries/Win64/fangs{ctl,host}.log 2>/dev/null | sed 's/^/host: /' | cut -c1-260
+  grep -h '"match"' work/logs/$R-alice-backend.jsonl | cut -c1-300
+  python3 - "$PWD/work/run/$R-store.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+for u in d['users'].values():
+    r = d['player_records'].get(u['user_id'], {})
+    print(u['display_name'], 'history', len(r.get('PROFILE_HISTORY_KEY', {}).get('Matches', [])), 'mastery', r.get('PROFILE_MASTERY_KEY'),
+          'rating', (r.get('PROFILE_RATINGS_KEY') or {}).get('ranked_rating'))
+PY
+  for n in alice bob; do
+    mkdir -p work/logs/$R-shots/$n; rm -f work/logs/$R-shots/$n/*
+    cp work/run/$R-$n.prefix/drive_c/users/*/AppData/Local/MOBA/Saved/Screenshots/WindowsNoEditor/*.png work/logs/$R-shots/$n/ 2>/dev/null
+  done
+  ls work/logs/$R-shots/*
+fi
