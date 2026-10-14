@@ -188,7 +188,10 @@ class Social:
             return await self.reply(ws, t, mid)
         if other in self.requests.get(me, []):       # they asked first: that's a yes
             await self.reply(ws, t, mid)
-            return await self._accept(me, other)
+            await self._accept(me, other)
+            # my client sent a request, not an accept: without this it keeps them as an outgoing request (and their
+            # request to me as pending), lists no friend and shows their chat messages without a name
+            return await self.send(me, 'acceptFriendsNotif', friendId=other)
         lst = self.requests.setdefault(other, [])
         if me not in lst:
             lst.append(me)
@@ -206,6 +209,8 @@ class Social:
 
     async def on_acceptFriendsRequest(self, me, ws, t, mid, f):
         other = f.get('friendId', '').strip()
+        if other in self.friends_of(me):             # already friends (both asked): the client's request is stale
+            return await self.reply(ws, t, mid)
         if other not in self.requests.get(me, []):
             return await self.reply(ws, t, mid, ERR_FRIEND)
         await self.reply(ws, t, mid)
