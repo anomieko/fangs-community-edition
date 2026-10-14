@@ -3,11 +3,22 @@
 # the match; the game server then ends it (the game's surrender: team B defeated). Checks that FangsHost saved
 # the result and the backend turned it into match history, levels and wins (and screenshots the end screen and
 # the profile). Own backend data and game-server directory, so local play is untouched.
-# Usage: CLIENT_DIR=clients/<build> tools/run/test_match.sh
+# Usage: CLIENT_DIR=clients/<build> [HERO=<DT_Heroes row>] tools/run/test_match.sh
+#   HERO: play that hero (default Berserker); one the seed doesn't offer (an unreleased hero) is added to this
+#   test's own copy of the seed. The test then also lists the hero's abilities and screenshots the match.
 set -u
 cd "$(dirname "$0")/../.."
 R=${RUN:-match}
+HERO=${HERO:-Berserker}
 rm -rf work/run/$R-hosts work/run/$R-store.json
+python3 - "$HERO" work/run/$R-seed.json <<'PY'
+import json, sys
+d = json.load(open('backend/seed/game_records.json'))
+for v in d['FANGSConfig'].values():
+    if isinstance(v, dict) and sys.argv[1] not in v['AvailableHeroes']:
+        v['AvailableHeroes'].append(sys.argv[1])
+json.dump(d, open(sys.argv[2], 'w'))
+PY
 A=work/run/$R/MOBA/Binaries/Win64/fangsctl_cmd.txt
 host_cmd() { for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do echo "$1" >> $h/fangsctl_cmd.txt; done; }
 WHERE='lua local gs=FindFirstOf("GameStateBase"); return "map: " .. (gs and gs:IsValid() and gs:GetFullName() or "none")'
@@ -17,14 +28,21 @@ OUTPARAM='lua local mr=FindFirstOf("BP_AC_MatchReport_C"); local a, b = {}, {}; 
 ITEMS='lua local function n(a) if type(a) == "table" then return #a end return a:GetArrayNum() end'\
 ' local gi=FindFirstOf("BP_MOBAInstance_C"); local p=StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0).Pawn'\
 ' return string.format("items on %s: generic=%d hero=%d offered=%d", p:GetClass():GetFName():ToString(), n(p.GenericItems), n(p.PossibleItems), n(p:GetPossibleItemsSorted()))'
+ABILITIES='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local p=StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0).Pawn'\
+' local t={} p.AbilitySystemComponent.ActivatableAbilities.Items:ForEach(function(_, e) local a=e:get().Ability'\
+' if a and a:IsValid() then t[#t+1]=a:GetClass():GetFName():ToString() end end)'\
+' return "abilities on " .. p:GetClass():GetFName():ToString() .. " (" .. #t .. "): " .. table.concat(t, ", ")'
 (
   sleep 40
   printf '%s\n' 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi; return "ready"' \
     'lua FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu:CreateLobbyAndJoin("Match Test", "The Garden of Vermilia", FText("LE_Arena02_Map"), 1); return "create"' >> $A
   sleep 40; echo "$WHERE" >> $A
-  echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):UpdateChosenHero("Berserker"); return "picked"' >> $A
+  # as the hero select does: the profile's hero (what the lobby server reads) and the lobby pick
+  echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("'"$HERO"'", false);'\
+' pcall(function() pc:UpdateChosenHero("'"$HERO"'") end); return "picked '"$HERO"'"' >> $A
   sleep 8; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartMatch(); return "start"' >> $A
-  sleep 75; echo "$WHERE" >> $A; echo "$ITEMS" >> $A; host_cmd "$WHERE"; host_cmd "$OUTPARAM"
+  sleep 60; echo 'shot showui' >> $A
+  sleep 15; echo "$WHERE" >> $A; echo "$ITEMS" >> $A; echo "$ABILITIES" >> $A; echo 'shot showui' >> $A; host_cmd "$WHERE"; host_cmd "$OUTPARAM"
   sleep 5; host_cmd 'lua FindFirstOf("GS_MOBA_Battle_C"):SurrenderForceTeamDefeat(2); return "surrendered team B"'
   sleep 15; echo 'shot showui' >> $A; host_cmd "$OUTPARAM"
   sleep 30; echo "$WHERE" >> $A; echo 'shot showui' >> $A
@@ -32,7 +50,7 @@ ITEMS='lua local function n(a) if type(a) == "table" then return #a end return a
   sleep 6; echo 'shot showui' >> $A
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
-  BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts" \
+  BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts --seed $PWD/work/run/$R-seed.json" \
   tools/run/headless.sh "${DURATION:-260}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
   -- $R:0:"-TestUser=matcher -TestPass=x" 2>&1 | grep -v Segmentation
 wait
