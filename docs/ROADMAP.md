@@ -28,7 +28,7 @@ Ships with the next deploy. Decision: one deploy once heirlooms are tested too (
 - **Cut items back in play** (`90e58f7` + follow-up): restore list `backend/seed/restore-feb2023.json`,
   served by `/fangsapi/*/restored-items`, applied by FangsBoot. Restored: 5 boons, 16 arena artifacts
   (all verified in matches; see `docs/recon/items.md`).
-- **Menus list only usable items**: `AvailableAugments` = in-match pools + restored items (367 of 539).
+- **Menus list only usable items**: `AvailableAugments` = in-match pools + restored items (479 of 539, incl. the unreleased heroes' pools and restored items).
   Fixes cut items showing in Inventory/Loadouts, e.g. WaterBlade's "Ebb & Flow" under CatSupp (Zoey).
 - **Unreleased heroes as a separate group** (`916dbd5`): the six are owned, listed in their own Inventory
   section, behind a toggle in custom lobbies' hero select, with a notice on pick (`tools/run/test_unreleased.sh`
