@@ -1047,6 +1047,10 @@
      "Owner": "Generic"
     },
     {
+     "Item": "Generic_BobAndWeave",
+     "Owner": "Generic"
+    },
+    {
      "Item": "Generic_RepeatRegicide",
      "Owner": "Generic"
     },
@@ -1079,11 +1083,19 @@
      "Owner": "Generic"
     },
     {
+     "Item": "Generic_ShootTheMoon",
+     "Owner": "Generic"
+    },
+    {
      "Item": "Generic_FlyPhoenixFly",
      "Owner": "Generic"
     },
     {
      "Item": "Generic_UnstoppableForce",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_BubbleBobble",
      "Owner": "Generic"
     },
     {
@@ -1095,7 +1107,15 @@
      "Owner": "Generic"
     },
     {
+     "Item": "Generic_RelicRunner_Garden",
+     "Owner": "Generic"
+    },
+    {
      "Item": "Generic_Revolution",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_RocketFuel",
      "Owner": "Generic"
     },
     {
@@ -1112,6 +1132,14 @@
     },
     {
      "Item": "Generic_ProtectTheBloodline",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_Prescience",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_RoleGetSwole",
      "Owner": "Generic"
     },
     {
@@ -3512,6 +3540,10 @@
      "Owner": "Generic"
     },
     {
+     "Item": "Generic_BobAndWeave",
+     "Owner": "Generic"
+    },
+    {
      "Item": "Generic_RepeatRegicide",
      "Owner": "Generic"
     },
@@ -3544,11 +3576,19 @@
      "Owner": "Generic"
     },
     {
+     "Item": "Generic_ShootTheMoon",
+     "Owner": "Generic"
+    },
+    {
      "Item": "Generic_FlyPhoenixFly",
      "Owner": "Generic"
     },
     {
      "Item": "Generic_UnstoppableForce",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_BubbleBobble",
      "Owner": "Generic"
     },
     {
@@ -3560,7 +3600,15 @@
      "Owner": "Generic"
     },
     {
+     "Item": "Generic_RelicRunner_Garden",
+     "Owner": "Generic"
+    },
+    {
      "Item": "Generic_Revolution",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_RocketFuel",
      "Owner": "Generic"
     },
     {
@@ -3577,6 +3625,14 @@
     },
     {
      "Item": "Generic_ProtectTheBloodline",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_Prescience",
+     "Owner": "Generic"
+    },
+    {
+     "Item": "Generic_RoleGetSwole",
      "Owner": "Generic"
     },
     {
@@ -7161,6 +7217,51 @@
    {
     "Class": "*",
     "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/ShootTheMoon/ITEM_Generic_ShootTheMoon.ITEM_Generic_ShootTheMoon"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/AllMaps/RelicRunner/ITEM_Generic_RelicRunnerGarden.ITEM_Generic_RelicRunnerGarden"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/RocketFuel/ITEM_Generic_RocketFuel.ITEM_Generic_RocketFuel"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/BubbleBobble/ITEM_Generic_BubbleBobble.ITEM_Generic_BubbleBobble"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/Prescience/ITEM_Generic_Prescience.ITEM_Generic_Prescience"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/RoleGetSwole/ITEM_Generic_RoleGetSwole.ITEM_Generic_RoleGetSwole"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/BobAndWeave/ITEM_Generic_BobAndWeave.ITEM_Generic_BobAndWeave"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/EnergyDrink/ITEM_Generic_EnergyDrink.ITEM_Generic_EnergyDrink"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
+    "Item": "/Game/Items/Characters/Generic/Garden/RoyalTax/ITEM_Generic_RoyalTax.ITEM_Generic_RoyalTax"
+   },
+   {
+    "Class": "*",
+    "List": "GenericItems",
     "Item": "/Game/Items/Characters/Generic/Actives/RespawnBeacon/ITEM_Generic_RespawnBeacon.ITEM_Generic_RespawnBeacon"
    },
    {
@@ -7202,16 +7303,6 @@
     "Class": "*",
     "List": "GenericItems",
     "Item": "/Game/Items/Characters/Generic/Garden/MoshPit/ITEM_Generic_MoshPit.ITEM_Generic_MoshPit"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/EnergyDrink/ITEM_Generic_EnergyDrink.ITEM_Generic_EnergyDrink"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/RoyalTax/ITEM_Generic_RoyalTax.ITEM_Generic_RoyalTax"
    },
    {
     "Class": "*",
@@ -7334,6 +7425,10 @@
     "Item": "/Game/Items/Characters/WoodenSword/Skill4/UNUSED_Item_WoodenSword_TanglerootGauntlets.UNUSED_Item_WoodenSword_TanglerootGauntlets"
    }
   ]
+ },
+ "CEOldShards": {
+  "Enabled": true,
+  "AspectSpeedup": "off"
  },
  "CEUnreleasedHeroes": {
   "Playtest021523v1_v0_0_02": [

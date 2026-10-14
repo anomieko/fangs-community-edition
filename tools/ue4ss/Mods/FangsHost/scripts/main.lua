@@ -504,3 +504,11 @@ every(2000, function()
         if not ok then log("match end: " .. tostring(e)) end
     end)
 end)
+
+-- ---------------------------------------------------------------------------------------------
+-- The old Shard system (carry-and-turn-in, channeled Health Shrines) on the arena maps: shards.lua, switched by the
+-- backend's CEOldShards record (make_seed.py OLD_SHARDS). Feb 2023 build only (Aug 2022 has it as shipped).
+if not IS_AUG2022 then
+    local ok, err = pcall(function() require("shards")({ log = log, every = every, readRecord = readRecord }) end)
+    if not ok then log("old shards: not loaded: " .. tostring(err)) end
+end
