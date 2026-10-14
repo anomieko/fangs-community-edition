@@ -4,9 +4,12 @@
 # tabs, no Discord banner, players online in place of missions). Screenshots of Home, Leaderboard and
 # Collection > Artifacts end up in work/logs/menu-shots/. Own backend data, so local profiles are untouched.
 # Usage: CLIENT_DIR=clients/<build> [MOVIES=1] tools/run/test_menu.sh   (MOVIES=1 keeps the menu background video)
+#   STORE=<backend store.json> PLAYER=<name>: start from a copy of that data (e.g. after test_join.sh END=1) and
+#   log in as that player (test password "x") to see their profile, match history and the leaderboard.
 set -u
 cd "$(dirname "$0")/../.."
 rm -f work/run/menu-store.json
+[[ -n ${STORE:-} ]] && cp "$STORE" work/run/menu-store.json
 A=work/run/menu/MOBA/Binaries/Win64/fangsctl_cmd.txt
 GI='local function n(a) if type(a) == "table" then return #a end return a:GetArrayNum() end'\
 ' local gi=FindFirstOf("BP_MOBAInstance_C"); local menu=gi.WB_MainMenuRef; local pm=menu.WB_PlayMenu;'
@@ -30,6 +33,7 @@ BATTLE="lua $GI"' pm.BP_MOBAInstanceRef=gi; pm:CreateSessionDialog();'\
   sleep 70; echo "$CHECK" >> $A; sleep 20
   echo "$CHECK" >> $A; echo "$COSMETICS" >> $A; echo "$MENU" >> $A; echo 'shot showui' >> $A; sleep 3
   echo "lua $GI menu:SelectMainMenuTab(3)" >> $A; sleep 4; echo 'shot showui' >> $A; sleep 2
+  echo "lua $GI menu:SelectMainMenuTab(2)" >> $A; sleep 4; echo 'shot showui' >> $A; sleep 2
   echo "lua $GI menu:SelectMainMenuTab(1) menu.WB_Collection:SelectCollectionMenu(1)" >> $A; sleep 4
   echo 'shot showui' >> $A; sleep 2
   echo "$STORE" >> $A; echo "lua $GI menu:SelectMainMenuTab(0)" >> $A; sleep 2; echo "$BATTLE" >> $A; echo 'shot showui' >> $A
@@ -37,7 +41,7 @@ BATTLE="lua $GI"' pm.BP_MOBAInstanceRef=gi; pm:CreateSessionDialog();'\
 [[ ${MOVIES:-0} == 1 ]] && nomovies=0 || nomovies=1
 UE4SS=1 GPU=1 NOMOVIES=$nomovies BACKEND=127.0.0.1:8080 RUN_BACKEND=1 BACKEND_ARGS="--data $PWD/work/run/menu-store.json" \
   tools/run/headless.sh "${DURATION:-130}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
-  -- menu:0:"-TestUser=menu -TestPass=x" 2>&1 | grep -v Segmentation
+  -- menu:0:"-TestUser=${PLAYER:-menu} -TestPass=x" 2>&1 | grep -v Segmentation
 wait
 grep -E 'fangsctl\]|fangsboot\] (custom|menu)' work/run/menu/MOBA/Binaries/Win64/ue4ss/UE4SS.log | cut -c30-400
 rm -rf work/logs/menu-shots; mkdir -p work/logs/menu-shots
