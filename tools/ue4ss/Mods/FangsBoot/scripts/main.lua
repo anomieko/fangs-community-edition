@@ -569,12 +569,12 @@ if not gameVersion():find("^alpha7") then
     -- that player then counts as matchmade: the lobby screen's 45 s "Failed to Connect to Match" timeout runs
     -- (the owner launching later sends them back to the menu, which ends the lobby for everyone), and the lobby
     -- server is told it is a Casual lobby. While the list is searching, keep the mode at Custom.
-    local CUSTOM = 4
+    local CASUAL, CUSTOM = 2, 4
     every(250, function()
         local gi = gameInstance()
         local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
         if not (menu and menu:IsValid() and menu:IsInViewport()) then return end
-        if menu.WB_PlayMenu.GetSessions and gi.MapGameMode ~= CUSTOM then
+        if menu.WB_PlayMenu.GetSessions and gi.MapGameMode == CASUAL then   -- only PLAY's Casual: not Training etc.
             log("lobby list: game mode " .. gi.MapGameMode .. " -> Custom")
             gi.MapGameMode = CUSTOM
         end

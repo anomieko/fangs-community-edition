@@ -17,6 +17,14 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 | Change | Commits | Off switch |
 |---|---|---|
+| FangsBoot: the lobby list's Casual → Custom correction only touches Casual (never Training or other modes) | see git log | revert the commit |
+
+## deploy-2026-10-14-1821 (`273d2d1`, Feb 2023 build)
+
+Backend only (no player update). Requested by the user while players hit "failed to request server".
+
+| Change | Commits | Off switch |
+|---|---|---|
 | Fix "failed to request server" / lobby closing when no standby server is ready: a lobby replaced by the same owner while its server boots gives that server to the newer lobby (requests per owner run one at a time) | `31ef490` | revert the commit |
 
 ## deploy-2026-10-14-1811 (`bb679fb`, Feb 2023 build)
