@@ -2,7 +2,7 @@
 
 The single place that says what is being worked on, what is done but not shipped, and what was decided.
 `docs/STATUS.md` describes what exists; this file describes what is moving. Research findings go to
-`docs/recon/`, not here.
+`docs/recon/`, not here; what each deploy changed (and how to undo it) goes to `docs/CHANGELOG.md`.
 
 **How to keep it (humans and agents alike):**
 - Read it before starting work; update it in the same commit as the change that moves an item.
