@@ -40,8 +40,9 @@ rsync_ -a --delete --relative \
 
 # never restart the server under people's feet: a restart ends every lobby and match
 if [[ -z ${FANGS_DEPLOY_FORCE:-} ]]; then
-  busy=$(ssh_ "sudo docker exec server-fangs-1 sh -c 'cat /data/hosts/host-*/MOBA/Binaries/Win64/fangshost_status.json 2>/dev/null' 2>/dev/null" \
-         | grep -o '"players": [1-9][0-9]*' | awk '{n += $2} END {print n + 0}')
+  # (no match / no container yet = 0 players; this runs under set -e and pipefail)
+  busy=$( { ssh_ "sudo docker exec server-fangs-1 sh -c 'cat /data/hosts/host-*/MOBA/Binaries/Win64/fangshost_status.json 2>/dev/null' 2>/dev/null" || true; } \
+         | { grep -o '"players": [1-9][0-9]*' || true; } | awk '{n += $2} END {print n + 0}')
   if [[ ${busy:-0} -gt 0 ]]; then
     echo "!! $busy player(s) are in a lobby or match right now; restarting the server would end their games." >&2
     echo "!! Deploy again when they're done, or force it with FANGS_DEPLOY_FORCE=1." >&2
