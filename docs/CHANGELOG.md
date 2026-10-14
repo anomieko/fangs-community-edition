@@ -22,7 +22,7 @@ What each deploy put on the server, so a problem can be traced to a change and u
 | FangsBoot fetches its lists (restored items, unreleased heroes) as soon as the game can, retries after 5 s instead of 30 s, and caches them next to the game (`fangsboot_*.txt`): hero select no longer shows the unreleased heroes for the first ~30 s after starting | `c49e624` | revert the commit |
 | Main menu: "PLAYERS ONLINE" lists the online players' names (small text below the header; names only for logged-in players), free game servers below them; realm gold and soul cores hidden | `3eaa674` | revert the commit |
 | BladeMaster removed from the unreleased heroes (grey mannequin, no abilities): not owned, not listed, not playable | `3eaa674` | add it back to `unreleased` in `make_seed.py` |
-| Seven restored artifacts made for the old shard system parked (off and out of the menus): Mask of Glory, Swiftrunner, Mask of Speed, Shadowbringer, Allseer, Mask of Ascension, Shardseeker | see git log | move them from `_parked_old_shards` back to `Generic` in `backend/seed/restore-feb2023.json` |
+| Seven restored artifacts made for the old shard system parked (off and out of the menus): Mask of Glory, Swiftrunner, Mask of Speed, Shadowbringer, Allseer, Mask of Ascension, Shardseeker | `26ce56c` | move them from `_parked_old_shards` back to `Generic` in `backend/seed/restore-feb2023.json` |
 
 ## deploy-2026-10-14-1821 (`273d2d1`, Feb 2023 build)
 
