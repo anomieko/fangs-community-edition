@@ -15,7 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Commits after `deploy-2026-10-14-1607` (`90e58f7` … `dc3a1fb`). Needs players to restart the launcher (FangsBoot).
+Nothing yet.
+
+## deploy-2026-10-14-1811 (`bb679fb`, Feb 2023 build)
+
+Commits after `deploy-2026-10-14-1607` (`90e58f7` … `bb679fb`). Players need to restart the launcher (FangsBoot).
+Deployed with `FANGS_DEPLOY_FORCE=1` (one player was in a lobby; the user chose to force it).
 
 | Change | Commits | Off switch |
 |---|---|---|

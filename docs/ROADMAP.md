@@ -17,26 +17,16 @@ Last updated: 2026-10-14.
 
 ## Live on the server
 
-Deployed 2026-10-14 (commit `92ca7d5`): all cosmetics owned, menu cleanup and players-online count, match
-history / levels / ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix,
-PLAY waits for full 4v4 games.
+Current deploy: `deploy-2026-10-14-1811` (`bb679fb`); what each deploy changed: `docs/CHANGELOG.md`.
+- since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
+  ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
+  4v4 games;
+- since 14 Oct 18:11: cut items back in play (5 boons, 16 arena artifacts, 21 heirlooms), menus list only usable
+  items, unreleased heroes as a separate group (Inventory section, hero-select toggle, notice).
 
 ## Done, not deployed
 
-Ships with the next deploy. Decision: one deploy once heirlooms are tested too (see Decisions).
-
-- **Cut items back in play** (`90e58f7` + follow-up): restore list `backend/seed/restore-feb2023.json`,
-  served by `/fangsapi/*/restored-items`, applied by FangsBoot. Restored: 5 boons, 16 arena artifacts
-  (all verified in matches; see `docs/recon/items.md`).
-- **Menus list only usable items**: `AvailableAugments` = in-match pools + restored items (479 of 539, incl. the unreleased heroes' pools and restored items).
-  Fixes cut items showing in Inventory/Loadouts, e.g. WaterBlade's "Ebb & Flow" under CatSupp (Zoey).
-- **Unreleased heroes as a separate group** (`916dbd5`): the six are owned, listed in their own Inventory
-  section, behind a toggle in custom lobbies' hero select, with a notice on pick (`tools/run/test_unreleased.sh`
-  passes). Needs players' FangsBoot update (launcher) and the server seed.
-- **Heirlooms back in play**: 21 hero-specific cut items whose effect code exists (15 for released heroes,
-  6 for Priest/Scythe) are in the restore list; each passed `tools/run/test_items.sh` (equipped, held by the
-  server, abilities still fire). Effects themselves to be confirmed in play. List: `docs/recon/items.md`.
-- FangsBoot: the Battle Pass/Store redirect no longer calls a Blueprint function inside its hook.
+Nothing.
 
 ## In progress
 
