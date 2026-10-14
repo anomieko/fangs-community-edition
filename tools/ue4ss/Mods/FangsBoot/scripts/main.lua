@@ -286,28 +286,41 @@ local function backendBase()   -- from the connection settings the launcher writ
 end
 
 -- A plain-text list from our backend (one line per entry, tab-separated fields). Returns a function to call from
--- a game-thread loop: it returns nil until the list has arrived (a failed request is retried after 30 s).
-local function backendList(path)
-    local req, asked, rows = nil, 0, nil
+-- a game-thread loop: it returns the list, or nil while there is none yet. The last list received is kept in
+-- <cache> next to the game and returned at once on the next start, until the backend answers again. The request
+-- needs the game instance (VaRest is one of its subsystems); a failed one is retried after 5 s.
+local function backendList(path, cache)
+    local req, asked, rows, fresh = nil, 0, nil, false
+    local function parse(text)
+        local list = {}
+        for line in text:gmatch("[^\n]+") do
+            local fields = {}
+            for f in line:gmatch("[^\t]+") do fields[#fields + 1] = f end
+            list[#list + 1] = fields
+        end
+        return list
+    end
+    local f = cache and io.open(cache, "r")
+    if f then rows = parse(f:read("a")); f:close() end
     return function()
-        if rows then return rows end
+        if fresh then return rows end
         if req then
             local status = req:IsValid() and req:GetStatus() or 2   -- 0 not started, 1 processing, 2/3 failed, 4 ok
-            if status < 2 and os.time() - asked < 20 then return nil end
+            if status < 2 and os.time() - asked < 20 then return rows end
             if status == 4 and req:GetResponseCode() == 200 then
-                rows = {}
-                for line in req:GetResponseContentAsString(true):ToString():gmatch("[^\n]+") do
-                    local fields = {}
-                    for f in line:gmatch("[^\t]+") do fields[#fields + 1] = f end
-                    rows[#rows + 1] = fields
-                end
+                local text = req:GetResponseContentAsString(true):ToString()
+                rows, fresh = parse(text), true
+                local out = cache and io.open(cache, "w")
+                if out then out:write(text); out:close() end
             end
             req = nil
-        elseif os.time() - asked >= 30 then
+        elseif os.time() - asked >= 5 then
+            local gi, base = gameInstance(), backendBase()
+            if not (gi and gi:IsValid() and base) then return rows end
+            local vr = FindFirstOf("VaRestSubsystem")
+            if not (vr and vr:IsValid()) then return rows end
             asked = os.time()
-            local base = backendBase()
-            if not base then return nil end
-            req = FindFirstOf("VaRestSubsystem"):ConstructVaRestRequestExt(0, 0)   -- GET, no body
+            req = vr:ConstructVaRestRequestExt(0, 0)   -- GET, no body
             req:ProcessURL(base .. path)
         end
         return rows
@@ -655,8 +668,8 @@ end
 -- GenericItems (the server doesn't check equipped items against them), so the backend's list for this build
 -- (/fangsapi/prod/restored-items) is added to each new hero this player controls.
 do
-    local fetch = backendList("/fangsapi/prod/restored-items?build=" .. gameVersion())
-    local restore, patched = nil, nil
+    local fetch = backendList("/fangsapi/prod/restored-items?build=" .. gameVersion(), "fangsboot_restored.txt")
+    local restore, rowsSeen, patched = nil, nil, nil
     local function patch(pawn, cls)
         local added, missing = 0, 0
         for _, r in ipairs(restore) do
@@ -674,14 +687,14 @@ do
         log(string.format("restored items: %d added to %s%s", added, cls, missing > 0 and (" (" .. missing .. " not loaded)") or ""))
     end
     every(1000, function()
-        if not restore then
-            local rows = fetch()
-            if not rows then return end
-            restore = {}
+        local rows = fetch()
+        if not rows then return end
+        if rows ~= rowsSeen then
+            rowsSeen, restore = rows, {}
             for _, r in ipairs(rows) do restore[#restore + 1] = { cls = r[1], list = r[2], path = r[3] } end
             log("restored items: " .. #restore .. " for this build")
         end
-        if #restore == 0 then return true end   -- nothing restored for this build
+        if #restore == 0 then return end
         local gi = gameInstance()
         if not (gi and gi:IsValid()) then return end
         local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
@@ -704,8 +717,8 @@ end
 -- Calling a Blueprint function inside a Blueprint hook can hang the game thread: the hooks note what happened
 -- and the work runs deferred (later()).
 if not gameVersion():find("^alpha7") then
-    local fetch = backendList("/fangsapi/prod/unreleased-heroes?build=" .. gameVersion())
-    local UNREL, ORANGE, CUSTOM = nil, { R = 1.0, G = 0.62, B = 0.18, A = 1.0 }, 4
+    local fetch = backendList("/fangsapi/prod/unreleased-heroes?build=" .. gameVersion(), "fangsboot_unreleased.txt")
+    local UNREL, rowsSeen, ORANGE, CUSTOM = nil, nil, { R = 1.0, G = 0.62, B = 0.18, A = 1.0 }, 4
     -- the game's own pictures standing in for card art these heroes lack
     local ICONS = { Warlock = "/Game/UI/Thumbnails/Warlock_Thumb.Warlock_Thumb",
         Priest = "/Game/UI/Textures/HeroSelectPortraits/PriestPortrait.PriestPortrait",
@@ -843,14 +856,14 @@ if not gameVersion():find("^alpha7") then
     end
 
     every(1000, function()
-        if not UNREL then
-            local rows = fetch()
-            if not rows then return end
-            UNREL = {}
+        local rows = fetch()
+        if not rows then return end
+        if rows ~= rowsSeen then
+            rowsSeen, UNREL = rows, {}
             for _, r in ipairs(rows) do UNREL[r[1]] = r[2] or r[1] end
             log("unreleased heroes: " .. #rows)
         end
-        if not next(UNREL) then return true end
+        if not next(UNREL) then return end
         hook("/Game/UI/MainMenu/WB_Heroes.WB_Heroes_C:InitHeroSelection", function(ctx)
             local h = ctx:get()
             later("inventory", function() if h:IsValid() then inventory(h) end end)
