@@ -20,8 +20,8 @@ What each deploy put on the server, so a problem can be traced to a change and u
 | FangsBoot: the lobby list's Casual → Custom correction only touches Casual (never Training or other modes) | `170d298` | revert the commit |
 | Main menu shows free game servers under the players-online count ("1 OF 2 GAME SERVERS FREE"), from the new `/fangsapi/*/server-status`; refreshed every 15 s | `498b8ad` | revert the commit (old clients keep using `online-players`) |
 | FangsBoot fetches its lists (restored items, unreleased heroes) as soon as the game can, retries after 5 s instead of 30 s, and caches them next to the game (`fangsboot_*.txt`): hero select no longer shows the unreleased heroes for the first ~30 s after starting | `c49e624` | revert the commit |
-| Main menu: "PLAYERS ONLINE" lists the online players' names (small text below the header; names only for logged-in players), free game servers below them; realm gold and soul cores hidden | see git log | revert the commit |
-| BladeMaster removed from the unreleased heroes (grey mannequin, no abilities): not owned, not listed, not playable | see git log | add it back to `unreleased` in `make_seed.py` |
+| Main menu: "PLAYERS ONLINE" lists the online players' names (small text below the header; names only for logged-in players), free game servers below them; realm gold and soul cores hidden | `3eaa674` | revert the commit |
+| BladeMaster removed from the unreleased heroes (grey mannequin, no abilities): not owned, not listed, not playable | `3eaa674` | add it back to `unreleased` in `make_seed.py` |
 
 ## deploy-2026-10-14-1821 (`273d2d1`, Feb 2023 build)
 
