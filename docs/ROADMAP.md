@@ -30,13 +30,17 @@ Ships with the next deploy. Decision: one deploy once heirlooms are tested too (
   (all verified in matches; see `docs/recon/items.md`).
 - **Menus list only usable items**: `AvailableAugments` = in-match pools + restored items (367 of 539).
   Fixes cut items showing in Inventory/Loadouts, e.g. WaterBlade's "Ebb & Flow" under CatSupp (Zoey).
+- **Unreleased heroes as a separate group** (`916dbd5`): the six are owned, listed in their own Inventory
+  section, behind a toggle in custom lobbies' hero select, with a notice on pick (`tools/run/test_unreleased.sh`
+  passes). Needs players' FangsBoot update (launcher) and the server seed.
+- FangsBoot: the Battle Pass/Store redirect no longer calls a Blueprint function inside its hook.
 
 ## In progress
 
 1. **Heirlooms (hero-specific cut items).** 21 candidates whose effect code exists in the Feb build:
    15 for released heroes, 6 for unreleased ones. List and evidence: `docs/recon/items.md`.
-   Next: equip each in a match (procedure in `docs/recon/items.md`), verify, add passing ones to the
-   restore list.
+   Test: `tools/run/test_items.sh` (equips through the real slots, checks the server). Lancer's 3 pass;
+   the other 18 run in 12 batches (in progress). Then: add passing ones to the restore list.
 2. **Unreleased heroes.** Playable with full kits: Warlock (Withergrim), Priest (Ellis), WaterBlade (Nuali),
    Scythe, Sniper. BladeMaster is a shell (no abilities); Grappler, PetSum, VampMage are stubs.
    Showcase test: `tools/run/test_hero.sh` (fires every ability, screenshots). Plan (agreed with the user):
@@ -47,7 +51,9 @@ Ships with the next deploy. Decision: one deploy once heirlooms are tested too (
      images generated outside, shipped as PNGs and loaded at runtime.
    Showcase done (findings in `docs/recon/heroes.md`): all five have animated models; Priest and Scythe
    have real effects, Sniper uses placeholder effects, Warlock and WaterBlade have few.
-   Next: UI integration research (in progress, agent), then a bug list per hero from bot/2-player matches.
+   Menus done (see "Done, not deployed"). Next: a bug list per hero from 2-player matches; art (PNG
+   pipeline ready: `ImportFileAsTexture2D`, slots in `docs/recon/heroes.md`); premade builds (`DT_Presets` rows);
+   lobby shows DT names ("Priest") under the hero grid.
 3. **Newer builds**: none to fetch. The newest build of either app is the Dec 2023 Closed Playtest we already
    have; it is only a little further along for the unreleased heroes (Priest animations, a Warlock bot AI);
    pieces could be ported asset by asset later (`docs/recon/heroes.md`).
