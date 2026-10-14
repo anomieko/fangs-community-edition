@@ -613,3 +613,63 @@ if not gameVersion():find("^alpha7") then
         return true
     end)
 end
+
+-- ---------------------------------------------------------------------------------------------
+-- Cut content back in play: items the developers took out of the in-match pick lists although they still
+-- work (boons, artifacts, hero augments). The item picker offers the player's own hero's PossibleItems and
+-- GenericItems (the server doesn't check equipped items against them), so the backend's list for this build
+-- (/fangsapi/prod/restored-items) is added to each new hero this player controls.
+do
+    local restore, req, asked, patched = nil, nil, 0, nil
+    local function fetch()
+        if req then
+            local status = req:IsValid() and req:GetStatus() or 2   -- 0 not started, 1 processing, 2/3 failed, 4 ok
+            if status < 2 and os.time() - asked < 20 then return end
+            if status == 4 and req:GetResponseCode() == 200 then
+                restore = {}
+                for cls, list, path in req:GetResponseContentAsString(true):ToString():gmatch("([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)") do
+                    restore[#restore + 1] = { cls = cls, list = list, path = path }
+                end
+                log("restored items: " .. #restore .. " for this build")
+            end
+            req = nil
+        elseif os.time() - asked >= 30 then
+            asked = os.time()
+            local base = backendBase()
+            if not base then return end
+            req = FindFirstOf("VaRestSubsystem"):ConstructVaRestRequestExt(0, 0)   -- GET, no body
+            req:ProcessURL(base .. "/fangsapi/prod/restored-items?build=" .. gameVersion())
+        end
+    end
+    local function patch(pawn, cls)
+        local added, missing = 0, 0
+        for _, r in ipairs(restore) do
+            if r.cls == "*" or r.cls == cls then
+                local item, list = StaticFindObject(r.path), pawn[r.list]
+                if item and item:IsValid() then
+                    local have = false
+                    list:ForEach(function(_, e) if e:get():GetAddress() == item:GetAddress() then have = true end end)
+                    if not have then list[list:GetArrayNum() + 1] = item; added = added + 1 end
+                else
+                    missing = missing + 1
+                end
+            end
+        end
+        log(string.format("restored items: %d added to %s%s", added, cls, missing > 0 and (" (" .. missing .. " not loaded)") or ""))
+    end
+    every(1000, function()
+        if not restore then return fetch() end
+        if #restore == 0 then return true end   -- nothing restored for this build
+        local gi = gameInstance()
+        if not (gi and gi:IsValid()) then return end
+        local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
+        local pawn = pc and pc:IsValid() and pc.Pawn
+        if not (pawn and pawn:IsValid()) then return end
+        local name = pawn:GetFullName()
+        if patched == name then return end
+        local cls = pawn:GetClass():GetFName():ToString()
+        if not cls:find("_Char_C$") then return end   -- heroes only (BP_<Hero>_Char_C)
+        patched = name
+        patch(pawn, cls)
+    end)
+end
