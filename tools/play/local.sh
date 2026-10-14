@@ -10,6 +10,16 @@
 # Env: CLIENT_DIR (default clients/fangs-2022-08-26-b9396481), PLAY_HEADLESS=1 (off-screen, for tests).
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
+# Playing on a server: use the local game copy of the build that server runs (its file list names it)
+if [[ -z ${CLIENT_DIR:-} && -n ${SERVER:-} && -n ${JOIN_CODE:-} ]]; then
+  want=$(curl -fsS --max-time 10 "http://$SERVER/download/$JOIN_CODE/manifest.json" 2>/dev/null \
+         | python3 -c 'import json,sys; print(json.load(sys.stdin)["build"])' 2>/dev/null || true)
+  for d in "$REPO"/clients/*/; do
+    [[ -n $want && "$(tr -d '\r\n' < "$d/MOBA/Content/Data/version.txt" 2>/dev/null)" == "$want" ]] && { CLIENT_DIR=$d; break; }
+  done
+  [[ -n $want && -z ${CLIENT_DIR:-} ]] && { echo "the server runs build $want; no local copy of it in clients/" >&2; exit 1; }
+  [[ -n $want ]] && echo "server runs $want: using $(basename "$CLIENT_DIR")"
+fi
 CLIENT_DIR=$(realpath "${CLIENT_DIR:-$REPO/clients/fangs-2022-08-26-b9396481}")
 build=$(basename "$CLIENT_DIR")
 DXVK=${DXVK:-$(ls -d "$HOME"/.local/share/Steam/steamapps/common/Proton*/files/lib/wine/dxvk/x86_64-windows 2>/dev/null | tail -1)}
