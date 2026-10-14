@@ -68,8 +68,8 @@ shot() { echo 'lua local n=0 for _, w in ipairs(FindAllOf("WB_LobbyMenu_C") or {
     sleep 26; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 4; host 'tp("enemy")'; sleep 2; client 'channel()'; sleep 4; shot
     sleep 2; host 'tp("turret")'; sleep 3; host 'tp("shrine")'; sleep 2; client 'channel()'; sleep 1; shot; sleep 4; host 'state()'
     sleep 3; host 'endRound(1)'
-    sleep 30; client 'equip({})'
-    sleep 35; host 'state()'; shot
+    sleep 30; client 'equip({})'; sleep 5; host 'equipment()'
+    sleep 30; host 'state()'; shot
     sleep 2; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 4; host 'vanish()'; sleep 4; host 'state()'
   fi
 ) &
