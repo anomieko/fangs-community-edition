@@ -13,6 +13,7 @@ from aiohttp import web, WSMsgType
 
 from hosts import HostManager
 from matchmaker import Matchmaker
+from social import Social
 
 NAMESPACE = 'fangs'
 ROUTES = []  # (method-or-*, compiled regex, handler)
@@ -985,12 +986,16 @@ async def lobby_ws(request):
         app['lobby_users'].setdefault(uid, set()).add(ws)
     try:
         await ws.send_str(lobby_frame(type='connectNotif', lobbySessionID=uuid.uuid4().hex))
+        if uid:
+            await app['social'].connect(uid, ws)   # friends, presence, parties, chat: social.py
         async for msg in ws:
-            if msg.type != WSMsgType.TEXT:
+            if msg.type != WSMsgType.TEXT or not msg.data.strip():   # empty frames are the SDK's pings
                 continue
-            log({'ws': 'lobby', 'recv': msg.data})
-            fields = dict(line.split(': ', 1) for line in msg.data.split('\n') if ': ' in line)
+            log({'ws': 'lobby', 'recv': msg.data[:2000]})
+            fields = {k: v.strip() for k, v in (line.split(': ', 1) for line in msg.data.split('\n') if ': ' in line)}
             t, mid = fields.get('type', ''), fields.get('id', '')
+            if uid and await app['social'].handle(uid, ws, t, fields):
+                continue
             if t.endswith('Request'):
                 await ws.send_str(lobby_frame(type=t[:-len('Request')] + 'Response', id=mid, code=0))
             if t == 'createDSRequest':
@@ -1002,8 +1007,35 @@ async def lobby_ws(request):
             if not socks:
                 app['lobby_users'].pop(uid, None)
                 app['lobby_left'][uid] = time.time()
+            app['social'].disconnect(uid, ws)
         log({'ws': 'lobby', 'event': 'close', 'who': who})
     return ws
+
+
+# Friend search: the client looks up "name#1234" and takes the result whose displayName matches exactly.
+@route('GET', r'/iam/v3/public/namespaces/[^/]+/users')
+async def users_search(request):
+    store = request.app['store']
+    if not caller(request).get('user_id'):
+        return err(401, 20001, 'unauthorized')
+    q = request.query.get('query', '').strip().lower()
+    users = [u for u in store.data['users'].values() if q and tagged_name(u).lower() == q][:1]
+    return web.json_response({'data': [{'userId': u['user_id'], 'displayName': tagged_name(u),
+                                        'userName': u['display_name'], 'namespace': NAMESPACE,
+                                        'createdAt': u['created_at']} for u in users],
+                              'paging': {'first': '', 'last': '', 'next': '', 'previous': ''}})
+
+
+@route('GET', r'/lobby/v1/public/presence/namespaces/[^/]+/users/presence')
+async def users_presence(request):
+    if not caller(request).get('user_id'):
+        return err(401, 20001, 'unauthorized')
+    ids = [i for i in request.query.get('userIds', '').split(',') if i][:100]
+    rows = request.app['social'].presence_rows(ids)
+    count = {a: sum(r['availability'] == a for r in rows) for a in ('online', 'busy', 'invisible', 'offline')}
+    if request.query.get('countOnly', 'false').lower() == 'true':
+        rows = []
+    return web.json_response({'data': rows, **count})
 
 
 # Main-menu "players online" (FangsBoot, in place of the missions list): players with an open lobby connection,
@@ -1097,6 +1129,7 @@ def main():
     app['store'], app['log'], app['cfg'] = Store(a.data), log, a
     app['sessions'] = {}
     app['lobby_users'], app['lobby_left'] = {}, {}   # user id -> open lobby websockets / when the last one closed
+    app['social'] = Social(app)
     lo, hi = map(int, a.host_ports.split('-'))
     app['hosts'] = HostManager(game_dir=a.game_dir, inst_root=a.instances, ports=range(lo, hi + 1),
                                run_script=a.run_host, backend_addr=f'127.0.0.1:{a.port}', log=log,
