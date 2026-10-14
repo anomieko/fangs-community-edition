@@ -188,6 +188,14 @@
      "Owner": "FireMage"
     },
     {
+     "Item": "WallOfIgnition",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "CircleOfPower",
+     "Owner": "FireMage"
+    },
+    {
      "Item": "IncreasedRange",
      "Owner": "LightningArcher"
     },
@@ -316,11 +324,19 @@
      "Owner": "BattleMonk"
     },
     {
+     "Item": "BloodthirstySpear",
+     "Owner": "Lancer"
+    },
+    {
      "Item": "DebilitatingHop",
      "Owner": "Lancer"
     },
     {
      "Item": "IntimidatingDash",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerItem19",
      "Owner": "Lancer"
     },
     {
@@ -357,6 +373,10 @@
     },
     {
      "Item": "RowenSiegilsBlade",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "RowenTanglerootGauntlets",
      "Owner": "WoodenSword"
     },
     {
@@ -398,6 +418,10 @@
     {
      "Item": "BattleMonkZenLMB",
      "Owner": "BattleMonk"
+    },
+    {
+     "Item": "FireMageDoubleRangeLMB",
+     "Owner": "FireMage"
     },
     {
      "Item": "FireMageCDReduceSkill4",
@@ -552,6 +576,10 @@
      "Owner": "Berserker"
     },
     {
+     "Item": "DuelistZone",
+     "Owner": "Lancer"
+    },
+    {
      "Item": "TankShredder",
      "Owner": "Lancer"
     },
@@ -582,6 +610,10 @@
     {
      "Item": "WoodenSwordSkill1Recast",
      "Owner": "WoodenSword"
+    },
+    {
+     "Item": "SurgingWinds",
+     "Owner": "FireMage"
     },
     {
      "Item": "Incinerate",
@@ -673,6 +705,10 @@
     },
     {
      "Item": "ShieldAssist",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "LowHPShieldIncrease",
      "Owner": "ShieldGirl"
     },
     {
@@ -808,6 +844,10 @@
      "Owner": "CatSupp"
     },
     {
+     "Item": "CatSupp_PassiveTotoAOEHPS",
+     "Owner": "CatSupp"
+    },
+    {
      "Item": "CatSupp_RMBThornShield",
      "Owner": "CatSupp"
     },
@@ -832,6 +872,10 @@
      "Owner": "Gunslinger"
     },
     {
+     "Item": "Gunslinger_LRMB8Bullets",
+     "Owner": "Gunslinger"
+    },
+    {
      "Item": "Gunslinger_LRMBLastShot",
      "Owner": "Gunslinger"
     },
@@ -849,6 +893,10 @@
     },
     {
      "Item": "Backstab_Passive_StealthHeal",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "Backstab_Passive_StealthSpeed",
      "Owner": "Backstab"
     },
     {
@@ -1156,6 +1204,10 @@
      "Owner": "Sidekick"
     },
     {
+     "Item": "Sidekick_P_WallPin",
+     "Owner": "Sidekick"
+    },
+    {
      "Item": "Sidekick_Skill2_SuckSlow",
      "Owner": "Sidekick"
     },
@@ -1165,6 +1217,10 @@
     },
     {
      "Item": "Sidekick_Skill3_Unkillable",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "Sidekick_Skill3_AOECC",
      "Owner": "Sidekick"
     },
     {
@@ -1284,6 +1340,10 @@
      "Owner": "BigBoi"
     },
     {
+     "Item": "BigBoi_P_BrushHeal",
+     "Owner": "BigBoi"
+    },
+    {
      "Item": "BigBoi_RMB_BonusFromBrush",
      "Owner": "BigBoi"
     },
@@ -1368,6 +1428,10 @@
      "Owner": "Priest"
     },
     {
+     "Item": "Priest_Skill3_AttackSpeed",
+     "Owner": "Priest"
+    },
+    {
      "Item": "Priest_LMB_Slow",
      "Owner": "Priest"
     },
@@ -1404,6 +1468,22 @@
      "Owner": "Warlock"
     },
     {
+     "Item": "Scythe_RMB_FreeFire",
+     "Owner": "Scythe"
+    },
+    {
+     "Item": "Scythe_Skill2_MoreDamage",
+     "Owner": "Scythe"
+    },
+    {
+     "Item": "Scythe_Skill2_Heal",
+     "Owner": "Scythe"
+    },
+    {
+     "Item": "Scythe_P_FlameAura",
+     "Owner": "Scythe"
+    },
+    {
      "Item": "BigBoi_RMB_AllyShield",
      "Owner": "BigBoi"
     },
@@ -1413,6 +1493,10 @@
     },
     {
      "Item": "BigBoi_Skill4_PickUpDamage",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_Skill1_AllyHeal",
      "Owner": "BigBoi"
     },
     {
@@ -2598,6 +2682,14 @@
      "Owner": "FireMage"
     },
     {
+     "Item": "WallOfIgnition",
+     "Owner": "FireMage"
+    },
+    {
+     "Item": "CircleOfPower",
+     "Owner": "FireMage"
+    },
+    {
      "Item": "IncreasedRange",
      "Owner": "LightningArcher"
     },
@@ -2726,11 +2818,19 @@
      "Owner": "BattleMonk"
     },
     {
+     "Item": "BloodthirstySpear",
+     "Owner": "Lancer"
+    },
+    {
      "Item": "DebilitatingHop",
      "Owner": "Lancer"
     },
     {
      "Item": "IntimidatingDash",
+     "Owner": "Lancer"
+    },
+    {
+     "Item": "LancerItem19",
      "Owner": "Lancer"
     },
     {
@@ -2767,6 +2867,10 @@
     },
     {
      "Item": "RowenSiegilsBlade",
+     "Owner": "WoodenSword"
+    },
+    {
+     "Item": "RowenTanglerootGauntlets",
      "Owner": "WoodenSword"
     },
     {
@@ -2808,6 +2912,10 @@
     {
      "Item": "BattleMonkZenLMB",
      "Owner": "BattleMonk"
+    },
+    {
+     "Item": "FireMageDoubleRangeLMB",
+     "Owner": "FireMage"
     },
     {
      "Item": "FireMageCDReduceSkill4",
@@ -2962,6 +3070,10 @@
      "Owner": "Berserker"
     },
     {
+     "Item": "DuelistZone",
+     "Owner": "Lancer"
+    },
+    {
      "Item": "TankShredder",
      "Owner": "Lancer"
     },
@@ -2992,6 +3104,10 @@
     {
      "Item": "WoodenSwordSkill1Recast",
      "Owner": "WoodenSword"
+    },
+    {
+     "Item": "SurgingWinds",
+     "Owner": "FireMage"
     },
     {
      "Item": "Incinerate",
@@ -3083,6 +3199,10 @@
     },
     {
      "Item": "ShieldAssist",
+     "Owner": "ShieldGirl"
+    },
+    {
+     "Item": "LowHPShieldIncrease",
      "Owner": "ShieldGirl"
     },
     {
@@ -3218,6 +3338,10 @@
      "Owner": "CatSupp"
     },
     {
+     "Item": "CatSupp_PassiveTotoAOEHPS",
+     "Owner": "CatSupp"
+    },
+    {
      "Item": "CatSupp_RMBThornShield",
      "Owner": "CatSupp"
     },
@@ -3242,6 +3366,10 @@
      "Owner": "Gunslinger"
     },
     {
+     "Item": "Gunslinger_LRMB8Bullets",
+     "Owner": "Gunslinger"
+    },
+    {
      "Item": "Gunslinger_LRMBLastShot",
      "Owner": "Gunslinger"
     },
@@ -3259,6 +3387,10 @@
     },
     {
      "Item": "Backstab_Passive_StealthHeal",
+     "Owner": "Backstab"
+    },
+    {
+     "Item": "Backstab_Passive_StealthSpeed",
      "Owner": "Backstab"
     },
     {
@@ -3566,6 +3698,10 @@
      "Owner": "Sidekick"
     },
     {
+     "Item": "Sidekick_P_WallPin",
+     "Owner": "Sidekick"
+    },
+    {
      "Item": "Sidekick_Skill2_SuckSlow",
      "Owner": "Sidekick"
     },
@@ -3575,6 +3711,10 @@
     },
     {
      "Item": "Sidekick_Skill3_Unkillable",
+     "Owner": "Sidekick"
+    },
+    {
+     "Item": "Sidekick_Skill3_AOECC",
      "Owner": "Sidekick"
     },
     {
@@ -3694,6 +3834,10 @@
      "Owner": "BigBoi"
     },
     {
+     "Item": "BigBoi_P_BrushHeal",
+     "Owner": "BigBoi"
+    },
+    {
      "Item": "BigBoi_RMB_BonusFromBrush",
      "Owner": "BigBoi"
     },
@@ -3778,6 +3922,10 @@
      "Owner": "Priest"
     },
     {
+     "Item": "Priest_Skill3_AttackSpeed",
+     "Owner": "Priest"
+    },
+    {
      "Item": "Priest_LMB_Slow",
      "Owner": "Priest"
     },
@@ -3814,6 +3962,22 @@
      "Owner": "Warlock"
     },
     {
+     "Item": "Scythe_RMB_FreeFire",
+     "Owner": "Scythe"
+    },
+    {
+     "Item": "Scythe_Skill2_MoreDamage",
+     "Owner": "Scythe"
+    },
+    {
+     "Item": "Scythe_Skill2_Heal",
+     "Owner": "Scythe"
+    },
+    {
+     "Item": "Scythe_P_FlameAura",
+     "Owner": "Scythe"
+    },
+    {
      "Item": "BigBoi_RMB_AllyShield",
      "Owner": "BigBoi"
     },
@@ -3823,6 +3987,10 @@
     },
     {
      "Item": "BigBoi_Skill4_PickUpDamage",
+     "Owner": "BigBoi"
+    },
+    {
+     "Item": "BigBoi_Skill1_AllyHeal",
      "Owner": "BigBoi"
     },
     {
@@ -7152,6 +7320,111 @@
     "Class": "*",
     "List": "GenericItems",
     "Item": "/Game/Items/Characters/Generic/Garden/BobAndWeave/ITEM_Generic_BobAndWeave.ITEM_Generic_BobAndWeave"
+   },
+   {
+    "Class": "BP_FireMage_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/FireMage/LMB/Items/DoubleRangeLMB/ITEM_FireMage_DoubleRangeLMB.ITEM_FireMage_DoubleRangeLMB"
+   },
+   {
+    "Class": "BP_FireMage_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/FireMage/E/Items/SoulflamesBlessing/ITEM_FireMage_ProjectileAmpCage.ITEM_FireMage_ProjectileAmpCage"
+   },
+   {
+    "Class": "BP_FireMage_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/FireMage/Q/Items/CircleOfPower/ITEM_FireMage_SpaceDamageAmp.ITEM_FireMage_SpaceDamageAmp"
+   },
+   {
+    "Class": "BP_FireMage_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/FireMage/Q/Items/SurgingWinds/ITEM_FireMage_SurgingWinds.ITEM_FireMage_SurgingWinds"
+   },
+   {
+    "Class": "BP_BackStab_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Items/Characters/Backstab/Passive/ITEM_Backstab_PassiveStealthSpeed.ITEM_Backstab_PassiveStealthSpeed"
+   },
+   {
+    "Class": "BP_BigBoi_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/BigBoi/Skill1/ITEM_BigBoi_Skill1_AllyHeal.ITEM_BigBoi_Skill1_AllyHeal"
+   },
+   {
+    "Class": "BP_BigBoi_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/BigBoi/LMB/ITEM_BigBoi_P_BrushHeal.ITEM_BigBoi_P_BrushHeal"
+   },
+   {
+    "Class": "BP_CatSupp_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Items/Characters/CatSupp/Passive/ITEM_CatSupp_PassiveTotoAOEHPS.ITEM_CatSupp_PassiveTotoAOEHPS"
+   },
+   {
+    "Class": "BP_Gunslinger_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/Gunslinger/Passive/Items/ITEM_Gunslinger_Passive8Shots.ITEM_Gunslinger_Passive8Shots"
+   },
+   {
+    "Class": "BP_Lancer_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Items/Characters/Lancer/BloodthirstySpear/ITEM_Lancer_BloodthirstySpear.ITEM_Lancer_BloodthirstySpear"
+   },
+   {
+    "Class": "BP_Lancer_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Items/Characters/Lancer/Skill2/Item19/ITEM_Lancer_Item19.ITEM_Lancer_Item19"
+   },
+   {
+    "Class": "BP_Lancer_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Items/Characters/Lancer/Item9/ITEM_Lancer_Item9_2.ITEM_Lancer_Item9_2"
+   },
+   {
+    "Class": "BP_Priest_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/Priest/Skill3/Items/ITEM_Priest_Skill3_AttackSpeed.ITEM_Priest_Skill3_AttackSpeed"
+   },
+   {
+    "Class": "BP_Scythe_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/Scythe/Passive/ITEM_Scythe_P_FlameAura.ITEM_Scythe_P_FlameAura"
+   },
+   {
+    "Class": "BP_Scythe_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/Scythe/RMB/ITEM_Scythe_RMB_FreeFire.ITEM_Scythe_RMB_FreeFire"
+   },
+   {
+    "Class": "BP_Scythe_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/Scythe/Skill2/ITEM_Scythe_Skill2_Heal.ITEM_Scythe_Skill2_Heal"
+   },
+   {
+    "Class": "BP_Scythe_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/Scythe/Skill2/ITEM_Scythe_Skill2_MoreDamage.ITEM_Scythe_Skill2_MoreDamage"
+   },
+   {
+    "Class": "BP_ShieldGirl_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Items/Characters/ShieldGirl/GenericPassive/ITEM_ShieldGirl_LowHPShieldIncrease.ITEM_ShieldGirl_LowHPShieldIncrease"
+   },
+   {
+    "Class": "BP_Sidekick_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/SideKick/Passive/Items/ITEM_Sidekick_P_WallPin.ITEM_Sidekick_P_WallPin"
+   },
+   {
+    "Class": "BP_Sidekick_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Gameplay/Abilities/Player/SideKick/Skill3/Items/ITEM_Sidekick_Skill3_AOECC.ITEM_Sidekick_Skill3_AOECC"
+   },
+   {
+    "Class": "BP_WoodenSword_Char_C",
+    "List": "PossibleItems",
+    "Item": "/Game/Items/Characters/WoodenSword/Skill4/UNUSED_Item_WoodenSword_TanglerootGauntlets.UNUSED_Item_WoodenSword_TanglerootGauntlets"
    }
   ]
  },
