@@ -10,6 +10,9 @@
 # Every game build has its own folder on the server (builds/<version.txt>), so switching between builds
 # is a deploy with the other game dir and no new upload. UPLOAD_ONLY=1: only upload the game files (e.g. a
 # build to switch to later), leave the running server alone.
+# Every deploy is a commit: it refuses uncommitted changes in what it ships (FANGS_DEPLOY_DIRTY=1 overrides, for
+# emergencies) and, once the smoke test passed, tags the commit `deploy-<UTC date-time>` and records it on the
+# server (<remote>/repo/DEPLOYED). Rolling back = deploying the previous tag; see docs/CHANGELOG.md.
 # Open in any firewall in front of the server: TCP 8080, UDP 11032, UDP 7777-7786.
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -20,6 +23,13 @@ remote=/opt/fangs-ce
 build=$(tr -d '\r\n' < "$game/MOBA/Content/Data/version.txt")
 [[ $build =~ ^[A-Za-z0-9._-]+$ ]] || { echo "unexpected version.txt in $game: '$build'" >&2; exit 1; }
 code=${FANGS_JOIN_CODE:?set FANGS_JOIN_CODE (players need it; it is baked into the player package)}
+shipped=(backend server tools/ue4ss tools/run/config player launcher .dockerignore)
+dirty=$(git -C "$REPO" status --porcelain -- "${shipped[@]}" | grep -v '^??' || true)
+if [[ -n $dirty && -z ${UPLOAD_ONLY:-} && -z ${FANGS_DEPLOY_DIRTY:-} ]]; then
+  echo "!! uncommitted changes in what would be deployed (commit them first, or FANGS_DEPLOY_DIRTY=1):" >&2
+  echo "$dirty" >&2; exit 1
+fi
+commit=$(git -C "$REPO" rev-parse HEAD)
 ssh_() { ssh -o StrictHostKeyChecking=accept-new "$target" "$@"; }
 rsync_() { rsync --rsync-path="sudo rsync" "$@"; }
 
@@ -101,4 +111,8 @@ rsync_ -a --delete --exclude .hashcache.json "$dist/" "$target:$remote/repo/serv
 echo "==> smoke test"
 py=python3; [[ -x $REPO/backend/.venv/bin/python ]] && py=$REPO/backend/.venv/bin/python
 "$py" "$REPO/tools/run/smoke_server.py" "$public:8080" --join-code "$code"
+stamp=$(date -u +%Y-%m-%d-%H%M)
+echo "$commit ${dirty:+(with uncommitted changes) }$build $stamp" | ssh_ "sudo tee $remote/repo/DEPLOYED >/dev/null"
+git -C "$REPO" tag -a "deploy-$stamp" -m "deployed $build${dirty:+ (with uncommitted changes)}" "$commit"
+echo "==> deployed ${commit:0:7} as tag deploy-$stamp (add it to docs/CHANGELOG.md; push tags with the commits)"
 echo "==> server is up at $public:8080 (full client zip: ssh $target 'cd $remote/repo/server && sudo ./build-client.sh')"

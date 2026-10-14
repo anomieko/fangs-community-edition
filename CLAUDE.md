@@ -11,6 +11,8 @@ content, header dumps, or credentials found in the game. See the README disclaim
   in a chat or an agent transcript is lost: write it there.
 - `docs/STATUS.md`: what exists and gotchas; `docs/clients/*.md`: per-build facts. Say which build a
   finding comes from.
+- `docs/CHANGELOG.md`: what each deploy changed (commits, off switch, rollback). Every change that will reach
+  players gets a line under "Next deploy" in the same commit; `server/deploy.sh` tags each deploy.
 
 Builds: the server runs the **15 Feb 2023** build (`clients/fangs-2023-02-15-b10554626`, Shipping, encrypted
 pak; key recovered locally into `work/re/`, never print or commit it). The Aug 2022 build is also supported;
