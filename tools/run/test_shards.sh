@@ -9,12 +9,17 @@
 # Maps without turrets (Payload II) skip the turret steps.
 # MODE=off: the Feb 2023 kill system instead (seed with the switch off): Prismatic Shard spawn and kill, pickups.
 # Own backend data, seed and game servers; local play is untouched.
-# Usage: RUN=shards-<name> MAP=LE_Arena02_Map [MODE=on|off] [SPEEDUP=off|mask_of_speed|every_capture]
+# SEQ=round2: round 1 only PRE (death: a carrier killed by the turret; shrine: a Health Shrine channel; capture: a
+# turn-in; all: what SEQ=full does in round 1; none), then in round 2 pick a Shard up and turn it in CYCLES (5) times
+# (own/enemy zone); VANISH=1: then a carrier whose hero is destroyed.
+# Usage: RUN=shards-<name> MAP=LE_Arena02_Map [MODE=on|off] [SEQ=full|round2] [SPEEDUP=off|mask_of_speed|every_capture]
 #        [HERO=FireMage] [ITEMS="<restore rows>"] tools/run/test_shards.sh
 set -u
 cd "$(dirname "$0")/../.."
 R=${RUN:?set RUN}; MAP=${MAP:-LE_Arena02_Map}; MODE=${MODE:-on}; HERO=${HERO:-FireMage}; ITEMS=${ITEMS:-}
-rm -rf work/run/$R-hosts work/run/$R-store.json work/logs/$R
+# Own data dir: game servers read the backend's records from the store's folder (work/run/records is shared, and a
+# parallel run with another MODE would switch this one's Shards).
+rm -rf work/run/$R-hosts work/run/$R-data work/logs/$R
 python3 -I backend/seed/make_seed.py 127.0.0.1:8080 work/run/$R-seed.json >/dev/null
 PATHS=$(python3 -I - "$MODE" "${SPEEDUP:-}" work/run/$R-seed.json $ITEMS <<'PY'
 import json, sys
@@ -55,7 +60,30 @@ shot() { echo 'lua local n=0 for _, w in ipairs(FindAllOf("WB_LobbyMenu_C") or {
   sleep 8; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartMatch(); return "start"' >> $A
   sleep 60; echo "$LOAD" >> $A; client "texts()"; client "pool({ $NINE })"; client "equip({ $PATHS })"
   sleep 5; host 'equipment()'; host 'watch()'
-  if [[ $MODE == off ]]; then
+  if [[ ${SEQ:-full} == round2 ]]; then   # round 1: only PRE, then round 2: pick up and turn in, CYCLES times
+    case ${PRE:-} in
+      death) sleep 15; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 5; host 'tp("turret")'; sleep 25 ;;
+      shrine) sleep 5; host 'tp("shrine")'; sleep 2; client 'channel()'; sleep 6 ;;
+      all) sleep 5; host 'tp("shrine")'; sleep 2; client 'channel()'; sleep 6
+        host 'tp("shard")'; sleep 2; client 'channel()'; sleep 5; host 'tp("own")'; sleep 2; client 'channel()'; sleep 20
+        host 'tp("shard")'; sleep 2; client 'channel()'; sleep 5; host 'tp("turret")'; sleep 30
+        host 'tp("shard")'; sleep 2; client 'channel()'; sleep 5; host 'tp("enemy")'; sleep 2; client 'channel()'; sleep 5
+        host 'tp("turret")'; sleep 3; host 'tp("shrine")'; sleep 2; client 'channel()'; sleep 6 ;;
+      capture) sleep 15; host 'tp("shard")'; sleep 2; client 'channel()'; sleep 5; host 'tp("own")'; sleep 2; client 'channel()'; sleep 5 ;;
+      *) sleep 20 ;;
+    esac
+    host 'endRound(1)'
+    sleep 30; client 'equip({})'; sleep 5; host 'equipment()'
+    sleep 25; host 'state()'
+    for i in $(seq ${CYCLES:-5}); do
+      zone=own; (( i % 2 == 0 )) && zone=enemy
+      host 'tp("shard")'; sleep 2; client 'channel()'; sleep 7; host 'state()'
+      host 'tp("'$zone'")'; sleep 2; client 'channel()'; sleep 5; host 'state()'; sleep 16
+    done
+    if [[ -n ${VANISH:-} ]]; then   # a carrier whose hero is destroyed (as when its player leaves)
+      host 'tp("shard")'; sleep 2; client 'channel()'; sleep 6; host 'vanish()'; sleep 6; host 'state()'
+    fi
+  elif [[ $MODE == off ]]; then
     sleep 40; host 'state()'; host 'tp("prismatic")'; sleep 2; shot
     sleep 2; host 'hitPrismatic()'; sleep 3; host 'state()'; shot
     sleep 30; host 'state()'
@@ -76,7 +104,7 @@ shot() { echo 'lua local n=0 for _, w in ipairs(FindAllOf("WB_LobbyMenu_C") or {
   fi
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
-  BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts --seed $PWD/work/run/$R-seed.json" \
+  BACKEND_ARGS="--data $PWD/work/run/$R-data/store.json --instances $PWD/work/run/$R-hosts --seed $PWD/work/run/$R-seed.json" \
   tools/run/headless.sh "${DURATION:-560}" clients/fangs-2023-02-15-b10554626 \
   -- $R:0:"-TestUser=sharder -TestPass=x" 2>&1 | grep -v Segmentation
 wait
