@@ -31,13 +31,21 @@ local function commandLine()
     return ok and cl or ""
 end
 
+-- FindFirstOf/FindAllOf scan every object (~3 ms each), on the game thread: the game instance never changes,
+-- so it is looked up once (again only if it ever becomes invalid).
+local cachedGI = nil
+local function gameInstance()
+    if not (cachedGI and cachedGI:IsValid()) then cachedGI = FindFirstOf("BP_MOBAInstance_C") end
+    return cachedGI
+end
+
 -- Online, the game names players after their computer (Windows computer name + a random suffix), visible to
 -- everyone in the lobby and match. Use the FangsCE player name instead (re-applied after every map change,
 -- where the game sets the computer name again).
 local playerName = commandLine():match("%-TestUser=([%w_%-]+)")
 if playerName then
     every(2000, function()
-        local gi = FindFirstOf("BP_MOBAInstance_C")
+        local gi = gameInstance()
         if not (gi and gi:IsValid()) then return end
         local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
         if not (pc and pc:IsValid() and pc.PlayerState and pc.PlayerState:IsValid()) then return end
@@ -47,7 +55,7 @@ end
 
 local logoDone, loginDone = false, false
 every(500, function()
-    local gi = FindFirstOf("BP_MOBAInstance_C")
+    local gi = gameInstance()
     if not gi or not gi:IsValid() then return end
     if not logoDone then
         pcall(function()
@@ -99,15 +107,17 @@ local function everyonePickedASide(gs)
     end)
     return n > 0 and picked
 end
+local lobbyGS = nil
 local function offerLaunch(menu)
-    local gi, pc = FindFirstOf("BP_MOBAInstance_C"), menu.BP_LobbyPlayerControllerRef
+    local gi, pc = gameInstance(), menu.BP_LobbyPlayerControllerRef
     if not (gi and gi:IsValid() and gi.MapGameMode == 4 and pc:IsValid()) then return end   -- custom lobbies only
     local ps = pc.PlayerState
     if not (ps:IsValid() and ps.IsLobbyOwner) then return end
     local sw = menu.LobbyStatusSwitch
     if sw:GetActiveWidgetIndex() == 1 then return end
-    local gs = FindFirstOf("GS_Lobby_GameState_C")
-    if gs and gs:IsValid() and everyonePickedASide(gs) then sw:SetActiveWidgetIndex(1) end
+    -- this runs on every lobby-menu tick: look the lobby state up only when it isn't known (or gone)
+    if not (lobbyGS and lobbyGS:IsValid()) then lobbyGS = FindFirstOf("GS_Lobby_GameState_C") end
+    if lobbyGS and lobbyGS:IsValid() and everyonePickedASide(lobbyGS) then sw:SetActiveWidgetIndex(1) end
 end
 local launchHooked = false
 every(1000, function()
@@ -157,7 +167,7 @@ local function retag(round)
     return true
 end
 local retagged = {}   -- HUD full name -> true when done, or number of attempts so far
-every(1000, function()
+every(5000, function()   -- two object scans per run: not every second
     local huds = FindAllOf("WB_Round_C") or {}             -- Feb 2023 build
     for _, h in ipairs(FindAllOf("WB_HUD_C") or {}) do huds[#huds + 1] = h end   -- Aug 2022 build
     for _, round in ipairs(huds) do
@@ -223,7 +233,7 @@ if gameVersion():find("^alpha7") then
     local pending = nil   -- the one lobby request in flight: {req, kind = "create"|"list", pm, started}
     local lastCreate = 0
     local function liveMenu()   -- the play menu on screen right now (none while loading or in a game)
-        local gi = FindFirstOf("BP_MOBAInstance_C")
+        local gi = gameInstance()
         local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
         if not (menu and menu:IsValid() and menu:IsInViewport()) then return nil end
         local pm = menu.WB_PlayMenu
@@ -299,7 +309,7 @@ if gameVersion():find("^alpha7") then
     end
 
     every(200, function()
-        local gi = FindFirstOf("BP_MOBAInstance_C")
+        local gi = gameInstance()
         if not (gi and gi:IsValid()) then return end
         if not gi.UseLAN then gi.UseLAN = true end
         if pending then
@@ -341,7 +351,7 @@ if gameVersion():find("^alpha7") then
     -- the way the mode chooser does (saved in the player's settings; CHANGE still works). Once per start.
     local casualDone = false
     every(1000, function()
-        local gi = FindFirstOf("BP_MOBAInstance_C")
+        local gi = gameInstance()
         local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
         if casualDone or not (menu and menu:IsValid() and menu:IsInViewport()) then return end
         casualDone = true
