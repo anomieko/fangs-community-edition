@@ -889,10 +889,19 @@ async def handle_create_ds(app, ws, fields):
     sid = fields.get('matchId', '')
     sess = app['sessions'].get(sid)
     cfg = app['cfg']
+    # One server request per lobby owner at a time. When no standby server is ready, a request waits ~25 s for one
+    # to boot; an owner who meanwhile creates another lobby (client retry, or clicking again) replaces the first:
+    # the server booted for it goes back to standby and the newer request takes it instead of finding no slot.
+    lock = app['ds_locks'].setdefault((sess or {}).get('user_id', ''), asyncio.Lock())
     try:
-        if not sess:
-            raise RuntimeError(f'unknown session {sid}')
-        host = await app['hosts'].allocate(sid)
+        async with lock:
+            if not sess or app['sessions'].get(sid) is not sess:
+                raise RuntimeError(f'unknown session {sid}')
+            host = await app['hosts'].allocate(sid)
+            if app['sessions'].get(sid) is not sess:
+                host.session_id = None
+                app['log']({'host': host.id, 'event': 'back to standby', 'reason': f'lobby {sid} was replaced'})
+                return
         sess['_host'] = host
         sess['server'] = {'ip': cfg.public_ip, 'port': host.port, 'region': 'local', 'status': 'READY',
                           'pod_name': host.id, 'deployment': fields.get('deployment', ''),
@@ -1147,6 +1156,7 @@ def main():
     app['store'], app['log'], app['cfg'] = Store(a.data), log, a
     app['sessions'] = {}
     app['lobby_users'], app['lobby_left'] = {}, {}   # user id -> open lobby websockets / when the last one closed
+    app['ds_locks'] = {}   # lobby owner -> lock: one game server request at a time
     app['social'] = Social(app)
     lo, hi = map(int, a.host_ports.split('-'))
     app['hosts'] = HostManager(game_dir=a.game_dir, inst_root=a.instances, ports=range(lo, hi + 1),

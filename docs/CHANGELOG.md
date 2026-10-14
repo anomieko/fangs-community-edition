@@ -15,7 +15,9 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Commits | Off switch |
+|---|---|---|
+| Fix "failed to request server" / lobby closing when no standby server is ready: a lobby replaced by the same owner while its server boots gives that server to the newer lobby (requests per owner run one at a time) | see git log | revert the commit |
 
 ## deploy-2026-10-14-1811 (`bb679fb`, Feb 2023 build)
 
