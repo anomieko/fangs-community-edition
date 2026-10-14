@@ -25,7 +25,8 @@ MENU="lua $GI"' local cards=pm.WB_Missions.MissionsSizeBox:GetParent()'\
 ' menu.BattlePassTab:GetVisibility(), menu.ShopTab:GetVisibility(), pm.PromoButton:GetVisibility(),'\
 ' menu.MissionBtn:GetVisibility(), cards:GetVisibility(), cards:GetParent():GetChildAt(0):GetChildAt(0):GetText():ToString(),'\
 ' tostring(menu.BkgMediaPlayer and menu.BkgMediaPlayer:IsPlaying()))'
-STORE="lua $GI"' menu:SelectMainMenuTab(5) return "store tab request -> shown page " .. menu.MainMenuSwitcher:GetActiveWidgetIndex()'
+STORE="lua $GI"' menu:SelectMainMenuTab(5) return "store tab requested"'
+PAGE="lua $GI"' return "shown page " .. menu.MainMenuSwitcher:GetActiveWidgetIndex() .. " (0 = home: the redirect works)"'
 BATTLE="lua $GI"' pm.BP_MOBAInstanceRef=gi; pm:CreateSessionDialog();'\
 ' local cl=pm.WB_CreateLobbyRef; local out={}'\
 ' for _, m in ipairs({"Battle", "Duel", "4vs4"}) do cl:SelectGameMode(m); out[#out+1]=m .. "=" .. cl.PlayerCount end return "custom lobby sizes: " .. table.concat(out, " ")'
@@ -36,7 +37,7 @@ BATTLE="lua $GI"' pm.BP_MOBAInstanceRef=gi; pm:CreateSessionDialog();'\
   echo "lua $GI menu:SelectMainMenuTab(2)" >> $A; sleep 4; echo 'shot showui' >> $A; sleep 2
   echo "lua $GI menu:SelectMainMenuTab(1) menu.WB_Collection:SelectCollectionMenu(1)" >> $A; sleep 4
   echo 'shot showui' >> $A; sleep 2
-  echo "$STORE" >> $A; echo "lua $GI menu:SelectMainMenuTab(0)" >> $A; sleep 2; echo "$BATTLE" >> $A; echo 'shot showui' >> $A
+  echo "$STORE" >> $A; sleep 2; echo "$PAGE" >> $A; echo "lua $GI menu:SelectMainMenuTab(0)" >> $A; sleep 2; echo "$BATTLE" >> $A; echo 'shot showui' >> $A
 ) &
 [[ ${MOVIES:-0} == 1 ]] && nomovies=0 || nomovies=1
 UE4SS=1 GPU=1 NOMOVIES=$nomovies BACKEND=127.0.0.1:8080 RUN_BACKEND=1 BACKEND_ARGS="--data $PWD/work/run/menu-store.json" \
