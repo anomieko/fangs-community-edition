@@ -130,13 +130,14 @@ return function(env)
         end)
         return found
     end
-    -- Two safety nets the game lacks. A carrier whose hero goes away without dying (a player who leaves) would keep the
-    -- Shard "taken" until the round ends. And from round 2 on a carrier now and then loses the HoldingOrb tag ~1.4 s
-    -- after the pickup while the Shard's HoldingOrb effect stays (cause not found): such a carrier who dies keeps the
-    -- Shard (the game drops it only from a carrier with the tag). Either way, after 2 s the Shard goes back to a
-    -- shrine, as when a carrier dies. The rule states come from the game mode's rule components: no object scans in
-    -- this loop (it runs all match long).
+    -- A safety net the game lacks: a carrier whose hero goes away without dying (e.g. destroyed when its player
+    -- leaves) keeps the Shard "taken" until the round ends, and so would a dead carrier the game didn't take it from
+    -- (it drops the Shard only from a carrier with the HoldingOrb tag). After 2 s the Shard goes back to a shrine, as
+    -- when a carrier dies. A destroyed hero counts at once (its "pending kill" flag; UE4SS's IsValid() stays true
+    -- until garbage collection, 15 s and more). The rule states come from the game mode's rule components: no object
+    -- scans in this loop (it runs all match long).
     local DEAD = { TagName = FName("State.Dead") }
+    local PENDING_KILL = EInternalObjectFlags and EInternalObjectFlags.PendingKill
     local track = nil   -- this match: { gm, mode, rs, phoenix, a, b, carrier, lost }
     every(250, function()
         if not track then return end
@@ -150,6 +151,10 @@ return function(env)
         local rs = track.rs
         local carrier = rs.IsOrbTaken and rs.ShrineOrbCarrier
         local gone = rs.IsOrbTaken and not valid(carrier)
+        if not gone and valid(carrier) and PENDING_KILL then
+            local ok, dying = pcall(function() return carrier:HasAnyInternalFlags(PENDING_KILL) end)
+            gone = ok and dying == true
+        end
         if not gone and valid(carrier) then
             local ok, dead = pcall(function() return carrier.AbilitySystemComponent:HasMatchingGameplayTag(DEAD) end)
             gone = ok and dead
