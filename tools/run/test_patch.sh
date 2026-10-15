@@ -13,6 +13,8 @@
 #   Env: HERO_A/HERO_B (DT_Heroes rows), ULT_A, LMB_B, CAST_A, CAST_B (ability class name parts), RUN, DURATION,
 #        CHECK="<patch> ..." (whose values check() expects; default PATCHES, or ccrevert in a control run),
 #        AIM_A=<range>: CAST_A lands at alice's pointer (e.g. Brutus' Earthquake, 1350): bob is put there instead.
+#        CUE_A=<class>: the gameplay cue actor CAST_A's hit spawns on the clients, counted after each cast
+#        (default Allure's charm visual, BP_GC_BookMage_Skill4CharmVFX_C; CUE_A= to skip).
 #   e.g. Brutus' Earthquake centre (root -> stun): HERO_A=Berserker CAST_A=Berserker_Skill2 AIM_A=1350 ULT_A=Berserker_Skill3
 set -u
 cd "$(dirname "$0")/../.."
@@ -20,6 +22,7 @@ R=${RUN:-patch}
 CLIENT=${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}
 PATCHES=${PATCHES:-ccrevert}
 HERO_A=${HERO_A:-BookMage}; ULT_A=${ULT_A:-BookMage_RNEw}; CAST_A=${CAST_A:-BookMage_Skill4}
+CUE_A=${CUE_A-BP_GC_BookMage_Skill4CharmVFX_C}   # a cue actor CAST_A's hit should spawn on the clients ("" = no check)
 HERO_B=${HERO_B:-WoodenSword}; LMB_B=${LMB_B:-WoodenSword_LMB}; CAST_B=${CAST_B:-WoodenSword_Skill1}
 rm -rf work/run/$R-hosts work/run/$R-store.json work/run/$R-paks work/run/$R-built; mkdir -p work/run/$R-paks
 
@@ -84,6 +87,7 @@ pick() {
     if [[ -n ${AIM_A:-} ]]; then host "lua return FCE_PATCH.aim(\"alice\", \"bob\", $AIM_A)"
     else host "lua return FCE_PATCH.face(\"alice\", \"bob\", $d)"; fi
     sleep 0.5; echo "lua return FCE_PATCH.fire(\"$CAST_A\")" >> $A
+    if [[ -n $CUE_A ]]; then sleep 1.5; echo "lua return FCE_PATCH.count(\"$CUE_A\")" >> $A; echo "lua return FCE_PATCH.count(\"$CUE_A\")" >> $B; fi
     sleep 6; host "lua return FCE_PATCH.face(\"bob\", \"alice\", $d)"
     sleep 0.5; echo "lua return FCE_PATCH.fire(\"$CAST_B\")" >> $B
     sleep 6

@@ -79,6 +79,8 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `rename-call` | `from`, `to`, `count`, optional `function` | Calls to a Blueprint function of another class, e.g. `BP_FL_MOBA_AbilitySystemFunctionLibrary_C.MakeRootEffectSpec` → `MakeStunEffectSpec`. These calls are by name (`EX_VirtualFunction`) and resolved when they run. The new function must take the same arguments. |
 | `rename-import` | `from`, `to`, `uses` | A reference to another object, e.g. a `TSubclassOf` default from `BP_GE_Root_C` to `BP_GE_Stun_C`. Rename the class, its `Default__` object and its package together. Imports whose class is the renamed one are updated too: the game checks an import's class. |
 | `set-call-arg` | `function`, `call`, `arg`, `from`, `to`, `count`, optional `match` | One argument of the matching calls in one function: a number, `true`/`false`, or a variable that function already uses. `match` (`{"<arg index>": "<text>"}`) narrows the calls down. Arguments are written the way `AssetPatch calls` prints them. |
+| `replace-text` | `key`, `from`, `to`, optional `count` (1) | Text in a string table entry, e.g. a tooltip in `UI/Localization/LOC_EN_*`. Match the raw text, including its `<RichText…>` markup. The game ships English only. |
+| `copy-default` | `from` (an asset path), `property`, optional `rename` | Adds a class default copied from the same property of another asset's class defaults, renaming names in it. Example: the ult charm's `GameplayCues` onto the generic charm, with the cue tag renamed. The property must not be set in the target yet, and the copied value must not reference other objects. `build.sh` extracts the `from` asset too. |
 
 What a patch can't do:
 - Add code or functions.
@@ -90,6 +92,10 @@ Bigger changes need a UE4SS hook, or a new kind of edit in `AssetPatch` that rec
 
 - UAssetAPI re-saves the Feb 2023 Blueprint assets byte for byte (`AssetPatch roundtrip`, checked on all 10 CC
   assets).
+- In UAssetAPI a name (`FName`) is an index into its own asset's name map. A value copied from another asset needs
+  every name re-created in the target (`copy-default` does that).
+- A gameplay cue whose effect asset was deleted can come back: the cue notify (`BP_GC_…`) and its tag in
+  `Config/DefaultGameplayTags.ini` often survive. Put the tag into an effect's `GameplayCues`.
 - Calls into Blueprint function libraries are not imports. They are calls by name on the library's default object,
   so switching such a call only changes the name.
 - `LockAbilities(0)` locks until something calls `UnlockAbilities`: 0 means "no timeout". A timeout ends the lock

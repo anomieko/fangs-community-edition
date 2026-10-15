@@ -81,7 +81,8 @@ Nothing.
 5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
-6. **Revert the Feb 2023 CC changes** (players' request): **built and tested automatically, off** (`"enabled": false`).
+6. **Revert the Feb 2023 CC changes** (players' request): **enabled, being deployed** (user, 15 Oct: "lets get those
+   done in and then ship it"). The patch also brings back Allure's Aug charm visual and makes the tooltips say stun.
    - What it is: a patch pak, the first one (`tools/patch/patches/ccrevert.json`; process in `docs/PATCHING.md`,
      details in `docs/recon/cc-changes.md`).
    - What it reverts:
@@ -98,9 +99,9 @@ Nothing.
      - Dourling Dive stuns for 0.75 s (control: roots for 1.1 s).
      - Somnia's ability lock in her ult lasts 0.5 s (control: 3.2 s).
      - Rowan's LMB doesn't lock (control: 0.4 s).
-   - Not seen in a match yet (same kinds of edits, values loaded): Earthquake's centre (the test's Earthquake only
-     hit with the first tremor), Ethryn, Fiorne, Astrada, Zoey.
-   - Next: the user tests it locally. Then `"enabled": true`, a CHANGELOG line and a deploy, with the user's OK.
+     - Allure's charm visual plays on both clients (control: never).
+   - Not seen in a match yet (same kinds of edits, values loaded): Earthquake's centre (an augment, Quakebreak
+     Talisman), Ethryn, Fiorne, Astrada, Zoey.
 
 ## Known issues and small ideas
 

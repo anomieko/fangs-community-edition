@@ -5,7 +5,8 @@
 //   assetpatch roundtrip <asset.uasset> <out-dir>         read and write back unchanged; fails if a byte differs
 //   assetpatch apply <patch.json> <in-root> <out-root>    apply a patch; writes the edited assets under out-root
 //
-// Edits ("op"): set-default, rename-call, rename-import, set-call-arg (docs/PATCHING.md has the fields).
+// Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default
+// (docs/PATCHING.md has the fields).
 // Every edit states what it expects to find ("from", "uses", "count") and fails if the asset differs, so a patch
 // can't silently apply to another build. Bytecode edits must keep the function's in-memory size: jump offsets
 // inside the function are not recomputed.
@@ -264,12 +265,78 @@ static class Program
         return $"{f.ObjectName}: {hits.Count}x {call} argument {arg}: {from} -> {to}";
     }
 
-    static string Apply(UAsset a, JObject ed) => (string)ed["op"] switch
+    // Change text in a string table entry (tooltips): "from" must occur "count" times (default 1).
+    static string ReplaceText(UAsset a, JObject ed)
+    {
+        string key = Req(ed, "key"), from = Req(ed, "from"), to = Req(ed, "to");
+        int count = (int?)ed["count"] ?? 1;
+        var st = a.Exports.OfType<StringTableExport>().SingleOrDefault() ?? throw new PatchError("not a string table");
+        var k = st.Table.Keys.FirstOrDefault(x => x.Value == key) ?? throw new PatchError($"string table: no key '{key}'");
+        string text = st.Table[k].Value;
+        int n = (text.Length - text.Replace(from, "").Length) / from.Length;
+        if (n != count) throw new PatchError($"{key}: \"{from}\" occurs {n} times, patch expects {count}");
+        st.Table[k] = new FString(text.Replace(from, to), st.Table[k].Encoding);
+        return $"{key}: \"{from}\" -> \"{to}\"";
+    }
+
+    // Move a value read from another asset into this one: every name goes into this asset's name map (renamed as
+    // asked). References to other objects can't be moved this way.
+    static void Adopt(UAsset a, object o, Dictionary<string, string> rename, HashSet<string> used, HashSet<object> seen)
+    {
+        if (o == null || o is string || o is FString || o is INameMap || o is Type || o.GetType().IsPrimitive || o is Enum) return;
+        if (!o.GetType().IsValueType && !seen.Add(o)) return;
+        if (o is FPackageIndex pi)
+        {
+            if (pi.Index != 0) throw new PatchError("the copied value references another object; not supported");
+            return;
+        }
+        if (o is PropertyData pd) a.AddNameReference(pd.PropertyType);
+        if (o is FName[] arr) { for (int i = 0; i < arr.Length; i++) arr[i] = Moved(a, arr[i], rename, used); return; }
+        if (o is List<FName> list) { for (int i = 0; i < list.Count; i++) list[i] = Moved(a, list[i], rename, used); return; }
+        if (o is System.Collections.IEnumerable en && o is not FName) foreach (var x in en) Adopt(a, x, rename, used, seen);
+        for (var t = o.GetType(); t != null && t != typeof(object); t = t.BaseType)
+            foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                if (f.FieldType == typeof(FName)) { if (f.GetValue(o) is FName n) f.SetValue(o, Moved(a, n, rename, used)); }
+                else if (!f.FieldType.IsPrimitive && f.FieldType != typeof(string)) Adopt(a, f.GetValue(o), rename, used, seen);
+            }
+    }
+
+    static FName Moved(UAsset a, FName n, Dictionary<string, string> rename, HashSet<string> used)
+    {
+        if (n == null) return null;
+        string v = n.Value?.Value;
+        if (v != null && rename.TryGetValue(v, out var nv)) { used.Add(v); v = nv; }
+        return v == null ? n : new FName(a, v, n.Number);
+    }
+
+    // Add a class default copied from the same property of another asset's class defaults (e.g. the gameplay cues of
+    // one effect onto another), with names in it renamed. The property must not be set in this class yet.
+    static string CopyDefault(UAsset a, JObject ed, string inRoot)
+    {
+        string from = Req(ed, "from"), prop = Req(ed, "property");
+        var src = Load(Path.Combine(inRoot, from + ".uasset"));
+        var p = ClassDefaults(src).Data.SingleOrDefault(d => d.Name.ToString() == prop)
+            ?? throw new PatchError($"copy-default: '{prop}' is not set in {from}");
+        var cdo = ClassDefaults(a);
+        if (cdo.Data.Any(d => d.Name.ToString() == prop)) throw new PatchError($"copy-default: '{prop}' is already set here");
+        var rename = ((JObject)ed["rename"])?.Properties().ToDictionary(x => x.Name, x => (string)x.Value) ?? [];
+        var used = new HashSet<string>();
+        Adopt(a, p, rename, used, new HashSet<object>(ReferenceEqualityComparer.Instance));
+        var unused = rename.Keys.Where(k => !used.Contains(k)).ToList();
+        if (unused.Count > 0) throw new PatchError($"copy-default: no name {string.Join(", ", unused)} in the copied value");
+        cdo.Data.Add(p);
+        return $"{cdo.ObjectName}.{prop} copied from {Path.GetFileName(from)}" + string.Concat(rename.Select(r => $"; {r.Key} -> {r.Value}"));
+    }
+
+    static string Apply(UAsset a, JObject ed, string inRoot) => (string)ed["op"] switch
     {
         "rename-import" => RenameImport(a, ed),
         "rename-call" => RenameCall(a, ed),
         "set-default" => SetDefault(a, ed),
         "set-call-arg" => SetCallArg(a, ed),
+        "replace-text" => ReplaceText(a, ed),
+        "copy-default" => CopyDefault(a, ed, inRoot),
         var op => throw new PatchError($"unknown op '{op}'"),
     };
 
@@ -287,7 +354,7 @@ static class Program
             {
                 var a = Load(Path.Combine(inRoot, rel + ".uasset"));
                 foreach (JObject ed in (JArray)asset["edits"])
-                    Console.WriteLine("  " + Apply(a, ed));
+                    Console.WriteLine("  " + Apply(a, ed, inRoot));
                 string dst = Path.Combine(outRoot, rel + ".uasset");
                 Directory.CreateDirectory(Path.GetDirectoryName(dst));
                 a.Write(dst);
