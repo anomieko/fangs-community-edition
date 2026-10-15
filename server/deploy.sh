@@ -50,18 +50,8 @@ rsync_ -a --delete --info=progress2 --exclude 'MOBA/Saved/' \
   "$game/" "$target:$remote/builds/$build/"
 if [[ -n ${UPLOAD_ONLY:-} ]]; then echo "==> uploaded $build (server not changed)"; exit 0; fi
 
-echo "==> uploading server code"
-ue4ss_zip=$REPO/third_party/ue4ss/dl/UE4SS_v3.0.1-1170-g9e7fed53.zip   # see server/Dockerfile
-[[ -f $ue4ss_zip ]] || { echo "missing $ue4ss_zip (UE4SS v3.0.1-1170-g9e7fed53)" >&2; exit 1; }
-cp "$ue4ss_zip" "$REPO/server/ue4ss.zip"
-rsync_ -a --delete --relative \
-  "$REPO/./backend/fangs_backend.py" "$REPO/./backend/hosts.py" "$REPO/./backend/matchmaker.py" "$REPO/./backend/social.py" \
-  "$REPO/./backend/skill.py" "$REPO/./backend/allocator.py" "$REPO/./backend/ranked.py" "$REPO/./backend/seed/make_seed.py" \
-  "$REPO/./backend/seed/augments-alpha7.json" "$REPO/./backend/seed/augments-feb2023.json" "$REPO/./backend/seed/cosmetics-feb2023.json" "$REPO/./backend/seed/levels-feb2023.json" "$REPO/./backend/seed/itempaths-feb2023.json" "$REPO/./backend/seed/restore-feb2023.json" \
-  "$REPO/./server/" "$REPO/./tools/ue4ss/" "$REPO/./tools/run/config/" "$REPO/./player/" "$REPO/./.dockerignore" \
-  "$target:$remote/repo/"
-
-# never restart the server under people's feet: a restart ends every lobby and match
+# never restart the server under people's feet: a restart ends every lobby and match. Checked before the server code
+# is uploaded, so a refused deploy leaves the server exactly as it was.
 if [[ -z ${FANGS_DEPLOY_FORCE:-} ]]; then
   # (no match / no container yet = 0 players; this runs under set -e and pipefail)
   busy=$( { ssh_ "sudo docker exec server-fangs-1 sh -c 'cat /data/hosts/host-*/MOBA/Binaries/Win64/fangshost_status.json 2>/dev/null' 2>/dev/null" || true; } \
@@ -72,6 +62,19 @@ if [[ -z ${FANGS_DEPLOY_FORCE:-} ]]; then
     exit 1
   fi
 fi
+
+echo "==> uploading server code"
+ue4ss_zip=$REPO/third_party/ue4ss/dl/UE4SS_v3.0.1-1170-g9e7fed53.zip   # see server/Dockerfile
+[[ -f $ue4ss_zip ]] || { echo "missing $ue4ss_zip (UE4SS v3.0.1-1170-g9e7fed53)" >&2; exit 1; }
+cp "$ue4ss_zip" "$REPO/server/ue4ss.zip"
+# server/.env and server/downloads/ exist only on the server: --delete must not remove them (without the excludes it
+# did, so a refused or failed deploy left no downloads, and a running container kept a mount of the deleted folder)
+rsync_ -a --delete --relative --exclude /server/.env --exclude /server/downloads/ \
+  "$REPO/./backend/fangs_backend.py" "$REPO/./backend/hosts.py" "$REPO/./backend/matchmaker.py" "$REPO/./backend/social.py" \
+  "$REPO/./backend/skill.py" "$REPO/./backend/allocator.py" "$REPO/./backend/ranked.py" "$REPO/./backend/seed/make_seed.py" \
+  "$REPO/./backend/seed/augments-alpha7.json" "$REPO/./backend/seed/augments-feb2023.json" "$REPO/./backend/seed/cosmetics-feb2023.json" "$REPO/./backend/seed/levels-feb2023.json" "$REPO/./backend/seed/itempaths-feb2023.json" "$REPO/./backend/seed/restore-feb2023.json" \
+  "$REPO/./server/" "$REPO/./tools/ue4ss/" "$REPO/./tools/run/config/" "$REPO/./player/" "$REPO/./.dockerignore" \
+  "$target:$remote/repo/"
 
 # The download folder goes up before the restart: the standby game server that boots with the new container
 # copies its patch pak from there (FANGS_PAKS), and must get the same one as the players.
