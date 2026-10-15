@@ -57,7 +57,8 @@
     "Casual",
     "Training",
     "Tutorial",
-    "Bots"
+    "Bots",
+    "Ranked"
    ],
    "AvailableCustomModes": [
     "6vs6",
@@ -2546,7 +2547,8 @@
     "Casual",
     "Training",
     "Tutorial",
-    "Bots"
+    "Bots",
+    "Ranked"
    ],
    "AvailableCustomModes": [
     "6vs6",
@@ -5030,7 +5032,8 @@
     "Casual",
     "Training",
     "Tutorial",
-    "Bots"
+    "Bots",
+    "Ranked"
    ],
    "AvailableCustomModes": [
     "6vs6",

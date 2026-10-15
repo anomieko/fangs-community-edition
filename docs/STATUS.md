@@ -8,9 +8,12 @@ runs on the same stack; the Dec 2023 Closed Playtest (`main_v0_0_444`) is kept a
 
 - Play: custom lobbies (create → instant standby server → launch any time → hero pick → match) and
   PLAY/Casual matchmaking, solo or as a party. Verified headless with 1–2 players and on the VPS.
+- Ranked (game mode tile, unlocks at 10 wins, parties of up to 2): skill-based teams and a rating (TrueSkill-style
+  Gaussian team model with party offsets, `backend/skill.py`, `allocator.py`, `ranked.py`; `docs/recon/ranked.md`).
+  Casual and custom games have no rating.
 - Everything unlocked: heroes, skins, stickers, avatars (sigils), banners, titles, mounts (backend catalog +
   entitlements; lists generated per build by `tools/re/cosmetics.py`). Augments: the seed's `AvailableAugments`.
-- Profiles: match history, account and hero levels, wins, ratings and the leaderboard come from finished
+- Profiles: match history, account and hero levels, wins, the Ranked rating and the leaderboard come from finished
   matches (FangsHost saves the game's own match report; the backend keeps the records).
 - Social: friends (add by `name#1234`), presence, parties, party chat and whispers (`backend/social.py`).
 - Main menu: no Battle Pass, Store, missions or Discord banner; players-online count instead of missions;

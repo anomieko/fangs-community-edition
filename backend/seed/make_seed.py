@@ -28,6 +28,9 @@ server = {
 # Arena and Underworld load on the server, but players stay on the loading screen ("Waiting for players").
 maps = [('Embersong', 'LE_Arena02_Map'), ('Stormheart', 'LE_Arena06_Map'), ('Crownwatch', 'LE_Payload03_Map')]
 PLAY_MAPS = ('LE_Arena02_Map', 'LE_Arena06_Map', 'LE_Payload03_Map')   # PLAY (matchmade games)
+# Ranked (Play -> game mode -> Ranked): rated games picked and balanced by skill (backend/matchmaker.py, skill.py).
+# The client unlocks the tile at 10 wins (any mode; WB_GameModeTallBtn.CheckIfEnabled) and allows parties of 2.
+RANKED = True
 # DT_Heroes rows of the released heroes (the remaining rows are unfinished: no names, no owner class).
 heroes = ['Berserker', 'ShieldGirl', 'Lancer', 'Gunslinger', 'Backstab', 'FireMage', 'IceMage', 'LightningArcher',
           'DemonGirl', 'WoodenSword', 'BookMage', 'Sidekick', 'BattleMonk', 'CatSupp', 'BigBoi']
@@ -95,7 +98,7 @@ def restored(paths_file, restore_file):
 
 version_data = {
     'Servers': [server], 'AvailableHeroes': heroes + [h for h, _ in unreleased], 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
-    'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
+    'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'] + (['Ranked'] if RANKED else []),
     # Custom lobby modes only set how many players can join (WB_CreateLobby.SelectGameMode: Solo 1, Duel 2, Trio 3,
     # 2vs2 4, Battle 6, 4vs4 8, 5vs5 10, 6vs6 12; any other name 6, so "3vs3" is Battle); the rules are the same and
     # the host starts whenever; teams by seat (even/odd). The first entry is preselected: the biggest lobby, so nobody
