@@ -19,7 +19,7 @@ Player update only (FangsBoot); the server doesn't change.
 
 | Change | Commits | Off switch |
 |---|---|---|
-| Somnia gets the restored boons and artifacts (5 boons, 16 arena artifacts) in her item picker, like every other hero. FangsBoot skipped her pawn because its class is `BP_BookMage_Char2_C`, not `BP_<Hero>_Char_C` (`docs/recon/items.md`) | (this branch) | revert the commit and deploy |
+| Somnia gets the restored boons and artifacts (5 boons, 16 arena artifacts) in her item picker, like every other hero. FangsBoot skipped her pawn because its class is `BP_BookMage_Char2_C`, not `BP_<Hero>_Char_C` (`docs/recon/items.md`) | `da231a0` | revert the commit and deploy |
 
 ## deploy-2026-10-15-2144 (`4f83b89`, Feb 2023 build)
 
