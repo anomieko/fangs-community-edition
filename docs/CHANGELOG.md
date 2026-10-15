@@ -15,9 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Server + player update: players' launchers download `FangsCE_P.pak` (1.4 MB) the next time they start.
+
 | Change | Commits | Off switch |
 |---|---|---|
-| Patch pak support (`docs/PATCHING.md`): the deploy builds `FangsCE_P.pak` from the enabled patches into the players' download folder, and game servers load the same file (`FANGS_PAKS`). The download folder is now uploaded before the server restarts. No patch is enabled yet (the CC revert is `"enabled": false`), so nothing changes in game. | `81bf289` | nothing to switch off; revert the commit |
+| CC revert (`docs/recon/cc-changes.md`):<br>• Back to stuns, with Aug durations: Brutus' Quakebreak Talisman Earthquake centre (1.5 s, radius 150), Ethryn's Knightseeker wall hit (0.75 s), Fiorne's Earthbreaker Pommel (1.0 s), Astrada's Flame Cage (1.0 s, cage 3 s) and Repulsing Scepter (0.5 s), Zoey's Spirit Scratch (0.9 s; its heirloom hit-extension no longer roots Zoey herself), Rowan's Dourling Dive (0.75 s).<br>• Somnia's Allure charms again (0.75 s, Glamorfume +0.05 s per stack), with its Aug charm visual.<br>• Somnia's abilities are locked only during her ult's 0.5 s cast.<br>• Rowan's Glade Slash doesn't lock abilities.<br>• Tooltips say stun. | `209d2f2`, `3fdd080` | `"enabled": false` in `tools/patch/patches/ccrevert.json`, then deploy (launchers remove the pak) |
+| Patch pak support (`docs/PATCHING.md`): the deploy builds `FangsCE_P.pak` from the enabled patches into the players' download folder, and game servers load the same file (`FANGS_PAKS`). The download folder is now uploaded before the server restarts. With no patch enabled, no pak is built. | `209d2f2` | nothing to switch off; revert the commit |
 
 ## deploy-2026-10-15-1637 (`48efa57`, Feb 2023 build)
 
