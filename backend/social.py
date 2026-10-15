@@ -17,6 +17,7 @@ import asyncio, re, time, uuid
 GRACE = 60
 LOBBY_CHAT = True      # team/all chat between any two players (False: only friends and party mates, as before 15 Oct)
 MAX_PARTY = 4          # a matchmade game is 4 vs 4 and a party always plays on one team
+REINVITE_SECS = 10     # the client sends each invite twice: one notification; one repeated later is sent again
 AVAILABILITY = ('offline', 'online', 'busy', 'invisible')   # EAvailability, by name
 ZWSP = '\u200b'         # zero-width space: keeps a value from parsing as a list/object, or a word from matching
 CHAT_MAX = 500
@@ -73,6 +74,7 @@ class Party:
     def __init__(self, leader):
         self.id, self.token = uuid.uuid4().hex, uuid.uuid4().hex
         self.leader, self.members, self.invitees, self.updated = leader, [leader], [], time.time()
+        self.invited = {}   # invitee -> when they were last told
 
     def view(self):
         return {'partyID': self.id, 'leaderID': self.leader, 'leader': self.leader, 'members': self.members,
@@ -302,6 +304,17 @@ class Social:
     def party(self, uid):
         return self.parties.get(self.party_of.get(uid))
 
+    def pending(self, p, but=None):
+        """Invites of party `p` that hold a slot: not those of players who joined another party meanwhile (they may
+        still switch, with this invite, if there is room then)."""
+        return sum(1 for i in p.invitees if i != but and not self.in_party(i))
+
+    def in_party(self, uid):
+        """In a party with someone else. A party of one is no party to the client (it shows "one member or none" as
+        none), so it doesn't stop an invite or a new party: it stays only for the invites it sent."""
+        p = self.party(uid)
+        return p is not None and len(p.members) > 1
+
     async def party_update(self, p):
         p.updated = time.time()
         for m in p.members:
@@ -309,8 +322,10 @@ class Social:
                             members=p.members, invitees=p.invitees, custom_attribute={}, updatedAt=iso(p.updated))
 
     async def on_partyCreateRequest(self, me, ws, t, mid, f):
-        if self.party(me):
+        if self.in_party(me):
             return await self.reply(ws, t, mid, ERR_IN_PARTY)
+        if (p := self.party(me)) is not None:   # a party of one (e.g. after the others left): theirs again
+            return await self.reply(ws, t, mid, **p.view(), partyCode='')
         p = Party(me)
         self.parties[p.id], self.party_of[me] = p, p.id
         self.log(event='party created', party=p.id, leader=me)
@@ -328,14 +343,15 @@ class Social:
         if p is None:
             p = Party(me)   # the client normally creates one first
             self.parties[p.id], self.party_of[me] = p, p.id
-        if other in p.invitees:   # the client sends each invite twice: one notification is enough
-            return await self.reply(ws, t, mid, inviteeID=other)
-        if (other == me or not self.online(other) or other in p.members or self.party(other)
-                or len(p.members) + len(p.invitees) >= MAX_PARTY
+        if other in p.invitees and time.time() - p.invited.get(other, 0) < REINVITE_SECS:
+            return await self.reply(ws, t, mid, inviteeID=other)   # the client's second copy of the same invite
+        if (other == me or not self.online(other) or other in p.members or self.in_party(other)
+                or len(p.members) + self.pending(p, but=other) >= MAX_PARTY
                 or other not in self.friends_of(me)):
             return await self.reply(ws, t, mid, ERR_CANT_INVITE, inviteeID=other)
         if other not in p.invitees:
             p.invitees.append(other)
+        p.invited[other] = time.time()
         await self.reply(ws, t, mid, inviteeID=other)
         await self.send(other, 'partyGetInvitedNotif', **{'from': me}, partyID=p.id, invitationToken=p.token)
         for m in p.members:
