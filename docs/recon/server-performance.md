@@ -101,3 +101,18 @@ Final check with the changed files as they are (no test overrides), 3 active pla
   standby), not three.
 - A 60 Hz net tick isn't available from config (finding 6). The server already runs 60 fps; a 90 fps cap makes the
   ~25 Hz replication more regular for +45% CPU, worth trying only with one match per VPS.
+
+## Results on the VPS (first full evening, 15 Oct 2026 00:00-02:40 UTC, `deploy-2026-10-15-0003`)
+
+From the backend's `perf` lines (one per 30 s per server with players): seven matches, 4 to 8 players (2v2, 3v3, one
+4v4 on Crownwatch), at most two servers busy at once (a match plus the next lobby).
+- The first 30 s window of every match holds the map load: one frame of 2.6-4.9 s, `fps_min` 0-24. Not a stutter
+  players see in the match (they are on the loading screen).
+- After that: 58-60 fps throughout, typical longest gap (`hitch_ms`) 12-15 ms, 0 slow frames in most windows.
+  About one single frame of 75-240 ms every 1-3 minutes (one per window, the rest of the window clean), in 6- and
+  8-player matches alike. The 8-player match was no worse than the 6-player ones.
+- Lobbies run at their 15/30 fps cap (`slow` ~45 per window there is the 66 ms frames of the 15 fps lobby cap, not
+  hitches).
+- Idle (one standby, nobody on): the container uses ~20% of one vCPU.
+- Open: the remaining 75-240 ms single frames (locally the worst was a 67 ms sleep overshoot); they could be GC or the
+  wineserver without ntsync.
