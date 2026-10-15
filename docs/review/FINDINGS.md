@@ -13,8 +13,10 @@ Taken 15 Oct 2026 at `6f26b44` (ruff 0.17.1, Python 3.12, aiohttp 3.14).
   Broader set (E,F,W,B,SIM,PLE,PLW,ASYNC,RUF; line length 130): 223 over the repo, mostly one-line `;`/`:` statements
   and long lines. Those that point at behavior: 8 un-kept `asyncio.create_task` results in `backend/` (RUF006),
   one blocking `open` in an async function (`hosts.py`), three zero-width spaces written literally in `social.py`.
-- Unit tests: `tools/test/test_ranked.py` 14 OK (41 s), `tools/test/test_ranked_queue.py` 7 OK. Nothing else in
-  `backend/` has unit tests; the other flows are covered by headless game tests (`tools/run/*.sh`, need the game).
+- Unit tests: `test_ranked.py` 14 OK (41 s), `test_ranked_queue.py` 7 OK (moved from `tools/test/` to
+  `backend/tests/`). Nothing else in `backend/` had unit tests; the other flows were covered only by headless game
+  tests (`tools/run/*.sh`, need the game). Three ranked tests need the research checkout `../elommr` and skip
+  without it (CI). On production's versions (Debian trixie: Python 3.13.5, aiohttp 3.11.16) the same tests pass.
 - Shell (shellcheck), Lua (luacheck), Go (go vet): see the ops review; luacheck and Go aren't installed yet.
 
 ## Findings
