@@ -1141,7 +1141,7 @@ class _Req:
         return getattr(self._req, name)
 
 
-def main():
+def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', type=int, default=8080)
@@ -1167,15 +1167,11 @@ def main():
                     help='if > 0: seconds the first queued player waits before a match starts with whoever is queued '
                          '(at least 2); by default matches only start full')
     ap.add_argument('--log', default=str(Path(__file__).parent.parent / 'work' / 'logs' / 'backend.jsonl'))
-    a = ap.parse_args()
-    Path(a.log).parent.mkdir(parents=True, exist_ok=True)
-    logf = open(a.log, 'a', buffering=1)
+    return ap.parse_args(argv)
 
-    def log(entry):
-        line = json.dumps(entry)
-        logf.write(line + '\n')
-        print(line[:300], flush=True)
 
+def make_app(a, log):
+    """The backend for the command line `a` (parse_args), logging each entry with `log(entry)`."""
     app = web.Application(middlewares=[dispatch], client_max_size=16 * 1024 * 1024)
     app['store'], app['log'], app['cfg'] = Store(a.data), log, a
     app['sessions'] = {}
@@ -1215,6 +1211,20 @@ def main():
     app.on_startup.append(start_udp)
     app.on_cleanup.append(stop_udp)
     app.router.add_route('*', '/{tail:.*}', lambda r: web.Response(status=500))  # never reached; middleware answers
+    return app
+
+
+def main():
+    a = parse_args()
+    Path(a.log).parent.mkdir(parents=True, exist_ok=True)
+    logf = open(a.log, 'a', buffering=1)
+
+    def log(entry):
+        line = json.dumps(entry)
+        logf.write(line + '\n')
+        print(line[:300], flush=True)
+
+    app = make_app(a, log)
     web.run_app(app, host=a.host, port=a.port, print=lambda *_: print(f'fangs backend on {a.host}:{a.port}', flush=True))
 
 
