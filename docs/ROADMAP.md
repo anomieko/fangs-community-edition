@@ -17,7 +17,7 @@ Last updated: 2026-10-15.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-1637` (`48efa57`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -38,6 +38,9 @@ Current deploy: `deploy-2026-10-15-1637` (`48efa57`); what each deploy changed: 
 - since 15 Oct 03:17 UTC: team and all chat in custom lobbies, hero select and matches (`docs/recon/chat.md`).
 - since 15 Oct 16:37 UTC: Ranked (tile at 10 wins, parties of up to 2): skill-based teams and a rating, the game's
   draft hero select; Casual and custom games without a rating; ratings start fresh (`docs/recon/ranked.md`).
+- since 15 Oct 17:14 UTC: the Feb 2023 CC changes reverted by the first patch pak (`FangsCE_P.pak`, players get it
+  from the launcher): roots back to stuns, Allure charms again (with its Aug visual), Somnia's ult locks only her cast,
+  no LMB lock for Rowan, tooltips say stun (`docs/recon/cc-changes.md`, `docs/PATCHING.md`).
 
 ## Done, not deployed
 
@@ -81,27 +84,10 @@ Nothing.
 5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
-6. **Revert the Feb 2023 CC changes** (players' request): **enabled, being deployed** (user, 15 Oct: "lets get those
-   done in and then ship it"). The patch also brings back Allure's Aug charm visual and makes the tooltips say stun.
-   - What it is: a patch pak, the first one (`tools/patch/patches/ccrevert.json`; process in `docs/PATCHING.md`,
-     details in `docs/recon/cc-changes.md`).
-   - What it reverts:
-     - Roots back to stuns: Brutus' Earthquake centre, Ethryn's Knightseeker wall hit, Fiorne's Earthbreaker
-       Pommel, Astrada's Flame Cage and Repulsing Scepter, Zoey's Spirit Scratch, Rowan's Dourling Dive.
-     - Somnia's Allure: a charm again.
-     - Each of these with its Aug duration.
-     - Somnia's ult locks abilities only during its 0.5 s cast.
-     - Rowan's LMB doesn't lock abilities.
-     - Ethryn's Vortex Pauldrons stays a root: its Aug flip is gone.
-   - Tested with `tools/run/test_patch.sh` (Somnia or Brutus vs Rowan, with the pak and without it as the control):
-     - The server and both clients load 11/11 patched values (control: 0/11).
-     - Allure charms for 0.75 s (control: roots for 1.3 s).
-     - Dourling Dive stuns for 0.75 s (control: roots for 1.1 s).
-     - Somnia's ability lock in her ult lasts 0.5 s (control: 3.2 s).
-     - Rowan's LMB doesn't lock (control: 0.4 s).
-     - Allure's charm visual plays on both clients (control: never).
-   - Not seen in a match yet (same kinds of edits, values loaded): Earthquake's centre (an augment, Quakebreak
-     Talisman), Ethryn, Fiorne, Astrada, Zoey.
+6. **Revert the Feb 2023 CC changes**: **live** since `deploy-2026-10-15-1714` (see Live above). Tested in matches
+   against a control without the pak (`tools/run/test_patch.sh`). Not seen in a match yet: Earthquake's centre (the
+   Quakebreak Talisman augment), Ethryn, Fiorne, Astrada, Zoey. Next: players' feedback. Off switch:
+   `"enabled": false` in `tools/patch/patches/ccrevert.json` and a deploy.
 
 ## Known issues and small ideas
 

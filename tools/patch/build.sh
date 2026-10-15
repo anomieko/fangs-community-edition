@@ -64,5 +64,4 @@ done
 mkdir -p "$(dirname "$out")"
 python3 -I "$REPO/tools/pak/pakwrite.py" "$out.tmp" "$stage/out" > /dev/null
 mv "$out.tmp" "$out"
-printf '%s\n' "${patches[@]}" > "$(dirname "$out")/FangsCE_P.patches"
 echo "built $out ($(du -h "$out" | cut -f1), patches: ${patches[*]}, sha256 $(sha256sum "$out" | cut -c1-12))"
