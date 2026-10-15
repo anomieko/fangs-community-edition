@@ -17,7 +17,7 @@ Last updated: 2026-10-15.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-2144` (`4f83b89`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-2336` (`662f8ea`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -49,14 +49,14 @@ Current deploy: `deploy-2026-10-15-2144` (`4f83b89`); what each deploy changed: 
 - since 15 Oct 21:44 UTC: the launcher puts back mod loader files an antivirus removed and tells the player how to add
   the exclusion (no more silent "Steam authorization"); the public launcher on GitHub is `launcher-4f83b89` (invite
   first, the install checks and this one).
+- since 15 Oct 23:36 UTC (forced with 5 players on, no match test: the user's decisions): Somnia's item picker has the
+  restored boons and artifacts like every other hero (FangsBoot skipped her pawn, `BP_BookMage_Char2_C`;
+  `docs/recon/items.md`). To confirm in play: a Somnia player's `fangsboot.log` says
+  `restored items: 21 added to BP_BookMage_Char2_C`.
 
 ## Done, not deployed
 
-- Somnia's missing boons and artifacts (user's report, 16 Oct): FangsBoot didn't add the restored items to her pawn
-  (`BP_BookMage_Char2_C`; `docs/recon/items.md`). Fixed on branch `somnia-items` (worktree `../fangs-somnia`). Next:
-  `HERO=BookMage ITEMS="Generic_RespawnBeacon Generic_Kingslayer TetherLock" RUN=items-BookMage tools/run/test_items.sh`
-  when the user isn't playing (expect `restored items: 23 added to BP_BookMage_Char2_C`, all three in the pool),
-  then merge into `main`; ships with the next deploy (player update only).
+Nothing.
 
 ## In progress
 
