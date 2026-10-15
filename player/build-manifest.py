@@ -3,7 +3,7 @@
 
   build-manifest.py <game dir> <downloads dir> <build label>
 
-<downloads>/overlay holds the player files (UE4SS + FangsBoot, FangsCE/Engine.ini; see build-client.sh);
+<downloads>/overlay holds the player files (UE4SS + FangsBoot, FangsCE/Engine.ini; see server/deploy.sh);
 they win over game files with the same path. If <downloads>/FangsCE.exe exists, its hash is listed so
 launchers update themselves. SHA-256s are cached in <downloads>/.hashcache.json by (size, mtime).
 The backend serves exactly the files listed here (/download/<join code>/files/<path>).

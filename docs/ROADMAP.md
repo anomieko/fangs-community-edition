@@ -118,6 +118,11 @@ Nothing.
 
 ## Decisions
 
+- Casual (PLAY) starts only full games (8 players); the early start stays off (`--match-wait` 0) (user, 15 Oct).
+- Trio custom mode removed (`ac76b9a`): the user's call (15 Oct).
+- The old `.bat` client (FangsCE.bat, unsigned updates over HTTP) is retired; `FangsCE.exe` is the only installer
+  (user, 15 Oct).
+- `tools/pak/findkey*.py` and `docs/recon/playtest-source-paths.txt` stay in the repo (user, 15 Oct).
 - Ranked uses skill ratings; Casual stays quick matches without a rating, since the population is small (user,
   15 Oct). Custom lobbies have no rating either. The server runs `--ranked-widen-speed 2` (user, 15 Oct).
 

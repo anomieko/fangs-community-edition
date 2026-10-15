@@ -26,7 +26,8 @@ make launchers install anything; at worst they can break downloads.
   `gh release create`. Players paste an invite code on the first start: `FANGS_JOIN_CODE=$(cat work/joincode)
   server/invite.sh <public-host>` (share it privately, like the join code). The launcher then updates itself
   to the server's copy.
-- `server/build-client.sh` (full client zip, `.bat` launcher packages) is not signed; deploy doesn't use it.
+- `FangsCE.exe` is the only way to install. The old `.bat` client (unsigned updates over plain HTTP) was retired on
+  15 Oct (user's decision).
 
 ## Game server lifecycle
 
@@ -57,9 +58,6 @@ ssh <admin>@SERVER 'sudo passwd -l root && sudo rm -f /root/.ssh/authorized_keys
 python3 -c "import secrets; print(secrets.token_urlsafe(9))" > work/joincode   # keep it private
 FANGS_JOIN_CODE=$(cat work/joincode) server/deploy.sh <admin>@SERVER clients/<build> SERVER
 
-# 4. build the player download on the server
-ssh <admin>@SERVER 'cd /opt/fangs-ce/repo/server && sudo ./build-client.sh'
-# -> http://SERVER:8080/download/<join code>/FangsCE-Client.zip
 ```
 
 ## What is exposed
