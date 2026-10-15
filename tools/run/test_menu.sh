@@ -7,7 +7,7 @@
 #   STORE=<backend store.json> PLAYER=<name>: start from a copy of that data (e.g. after test_join.sh END=1) and
 #   log in as that player (test password "x") to see their profile, match history and the leaderboard.
 set -u
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../.." || exit 1
 rm -f work/run/menu-store.json
 [[ -n ${STORE:-} ]] && cp "$STORE" work/run/menu-store.json
 A=work/run/menu/MOBA/Binaries/Win64/fangsctl_cmd.txt
@@ -40,7 +40,7 @@ BATTLE="lua $GI"' pm.BP_MOBAInstanceRef=gi; pm:CreateSessionDialog();'\
   echo "$STORE" >> $A; sleep 2; echo "$PAGE" >> $A; echo "lua $GI menu:SelectMainMenuTab(0)" >> $A; sleep 2; echo "$BATTLE" >> $A; echo 'shot showui' >> $A
 ) &
 [[ ${MOVIES:-0} == 1 ]] && nomovies=0 || nomovies=1
-UE4SS=1 GPU=1 NOMOVIES=$nomovies BACKEND=127.0.0.1:8080 RUN_BACKEND=1 BACKEND_ARGS="--data $PWD/work/run/menu-store.json" \
+UE4SS=1 GPU=1 NOMOVIES=$nomovies BACKEND=127.0.0.1:8080 RUN_BACKEND=1 BACKEND_ARGS="--data $PWD/work/run/menu-store.json --instances $PWD/work/run/menu-hosts" \
   tools/run/headless.sh "${DURATION:-130}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
   -- menu:0:"-TestUser=${PLAYER:-menu} -TestPass=x" 2>&1 | grep -v Segmentation
 wait
