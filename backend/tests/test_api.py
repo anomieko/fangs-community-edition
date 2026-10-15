@@ -243,6 +243,8 @@ class Auth(ApiCase):
                 ('PUT', f'{API}/update-player-settings', {'Volume': 1}, False),
                 ('POST', f'{API}/update-loadouts', {'Berserker': {}}, False),
                 ('POST', SESSIONS, {}, False),
+                ('GET', SESSIONS, None, True),
+                ('GET', f'{SESSIONS}/bulk?user_ids={a}', None, True),
                 ('POST', '/zeuz/sessions', {}, False),
                 ('GET', '/zeuz/sessions.txt', None, False)):
             with self.subTest(method=method, path=path):
@@ -252,11 +254,11 @@ class Auth(ApiCase):
                 self.assertEqual(status, 200 if server_ok else 401, resp)
 
     async def test_public_endpoints_answer_without_a_token(self):
-        # the unauthenticated surface as it is (plus the session_one routes, see test_only_the_owner_can_delete_a_lobby)
+        # the unauthenticated surface: login-screen data and numbers (the session browser needs a login, review S2)
         for path in ('/qosm/public/qos', f'{GAME}/FANGSConfig', f'/platform/public/namespaces/fangs/users/{self.a}/entitlements',
                      '/leaderboard/v3/public/namespaces/fangs/leaderboards/s/alltime',
                      f'/leaderboard/v3/public/namespaces/fangs/leaderboards/s/users/{self.a}', f'{API}/vivox-token',
-                     f'{API}/online-players', f'{API}/server-status', SESSIONS, f'{SESSIONS}/bulk?user_ids={self.a}'):
+                     f'{API}/online-players', f'{API}/server-status'):
             with self.subTest(path=path):
                 self.assertEqual((await self.call('GET', path))[0], 200)
 
@@ -460,25 +462,27 @@ class Lobbies(ApiCase):
         self.assertNotIn(first, self.app['sessions'])
         await ws.close()
 
-    # bug: createDSRequest doesn't check that the sender owns the lobby: any connection, even one without a login,
-    # claims a game server for it, see report
-    @unittest.expectedFailure
     async def test_only_the_owner_can_request_a_lobbys_server(self):
         host = self.ready_host(17777)
         sid = (await self.new_lobby(self.alice))['session_id']
-        for token in (self.bob, None):
-            self.assertEqual((await self.server_for(token, sid))['status'], 'FAILED')
+        notif = await self.server_for(self.bob, sid)
+        self.assertEqual((notif['status'], notif['message']), ('FAILED', f'lobby {sid} belongs to another player'))
+        ws = await self.client.ws_connect('/lobby/', protocols=('wss',))      # no login: closed at once (review S2)
+        self.assertEqual(((await ws.receive()).type, ws.close_code), (WSMsgType.CLOSE, 4001))
         self.assertIsNone(host.session_id)
 
-    # bug: a second createDSRequest for a lobby claims a second server; the first stays assigned to the lobby, and
-    # when it stops, host_stopped drops the lobby that the second one serves, see report
-    @unittest.expectedFailure
     async def test_repeated_create_ds_keeps_the_lobbys_one_server(self):
+        # a second request gets the same server; a server that isn't the lobby's can't take the lobby down (review L2)
         first, spare = self.ready_host(17777), self.ready_host(17778)
         sid = (await self.new_lobby(self.alice))['session_id']
         await self.server_for(self.alice, sid)
-        await self.server_for(self.alice, sid)
+        self.assertEqual((await self.server_for(self.alice, sid))['podName'], 'host-17777')
         self.assertEqual((spare.session_id, self.app['sessions'][sid]['_host']), (None, first))
+        spare.session_id = sid                                # e.g. one left from an earlier request
+        await self.hm.stop(spare, 'test')
+        self.assertIn(sid, self.app['sessions'])
+        await self.hm.stop(first, 'test')
+        self.assertNotIn(sid, self.app['sessions'])
 
     async def test_one_custom_lobby_per_player(self):
         host = self.ready_host(17777)
@@ -491,6 +495,16 @@ class Lobbies(ApiCase):
         await self.until(lambda: not self.hm.is_live(host), "the old lobby's server to stop")
         self.assertEqual(set(self.app['sessions']), {second, bobs})
 
+    async def test_a_new_lobby_leaves_the_owners_running_match_alone(self):
+        # an owner who crashed out of a custom match and makes a new lobby must not end the others' match (review L1)
+        host = self.ready_host(17777)
+        first = (await self.new_lobby(self.alice))['session_id']
+        await self.server_for(self.alice, first)
+        self.set_status(host, players=3, launched=True)
+        second = (await self.new_lobby(self.alice))['session_id']
+        await asyncio.sleep(0.05)
+        self.assertEqual((self.hm.is_live(host), set(self.app['sessions'])), (True, {first, second}))
+
     async def test_lobby_browser_lists_open_lobbies_with_owner_and_live_player_count(self):
         host = self.ready_host(17777)
         sess = await self.new_lobby(self.alice, game_session_setting={'mode': 'Custom', 'max_player': 4,
@@ -502,13 +516,13 @@ class Lobbies(ApiCase):
         self.assertEqual(named['game_session_setting']['settings']['lobby_owner'], 'someone')   # the client's is kept
 
         async def listed(query=''):
-            _, resp = await self.call('GET', SESSIONS + query)
+            _, resp = await self.call('GET', SESSIONS + query, self.bob)
             return [s['session_id'] for s in resp['sessions']]
         self.assertEqual(await listed(), [])                 # no server yet
         await self.server_for(self.alice, sid)
         self.assertEqual(await listed(), [sid])              # bob's still has none
         self.set_status(host, players=4)
-        _, resp = await self.call('GET', SESSIONS)
+        _, resp = await self.call('GET', SESSIONS, self.bob)
         gs = resp['sessions'][0]['game_session_setting']
         self.assertEqual((gs['current_player'], gs['max_player']), (4, 4))   # full ones stay listed; the client hides them
         for query, ids in (('?session_type=dedicated', [sid]), ('?session_type=p2p', []), ('?game_mode=CUSTOM', [sid]),
@@ -519,7 +533,7 @@ class Lobbies(ApiCase):
         self.set_status(host)
         host.match_over = time.time()                        # its match is over
         self.assertEqual(await listed(), [])
-        _, resp = await self.call('GET', f"{SESSIONS}/bulk?user_ids={self.alice['user_id']}")
+        _, resp = await self.call('GET', f"{SESSIONS}/bulk?user_ids={self.alice['user_id']}", self.bob)
         self.assertEqual([s['session_id'] for s in resp['data']], [sid])   # its players still find it
 
     async def test_join_needs_a_ready_lobby_and_a_started_match_takes_only_its_players(self):
@@ -532,7 +546,7 @@ class Lobbies(ApiCase):
         self.assertEqual((status, resp['errorCode'], resp['errorMessage']), (409, 9015, 'session not ready'))
         await self.server_for(self.alice, sid)
         self.assertEqual((await join(self.bob))[0], 200)
-        await self.call('POST', f'{SESSIONS}/{sid}/player', self.bob, json={'user_id': self.bob['user_id']})
+        await self.call('POST', f'{SESSIONS}/{sid}/player', local=True, json={'user_id': self.bob['user_id']})
         carol = await self.login('carol')
         self.set_status(host, launched=True)
         status, resp = await join(carol)
@@ -549,17 +563,22 @@ class Lobbies(ApiCase):
         self.assertEqual((await self.call('GET', f'{SESSIONS}/{sid}', self.alice))[0], 404)
         await self.until(lambda: not self.hm.is_live(host), 'its server to stop')
 
-    # bug: session_one checks no token: anyone can delete any lobby (which stops its game server, mid-match too) or
-    # change it, see report
-    @unittest.expectedFailure
-    async def test_only_the_owner_can_delete_a_lobby(self):
+    async def test_only_the_owner_can_delete_or_change_a_lobby(self):
+        # deleting a session stops its game server, mid-match too (review S2)
         host = self.ready_host(17777)
-        sid = (await self.new_lobby(self.alice))['session_id']
+        sid = (await self.new_lobby(self.alice, game_session_setting={'settings': {'lobby_name': 'fun'}}))['session_id']
         await self.server_for(self.alice, sid)
-        for token in (None, self.bob):
-            status, _ = await self.call('DELETE', f'{SESSIONS}/{sid}', token)
-            self.assertIn(status, (401, 403))
-        self.assertEqual((self.app['sessions'][sid]['_host'], self.hm.is_live(host)), (host, True))
+        for method, sub, body in (('DELETE', '', None), ('PUT', '/settings', {'lobby_name': 'mine'}),
+                                  ('PUT', '', {'game_max_player': 99}), ('POST', '/player', {'user_id': self.bob['user_id']}),
+                                  ('DELETE', f"/player/{self.alice['user_id']}", None)):
+            for token, expected in ((None, 401), (self.bob, 403)):
+                with self.subTest(method=method, sub=sub, token=bool(token)):
+                    status, _ = await self.call(method, f'{SESSIONS}/{sid}{sub}', token, json=body)
+                    self.assertEqual(status, expected)
+        sess = self.app['sessions'][sid]
+        self.assertEqual((sess['_host'], self.hm.is_live(host), sess['players'], sess['game_session_setting']['settings']['lobby_name']),
+                         (host, True, [], 'fun'))
+        self.assertEqual((await self.call('PUT', f'{SESSIONS}/{sid}/settings', self.alice, json={'lobby_name': 'new'}))[0], 200)
 
     async def test_zeuz_lobby_owner_comes_from_the_login_and_an_unjoined_server_is_reused(self):
         # The Aug 2022 client's custom lobbies (FangsBoot makes these calls with "secret-token:accelbyte/<token>").

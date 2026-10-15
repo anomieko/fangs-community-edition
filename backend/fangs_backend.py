@@ -734,12 +734,24 @@ def session_view(sess):
     return {k: v for k, v in sess.items() if not k.startswith('_')}
 
 
+def known(request):
+    """A logged-in player or one of our game servers. The client sends its token with every session browser call."""
+    return bool(caller(request)) or is_local(request)
+
+
+def may_change(request, sess):
+    """Only a lobby's owner and our game servers may change or end it (deleting a session stops its game server)."""
+    return is_server(request) or caller(request).get('user_id') == sess['user_id']
+
+
 @route('POST', r'/sessionbrowser/namespaces/[^/]+/gamesession')
 async def session_create(request):
     app, who = request.app, caller(request)
     if 'user_id' not in who:
         return err(401, 20001, 'unauthorized')
     for old in [s for s in app['sessions'].values() if s['user_id'] == who['user_id']]:
+        if old['_host'] is not None and not lobby_open(old['_host']):
+            continue                     # its match is running (or over): it ends on its own, for its other players
         app['sessions'].pop(old['session_id'], None)          # one custom lobby per player
         if old['_host']:
             asyncio.create_task(app['hosts'].stop(old['_host'], 'owner created a new lobby'))
@@ -761,6 +773,8 @@ async def session_create(request):
 
 @route('GET', r'/sessionbrowser/namespaces/[^/]+/gamesession')
 async def session_list(request):
+    if not known(request):
+        return err(401, 20001, 'unauthorized')
     q = request.query
     mode = q.get('game_mode', '').lower()
     out = [session_view(s) for s in request.app['sessions'].values()
@@ -772,6 +786,8 @@ async def session_list(request):
 
 @route('GET', r'/sessionbrowser/namespaces/[^/]+/gamesession/bulk')
 async def session_bulk(request):
+    if not known(request):
+        return err(401, 20001, 'unauthorized')
     ids = set(request.query.get('user_ids', '').split(','))
     return web.json_response({'data': [session_view(s) for s in request.app['sessions'].values()
                                        if ids & set(s['players'] + [s['user_id']])]})
@@ -780,10 +796,14 @@ async def session_bulk(request):
 @route('*', r'/sessionbrowser/namespaces/[^/]+/gamesession/(?P<sid>[^/]+)(?P<sub>/join|/settings|/player(?:/[^/]+)?)?')
 async def session_one(request):
     app = request.app
+    if not known(request):
+        return err(401, 20001, 'unauthorized')
     sess = app['sessions'].get(request.match_info['sid'])
     if not sess:
         return err(404, 9014, 'session not found')
     sub, m = request.match_info['sub'] or '', request.method
+    if m != 'GET' and sub != '/join' and not may_change(request, sess):
+        return err(403, 20013, 'only the lobby owner can change this lobby')
     if sub == '/join':
         if not sess['joinable']:
             return err(409, 9015, 'session not ready')
@@ -885,7 +905,7 @@ def lobby_frame(**fields):
     return '\n'.join(f'{k}: {v}' for k, v in fields.items())
 
 
-async def handle_create_ds(app, ws, fields):
+async def handle_create_ds(app, ws, fields, uid):
     sid = fields.get('matchId', '')
     sess = app['sessions'].get(sid)
     cfg = app['cfg']
@@ -897,7 +917,11 @@ async def handle_create_ds(app, ws, fields):
         async with lock:
             if not sess or app['sessions'].get(sid) is not sess:
                 raise RuntimeError(f'unknown session {sid}')
-            host = await app['hosts'].allocate(sid)
+            if sess['user_id'] != uid:
+                raise RuntimeError(f'lobby {sid} belongs to another player')
+            host = sess['_host']
+            if host is None or not app['hosts'].is_live(host):   # a repeated request gets the lobby's own server
+                host = await app['hosts'].allocate(sid)
             if app['sessions'].get(sid) is not sess:
                 host.session_id = None
                 app['log']({'host': host.id, 'event': 'back to standby', 'reason': f'lobby {sid} was replaced'})
@@ -944,7 +968,7 @@ async def zeuz_create(request):
     conf['lobby_owner'] = user['display_name']           # trust the login, not the client
     sid, hosts, reuse = uuid.uuid4().hex, app['hosts'], None
     for old_sid, old in list(app['zeuz'].items()):        # one custom lobby per player
-        if old['user_id'] == uid:
+        if old['user_id'] == uid and lobby_open(old['host']):   # a running match ends on its own
             app['zeuz'].pop(old_sid)
             # nobody ever joined its server (e.g. Create clicked twice): hand that server to the new lobby
             if reuse is None and hosts.is_live(old['host']) and not old['host'].had_players:
@@ -990,6 +1014,9 @@ async def lobby_ws(request):
     await ws.prepare(request)
     app, who, log = request.app, caller(request), request.app['log']
     log({'ws': 'lobby', 'event': 'connect', 'who': who})
+    if not who and not is_local(request):   # no token, or one this backend doesn't know (e.g. from before a restart)
+        await ws.close(code=4001, message=b'unauthorized')
+        return ws
     uid = who.get('user_id')   # players only (game hosts log in without a user)
     if uid:
         app['lobby_users'].setdefault(uid, set()).add(ws)
@@ -1008,7 +1035,7 @@ async def lobby_ws(request):
             if t.endswith('Request'):
                 await ws.send_str(lobby_frame(type=t[:-len('Request')] + 'Response', id=mid, code=0))
             if t == 'createDSRequest':
-                asyncio.create_task(handle_create_ds(app, ws, fields))
+                asyncio.create_task(handle_create_ds(app, ws, fields, uid))
     finally:
         if uid:
             socks = app['lobby_users'].get(uid, set())
@@ -1201,9 +1228,11 @@ def make_app(a, log):
 
     app['zeuz'] = {}
 
-    def host_stopped(host):  # drop the custom lobby whose game server went away
-        app['sessions'].pop(host.session_id, None)
-        app['zeuz'].pop(host.session_id, None)
+    def host_stopped(host):  # drop the custom lobby whose game server went away (if it is still that lobby's server)
+        if (app['sessions'].get(host.session_id) or {}).get('_host') is host:
+            app['sessions'].pop(host.session_id)
+        if (app['zeuz'].get(host.session_id) or {}).get('host') is host:
+            app['zeuz'].pop(host.session_id)
     app['hosts'].on_stopped.append(host_stopped)
     app['hosts'].on_result.append(lambda host, result: ingest_match(
         app['store'], result, log, ranked_parties=app['matchmaker'].ranked_result(host.session_id)))
