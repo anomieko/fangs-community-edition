@@ -28,6 +28,7 @@ class Host:
         self.perf = None         # FangsHost heartbeats since the last perf line (see HostManager._perf)
         self.match_over = None   # when its match's result arrived: no longer listed or joinable, stopped soon after
         self.reserved = False    # booted by allocate() for its own request: never handed to another one as idle
+        self.peak_players = 0    # most players connected at once (a Ranked result: did every matched player join?)
 
     @property
     def log_path(self):
@@ -110,7 +111,7 @@ class HostManager:
                         raise
         finally:
             self._allocating -= 1
-        host.session_id, host.started, host.reserved = session_id, time.time(), False
+        host.session_id, host.started, host.reserved, host.peak_players = session_id, time.time(), False, 0
         if match:
             (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_match.json').write_text(json.dumps(match))
         self.replenish()
@@ -291,6 +292,7 @@ class HostManager:
             self.collect_results(host)
             st = host.status
             players = st.get('players', 0)
+            host.peak_players = max(host.peak_players, players)
             if players:
                 self._perf(host, st)
                 host.had_players, host.empty_since = True, None

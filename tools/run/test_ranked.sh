@@ -3,8 +3,10 @@
 # chooser (checks the Ranked tile is enabled), pick Ranked (MapGameMode 3: the ranked queue), accept, draft-pick
 # and lock in, play; the game server then ends the match (surrender: team B defeated). Checks the backend matched
 # them from the Ranked queue, settled the ratings from the result, and serves them as ranked_rating / leaderboard.
+# Then both leave the match (back to the main menu, which shows the game's end results / rank change: screenshots).
+# NOSHOW=1: the second client quits right after accepting: nothing may be rated (void result, or no game at all).
 # Own backend data and game-server directory, so local play is untouched.
-# Usage: CLIENT_DIR=clients/<build> tools/run/test_ranked.sh
+# Usage: CLIENT_DIR=clients/<build> [NOSHOW=1] tools/run/test_ranked.sh
 set -u
 cd "$(dirname "$0")/../.."
 R=${RUN:-ranked}
@@ -41,10 +43,11 @@ pick() { echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindF
   sleep 6; both "$STATUS"
   echo 'lua local d=FindFirstOf("BP_MOBAInstance_C").WB_AcceptMatchRef; d:BndEvt__OkBtn_K2Node_ComponentBoundEvent_2_OnButtonClickedEvent__DelegateSignature(); return "accepted"' >> $A
   echo 'lua local d=FindFirstOf("BP_MOBAInstance_C").WB_AcceptMatchRef; d:BndEvt__OkBtn_K2Node_ComponentBoundEvent_2_OnButtonClickedEvent__DelegateSignature(); return "accepted"' >> $B
+  [[ ${NOSHOW:-} == 1 ]] && { sleep 1; echo 'quit' >> $B; }   # never joins (FangsHost starts without it after 45 s)
   # Ranked hero select is the game's draft: 16 s per round to lock in, or the lobby ends. Pick from the moment
   # the server is assigned (until the clients are in the lobby the commands just fail).
   for i in $(seq 1 60); do grep -q '"mm": "assigned"' work/logs/$R-backend.jsonl 2>/dev/null && break; sleep 1; done
-  for i in $(seq 1 20); do sleep 2; pick $A Lancer; pick $B Berserker; done
+  for i in $(seq 1 $([[ ${NOSHOW:-} == 1 ]] && echo 40 || echo 20)); do sleep 2; pick $A Lancer; pick $B Berserker; done
   both "$DRAFT"
   for i in $(seq 1 24); do   # until the clients are in the arena
     sleep 5; echo "$STATUS" >> $A
@@ -53,11 +56,13 @@ pick() { echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindF
   sleep 20; both "$STATUS"; both 'shot showui'
   sleep 5; host_cmd 'lua FindFirstOf("GS_MOBA_Battle_C"):SurrenderForceTeamDefeat(2); return "surrendered team B"'
   sleep 20; both 'shot showui'
+  sleep 5; both 'disconnect'      # leave the match like Continue: the main menu then shows the end results
   sleep 25; both "$STATUS"; both 'shot showui'
+  sleep 10; both 'shot showui'
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
   BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts --ranked-size 2" \
-  tools/run/headless.sh "${DURATION:-360}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
+  tools/run/headless.sh "${DURATION:-$([[ ${NOSHOW:-} == 1 ]] && echo 420 || echo 380)}" "${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}" \
   -- $R:0:"-TestUser=rankeda -TestPass=x" -- ${R}2:3:"-TestUser=rankedb -TestPass=x" 2>&1 | grep -v Segmentation
 wait
 for c in $R ${R}2; do echo "== client $c"; grep -h 'lua \|exec' work/run/$c/MOBA/Binaries/Win64/fangsctl.log | cut -c21-300; done
@@ -85,3 +90,11 @@ for c in $R ${R}2; do
   done
 done
 ls work/logs/$R-shots
+if [[ ${NOSHOW:-} == 1 ]]; then   # no rated game: a void result, or (seen 15 Oct) no game at all: the staying
+  # client's lobby screen gives up ("Failed to Connect to Match.") as FangsHost's 45 s no-show start comes due
+  grep -q '"ranked": {"rated": true' work/logs/$R-backend.jsonl && echo "FAIL: a game with a no-show was rated" \
+    || echo "PASS: nothing rated ($(grep -ho '"ranked": {"rated": false[^}]*' work/logs/$R-backend.jsonl || echo 'no game played'))"
+  grep -h 'back to the main menu' work/run/$R/MOBA/Binaries/Win64/ue4ss/UE4SS.log | cut -c30-200
+else
+  grep -q '"ranked": {"rated": true' work/logs/$R-backend.jsonl && echo "PASS: ranked result rated" || echo "FAIL: no rated ranked result"
+fi

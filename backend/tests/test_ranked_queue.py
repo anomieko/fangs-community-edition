@@ -34,12 +34,15 @@ class FakeWS:
 class FakeHosts:
     def __init__(self, ports=2):
         self.ports, self.allocated = ports, []
+        self.booted = None       # an asyncio.Event: allocate() waits for it (a server still booting)
 
     def capacity(self):   # as HostManager.capacity: slots not taken yet
         return self.ports - len(self.allocated)
 
     async def allocate(self, session_id, match=None):
         self.allocated.append((session_id, match))
+        if self.booted is not None:
+            await self.booted.wait()
         return SimpleNamespace(port=7777 + len(self.allocated), session_id=session_id)
 
 
@@ -65,7 +68,7 @@ class Queues(unittest.IsolatedAsyncioTestCase):
         self.logs = []
         self.app = {'store': self.store, 'log': self.logs.append, 'cfg': SimpleNamespace(public_ip='203.0.113.1'),
                     'hosts': FakeHosts(), 'social': FakeSocial()}
-        self.mm = Matchmaker(self.app)
+        self.mm = self.app['matchmaker'] = Matchmaker(self.app)
         self.ws = {}
 
     async def asyncTearDown(self):
@@ -96,6 +99,13 @@ class Queues(unittest.IsolatedAsyncioTestCase):
         teams = {u: token_team(self.last(u, 'ServerAssignmentResponse')['token']) for u in uids}
         return mid, teams
 
+    def finish(self, mid, teams, winner_index, leave=(), seen=None, mode=2):
+        """The game server reports the result (the backend's real on_result path). seen: most players its
+        heartbeats saw connected at once (default: all of them)."""
+        host = SimpleNamespace(session_id=mid, peak_players=len(teams) if seen is None else seen)
+        fb.match_result(self.app, host, self.result(teams, winner_index, mode, leave))
+        return self.logs[-1]
+
     def result(self, teams, winner_index, mode=2, leave=()):
         rows = [{'UserId': u, 'Team': ('TeamA', 'TeamB')[t], 'Type': 'Berserker'} for u, t in teams.items() if u not in leave]
         return {'results': {'MatchResults': [{'RoundResults': rows, 'TotalRoundTime': 300.0 + time.time() % 1}],
@@ -116,7 +126,7 @@ class Queues(unittest.IsolatedAsyncioTestCase):
         team_sum = [sum(r for u, r in zip(uids, ratings) if teams[u] == t) for t in (0, 1)]
         self.assertLessEqual(abs(team_sum[0] - team_sum[1]), 20)
         before = {u: ranked.rating_of(self.store, u) for u in uids}
-        fb.ingest_match(self.store, self.result(teams, 0), self.logs.append, ranked_parties=self.mm.ranked_result(mid))
+        self.finish(mid, teams, 0)
         self.assertIsNone(self.mm.ranked_result(mid))          # settled once
         log = self.logs[-1]['ranked']
         self.assertTrue(log['rated'], log)
@@ -127,7 +137,8 @@ class Queues(unittest.IsolatedAsyncioTestCase):
             self.assertAlmostEqual(after.rating - before[u].rating, (1 if teams[u] == 0 else -1) * 19.0, delta=1.5)
         winner = next(u for u in uids if teams[u] == 0)
         served = fb.stats_record(self.store, winner, 'PROFILE_RATINGS_KEY')['ranked_rating']
-        self.assertEqual(served, skill.display(ranked.rating_of(self.store, winner)))
+        self.assertEqual(served, ranked.shown(self.store, winner))
+        self.assertEqual(served['mu'], skill.display(ranked.rating_of(self.store, winner))['mu'])
         board = fb.leaderboard(self.store)
         points = {u: fb.rank_points(fb.stats_record(self.store, u, 'PROFILE_RATINGS_KEY')['ranked_rating']) for u in uids}
         self.assertEqual(sorted(board, key=lambda r: -r[1]), board)
@@ -155,7 +166,7 @@ class Queues(unittest.IsolatedAsyncioTestCase):
         mid, teams = await self.play(uids)
         self.assertEqual(self.app['hosts'].allocated[0][1]['map'], 'LE_Casual')
         before, board = dict(self.store.data['ranked']['players']), fb.leaderboard(self.store)
-        fb.ingest_match(self.store, self.result(teams, 1), self.logs.append, ranked_parties=self.mm.ranked_result(mid))
+        self.finish(mid, teams, 1)
         self.assertNotIn('ranked', self.logs[-1])
         self.assertEqual(self.store.data['ranked']['players'], before)
         self.assertEqual(fb.leaderboard(self.store), board)
@@ -191,11 +202,10 @@ class Queues(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(teams[duo_a[0]], teams[duo_a[1]])
         self.assertEqual(teams[duo_b[0]], teams[duo_b[1]])
         self.assertNotEqual(teams[duo_a[0]], teams[duo_b[0]])      # mirrored 2+1+1 vs 2+1+1
-        fb.ingest_match(self.store, self.result(teams, teams[duo_a[0]]), self.logs.append,
-                        ranked_parties=self.mm.ranked_result(mid))
+        self.finish(mid, teams, teams[duo_a[0]])
         self.assertEqual(self.logs[-1]['ranked']['contexts'], [30.0, 30.0])
 
-    async def test_uneven_result_is_void_and_decline_requeues(self):
+    async def test_decline_requeues_quitter_counts_no_show_voids(self):
         uids = [self.player(f'v{i}', 1500) for i in range(8)]
         await self.queue(uids)
         queued_at = self.mm.tickets[self.mm.ticket_of[uids[1]]].queued_at
@@ -206,11 +216,38 @@ class Queues(unittest.IsolatedAsyncioTestCase):
         await self.queue(uids[:1])
         await self.mm.tick()
         mid, teams = await self.play(uids)
-        before = dict(self.store.data['ranked']['players'])
-        fb.ingest_match(self.store, self.result(teams, 0, leave={uids[0]}), self.logs.append,
-                        ranked_parties=self.mm.ranked_result(mid))
-        self.assertFalse(self.logs[-1]['ranked']['rated'])
+        # someone quits in round 1 (missing from the result): still rated with their team, so quitting can't void
+        quitter = next(u for u in uids if teams[u] == 1)
+        before = {u: ranked.rating_of(self.store, u) for u in uids}
+        log = self.finish(mid, teams, 0, leave={quitter})['ranked']
+        self.assertTrue(log['rated'], log)
+        self.assertEqual(log['quit'], [quitter])
+        self.assertLess(ranked.rating_of(self.store, quitter).rating, before[quitter].rating)
+        self.assertEqual(ranked.rating_of(self.store, quitter).played, before[quitter].played + 1)
+        # a matched player who never joined the server (heartbeats saw 7 of 8): void, nothing changes
+        await self.queue(uids)
+        await self.mm.tick()
+        mid, teams = await self.play(uids)
+        before = json.loads(json.dumps(self.store.data['ranked']['players']))
+        log = self.finish(mid, teams, 0, leave={quitter}, seen=7)['ranked']
+        self.assertEqual((log['rated'], log['reason']), (False, 'a matched player never joined'))
         self.assertEqual(self.store.data['ranked']['players'], before)
+
+    def test_settle_voids(self):
+        teams = {'a1': 'TeamA', 'a2': 'TeamA', 'b1': 'TeamB', 'b2': 'TeamB'}
+        game = {'parties': [[u] for u in teams], 'teams': teams, 'everyone_joined': True}
+        played = {'TeamA': ['a1', 'a2'], 'TeamB': ['b1', 'b2']}
+        swapped = {'TeamA': ['a1', 'b1'], 'TeamB': ['a2', 'b2']}
+        short = dict(game, teams={u: t for u, t in teams.items() if u != 'b2'})   # left while the server booted
+        stranger = {'TeamA': ['a1', 'a2', 'x'], 'TeamB': ['b1', 'b2']}
+        for g, p, w, reason in ((game, played, None, 'no winner'), (game, swapped, 'TeamA', 'result teams differ'),
+                                (short, {'TeamA': ['a1', 'a2'], 'TeamB': ['b1']}, 'TeamA', 'assigned teams 2 vs 1'),
+                                (game, stranger, 'TeamA', 'result teams differ')):
+            out = ranked.settle_match(self.store, p, g, w)
+            self.assertFalse(out['rated'])
+            self.assertTrue(out['reason'].startswith(reason), out)
+        self.assertEqual(self.store.data.get('ranked', {}).get('players', {}), {})
+        self.assertTrue(ranked.settle_match(self.store, played, game, 'TeamB')['rated'])
 
     async def test_party_too_big_for_ranked(self):
         a, b, c = self.player('a'), self.player('b'), self.player('c')
@@ -219,12 +256,96 @@ class Queues(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.last(a)['status'], 'Idle')
         await self.queue([a], 'casual')
         self.assertEqual(self.last(a)['status'], 'Queued')  # Casual takes them
-        self.mm = Matchmaker(self.app, ranked_size=2)       # 1 vs 1: no duos either
+        self.mm = self.app['matchmaker'] = Matchmaker(self.app, ranked_size=2)   # 1 vs 1: no duos either
         self.mm.clients.update({u: self.ws[u] for u in (a, b)})
         self.app['social'].parties = [[a, b]]
         await self.queue([a])
         self.assertEqual(self.last(a)['status'], 'Idle')
         self.assertEqual(sum(e.get('mm') == 'ranked party too big' for e in self.logs), 2)
+
+
+    # ---------------------------------------------------------- robustness
+
+    async def test_shown_rating_never_jumps_on_reopening(self):
+        """A confident player whose recent results kept beating the prediction gets reopened (uncertainty 300):
+        their rank points must not drop by hundreds, and a win must not lower them."""
+        uids = [self.player(f's{i}', 1500) for i in range(2)]
+        star = uids[0]
+        d = self.store.data['ranked']['players'][star]
+        d.update(uncertainty=150.0, played=60, evidence_games=25, recent_residual=4.0, recent_variance=1.0)
+        points = lambda: fb.rank_points(fb.stats_record(self.store, star, 'PROFILE_RATINGS_KEY')['ranked_rating'])
+        before = points()
+        self.mm = self.app['matchmaker'] = Matchmaker(self.app, ranked_size=2)
+        self.mm.clients.update({u: self.ws[u] for u in uids})
+        await self.queue(uids)
+        await self.mm.tick()
+        mid, teams = await self.play(uids)
+        log = self.finish(mid, teams, teams[star])['ranked']           # the star wins
+        self.assertEqual(log['reopened'], 1)
+        self.assertGreater(ranked.rating_of(self.store, star).uncertainty, 250)   # reopened inside the model
+        self.assertGreater(points(), before)                                     # but a win still raises points
+        self.assertLessEqual(fb.stats_record(self.store, star, 'PROFILE_RATINGS_KEY')['ranked_rating']['sigma'],
+                             round(150.0 / skill.DISPLAY_SCALE, 4))
+
+    async def test_party_member_in_the_other_mode_stops_the_party(self):
+        lead, mate = self.player('lead', 1500), self.player('mate', 1500)
+        self.app['social'].parties = [[lead, mate]]
+        await self.queue([lead])                                   # the leader queues Ranked
+        token = self.last(lead)['partyToken']
+        await self.mm.on_message(mate, 'QueueJoinRequest', {'id': 'casual', 'partyToken': token})
+        self.assertEqual((self.last(lead)['status'], self.last(mate)['status']), ('Idle', 'Idle'))
+        self.assertEqual(self.mm.tickets, {})
+        await self.queue([lead])                                   # a member sending no queue id follows the leader
+        await self.mm.on_message(mate, 'QueueJoinRequest', {'partyToken': self.last(lead)['partyToken']})
+        self.assertEqual(self.mm.tickets[self.mm.ticket_of[mate]].joined, [lead, mate])
+
+    async def test_accept_timeout_requeues_those_who_accepted(self):
+        uids = [self.player(f't{i}', 1500) for i in range(8)]
+        await self.queue(uids)
+        queued_at = {u: self.mm.tickets[self.mm.ticket_of[u]].queued_at for u in uids}
+        await self.mm.tick()
+        mid = self.last(uids[0])['match']['id']
+        for u in uids[1:]:
+            await self.mm.on_message(u, 'AcceptMatchRequest', {'id': mid})
+        self.mm.matches[mid].deadline = 0                          # uids[0] never answers
+        await self.mm.tick()
+        self.assertEqual(self.last(uids[0])['status'], 'Idle')
+        self.assertNotIn(uids[0], self.mm.ticket_of)
+        for u in uids[1:]:
+            self.assertEqual(self.last(u)['status'], 'Queued')
+            self.assertEqual(self.mm.tickets[self.mm.ticket_of[u]].queued_at, queued_at[u])   # keeps its wait
+            self.assertTrue(self.mm.tickets[self.mm.ticket_of[u]].ranked)
+
+    async def test_leaving_while_the_server_boots_voids(self):
+        uids = [self.player(f'b{i}', 1500) for i in range(8)]
+        await self.queue(uids)
+        await self.mm.tick()
+        self.app['hosts'].booted = asyncio.Event()
+        mid = self.last(uids[0])['match']['id']
+        for u in uids:
+            await self.mm.on_message(u, 'AcceptMatchRequest', {'id': mid})
+        await asyncio.sleep(0)
+        await self.mm.leave(uids[0], 'disconnected')                # gone before the server is ready
+        self.app['hosts'].booted.set()
+        for _ in range(5):
+            await asyncio.sleep(0)
+        self.assertIsNone(self.last(uids[0], 'ServerAssignmentResponse'))
+        teams = {u: token_team(self.last(u, 'ServerAssignmentResponse')['token']) for u in uids[1:]}
+        before = json.loads(json.dumps(self.store.data['ranked']['players']))
+        log = self.finish(mid, teams, 0, seen=7)['ranked']
+        self.assertEqual((log['rated'], log['reason']), (False, 'assigned teams 3 vs 4') if
+                         sum(t == 0 for t in teams.values()) == 3 else (False, 'assigned teams 4 vs 3'))
+        self.assertEqual(self.store.data['ranked']['players'], before)
+
+    async def test_duo_whose_mate_never_queues_plays_as_a_solo(self):
+        uids = [self.player(f'd{i}', 1500) for i in range(9)]
+        self.app['social'].parties = [[uids[0], uids[8]]]           # uids[8] never presses Ranked
+        await self.queue(uids[:8])
+        await self.mm.tick()
+        self.assertEqual(self.last(uids[0])['status'], 'Queued')    # the party waits for its member first
+        self.mm.tickets[self.mm.ticket_of[uids[0]]].queued_at -= 25  # PARTY_WAIT (20 s) is over
+        await self.mm.tick()
+        self.assertEqual([self.last(u)['status'] for u in uids[:8]], ['Matched'] * 8)
 
 
 if __name__ == '__main__':

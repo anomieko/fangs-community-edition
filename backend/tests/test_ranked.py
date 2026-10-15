@@ -111,6 +111,37 @@ class RatingMath(unittest.TestCase):
         self.assertEqual(chances, sorted(chances))
         self.assertAlmostEqual(skill.freeze([R('a')], [R('b')]).scale, math.sqrt(2 * 400 ** 2 + 2 * (170 ** 2 + 400)))
 
+    def test_n_vs_n_matches_monte_carlo(self):
+        """The n vs n generalization against the model itself, not against its derivation: draw skills from the
+        prepared beliefs and performances (team = average of its players + party offset), keep the games A won,
+        and compare A's win rate, a player's posterior mean and variance with freeze() / settle()."""
+        rng = random.Random(11)
+        cases = {1: ([R('a', 1600, 300)], [R('b', 1450, 200)], 0, 0),
+                 2: ([R('a', 1500, 450, 0), R('a2', 1700, 120)], [R('b', 1550, 250), R('b2', 1500, 250)], 60, 0),
+                 3: ([R(f'a{i}', r, s) for i, (r, s) in enumerate(((1400, 350), (1500, 170), (1650, 220)))],
+                     [R(f'b{i}', 1520, 200) for i in range(3)], 0, 0),
+                 6: ([R(f'a{i}', 1500 + 40 * i, 200) for i in range(6)], [R(f'b{i}', 1560, 200) for i in range(6)], 40, 20)}
+        for n, (a, b, ca, cb) in cases.items():
+            with self.subTest(n=n):
+                f = skill.freeze(a, b, ca, cb)
+                after = skill.settle(f, 'A')[0]
+                sd = [math.sqrt(q) for q in f.variances]
+                means = [p.rating for p in a + b]
+                wins, s0, s0sq, trials = 0, 0.0, 0.0, 300_000
+                for _ in range(trials):
+                    s = [rng.gauss(m, d) for m, d in zip(means, sd)]
+                    perf_a = sum(s[:n]) / n + rng.gauss(0, skill.PERFORMANCE_NOISE / math.sqrt(n)) + ca
+                    perf_b = sum(s[n:]) / n + rng.gauss(0, skill.PERFORMANCE_NOISE / math.sqrt(n)) + cb
+                    if perf_a > perf_b:
+                        wins += 1; s0 += s[0]; s0sq += s[0] * s[0]
+                p = wins / trials
+                mean = s0 / wins
+                var = s0sq / wins - mean * mean
+                se_p, se_mean = math.sqrt(p * (1 - p) / trials), sd[0] / math.sqrt(wins)
+                self.assertAlmostEqual(f.predicted_win_a, p, delta=5 * se_p)
+                self.assertAlmostEqual(after.rating, mean, delta=5 * se_mean)
+                self.assertAlmostEqual(after.uncertainty ** 2, var, delta=5 * f.variances[0] * math.sqrt(2 / wins))
+
     def test_extreme_upset_is_finite(self):
         f = skill.freeze([R(f'a{i}', 3500, 20) for i in range(4)], [R(f'b{i}', 0, 20) for i in range(4)])
         for p in skill.settle(f, 'B'):
@@ -187,6 +218,11 @@ class Allocator(unittest.TestCase):
         (m,) = allocator.allocate(ts, 0.0)     # mirrored 2+1+1 vs 2+1+1 at once
         self.assertEqual(m.composition_level, 0)
         self.assertNotEqual(duo in m.team_a, any(t.ticket_id == 'duo2' for t in m.team_a))
+
+    def test_limit_stops_after_the_first_lobby(self):
+        ts = solos([1500] * 16)
+        self.assertEqual(len(allocator.allocate(ts, 0.0)), 2)
+        self.assertEqual(len(allocator.allocate(ts, 0.0, limit=1)), 1)
 
     def test_wait_widening(self):
         ts = solos([1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700])

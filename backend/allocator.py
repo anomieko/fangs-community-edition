@@ -14,8 +14,9 @@ exact ties prefer fewer exact repeats of a player's last opponents, then ticket 
 `widen_speed` scales the whole wait schedule (bands, favorite cap, composition, late placement): the research
 uses 1; a small community gets the same fairness from a faster one (backend/tests/test_ranked.py, docs/recon/ranked.md).
 
-Search is bounded (anchor = oldest ticket; 32 index neighbours each side; per-size quotas; 4 anchored teams per
-shape; 64 opposing teams per anchored team and level), so its cost doesn't grow with the queue. Not modelled
+Search is bounded per anchor (anchor = oldest unused ticket; 32 index neighbours each side; per-size quotas; 4
+anchored teams per shape; 64 opposing teams per anchored team and level); `limit` stops after that many lobbies.
+A queue where no lobby is feasible examines every anchor: ~1.5 ms with 16 players queued, ~25 ms with 40. Not modelled
 here (no data for it): regions/latency, visible-tier party admission, several modes in one pool.
 """
 from bisect import bisect_left
@@ -123,10 +124,10 @@ class _TeamView:
     player_ids: frozenset
 
 
-def allocate(tickets, now, policy=Policy(), previous_opponents=None, counts=None):
+def allocate(tickets, now, policy=Policy(), previous_opponents=None, counts=None, limit=None):
     """Disjoint lobbies [Proposal] for live tickets at time `now`; nothing is mutated or reserved.
     previous_opponents: player id -> frozenset of their last ranked opponents (exact-tie breaker only).
-    counts: optional Counter that receives search diagnostics."""
+    counts: optional Counter that receives search diagnostics. limit: stop after this many lobbies."""
     n = policy.team_size
     late_max = n if policy.provisional_late_max_difference is None else policy.provisional_late_max_difference
     counts = Counter() if counts is None else counts
@@ -308,5 +309,7 @@ def allocate(tickets, now, policy=Policy(), previous_opponents=None, counts=None
         proposals.append(Proposal(a, b, probability, score, composition_level(team_view(a).shape, team_view(b).shape),
                                   youngest, oldest, ca, cb, frozen, repeats))
         used.update(t.ticket_id for t in a + b)
+        if limit is not None and len(proposals) >= limit:
+            break
     counts['matches'] = len(proposals)
     return proposals

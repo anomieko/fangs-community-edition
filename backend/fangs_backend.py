@@ -14,7 +14,7 @@ from aiohttp import web, WSMsgType
 from hosts import HostManager
 from matchmaker import Matchmaker
 from social import Social
-import ranked, skill
+import ranked
 
 NAMESPACE = 'fangs'
 ROUTES = []  # (method-or-*, compiled regex, handler)
@@ -288,7 +288,7 @@ def history_for_viewer(history, owner, viewer):
 
 def stats_record(store, uid, key):
     if key == 'PROFILE_RATINGS_KEY':   # Ranked is the only rating; casual games have none
-        r = skill.display(ranked.rating_of(store, uid))
+        r = ranked.shown(store, uid)
         return {'casual_rating': r, 'ranked_rating': dict(r)}
     value = store.data['player_records'].get(uid, {}).get(key)
     return value if value is not None else json.loads(json.dumps(STATS_DEFAULTS[key]))
@@ -709,10 +709,10 @@ def mastery_after(m, p, won, secs, levels, result):
     return m
 
 
-def ingest_match(store, result, log, ranked_parties=None):
+def ingest_match(store, result, log, ranked_game=None):
     """A match FangsHost saved at its end (fangshost_result-*.json): the game's own match-history entry plus the
     winner. Every player with an account gets it in PROFILE_HISTORY_KEY and XP/levels/wins in PROFILE_MASTERY_KEY.
-    A Ranked game (ranked_parties: the matchmaker's tickets) also settles the players' ratings (ranked.py)."""
+    A Ranked game (ranked_game: the matchmaker's roster, see ranked.settle_match) also settles the ratings."""
     entry, winner = result.get('results') or {}, TEAMS.get(result.get('winning_team'))
     rounds = entry.get('MatchResults') or []
     match_id = hashlib.sha1(json.dumps([entry.get('TimePlayed'), entry.get('MapLevel'),
@@ -746,13 +746,21 @@ def ingest_match(store, result, log, ranked_parties=None):
     seen.append(match_id)
     del seen[:-200]
     rating = None
-    if ranked_parties is not None:
-        teams = {t: [uid for uid, p in players.items() if p['team'] == t] for t in TEAMS.values()}
-        rating = ranked.settle_match(store, teams, ranked_parties, winner)
+    if ranked_game is not None:
+        played = {t: [uid for uid, p in players.items() if p['team'] == t] for t in TEAMS.values()}
+        rating = ranked.settle_match(store, played, ranked_game, winner)
     store.save()
     log({'match': match_id, 'mode': mode, 'map': entry.get('MapLevel'), 'winner': winner,
          'players': {p['user']['display_name']: p['team'] for p in players.values()},
          **({'ranked': rating} if rating else {})})
+
+
+def match_result(app, host, result):
+    """A result FangsHost saved on `host`: history and mastery for everyone, ratings for a Ranked game."""
+    game = app['matchmaker'].ranked_result(host.session_id)
+    if game is not None:   # did the server's heartbeats see every matched player connected at once?
+        game['everyone_joined'] = host.peak_players >= len(game['teams'])
+    ingest_match(app['store'], result, app['log'], ranked_game=game)
 
 
 # ---------------------------------------------------------------- Session browser (custom lobbies)
@@ -1259,7 +1267,8 @@ def parse_args(argv=None):
     ap.add_argument('--host-standby', type=int, default=1,
                     help='game servers kept booted and idle so lobbies/matches start at once (each ~3 GB RAM)')
     ap.add_argument('--match-size', type=int, default=8, help='players per matchmade game (Play -> Casual)')
-    ap.add_argument('--ranked-size', type=int, default=8, help='players per Ranked game (even: n vs n)')
+    ap.add_argument('--ranked-size', type=int, default=8, choices=(2, 4, 6, 8),
+                    help='players per Ranked game: n vs n, up to 4v4 (the game\'s draft order has 8 seats)')
     ap.add_argument('--ranked-widen-speed', type=float, default=1.0,
                     help='how fast a Ranked wait widens the skill limits (1: the research schedule, widest at 8 min; '
                          '2: at 4 min)')
@@ -1300,8 +1309,7 @@ def make_app(a, log):
         # just handed over any result the server left, so a finished game was settled before this
         app['matchmaker'].ranked_games.pop(host.session_id, None)
     app['hosts'].on_stopped.append(host_stopped)
-    app['hosts'].on_result.append(lambda host, result: ingest_match(
-        app['store'], result, log, ranked_parties=app['matchmaker'].ranked_result(host.session_id)))
+    app['hosts'].on_result.append(lambda host, result: match_result(app, host, result))
     if Path(a.seed).exists():  # seed (re)defines the global game records on every start
         app['store'].data['game_records'].update(json.loads(Path(a.seed).read_text()))
     app['store'].export_records()
