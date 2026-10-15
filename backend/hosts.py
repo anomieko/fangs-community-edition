@@ -11,6 +11,10 @@ READY_LINE = 'IpNetDriver listening on port {port}'
 LOBBY_MAP = '/Game/Environment/Maps/LE_Lobby_Map'
 
 
+class NoFreeSlot(RuntimeError):
+    """Every game server slot is taken (and none could be reclaimed): try again when one frees up."""
+
+
 class Host:
     def __init__(self, hid, port, inst):
         self.id, self.port, self.inst = hid, port, Path(inst)
@@ -56,6 +60,7 @@ class HostManager:
         self.on_stopped = []     # callbacks(host)
         self.on_result = []      # callbacks(host, result): a finished match (FangsHost's fangshost_result-*.json)
         self._booting = 0        # standby servers being started
+        self._allocating = 0     # allocate() calls still waiting for their server
         self._releasing = set()  # ports of stopped servers whose process hasn't exited yet
         self._closing = False
 
@@ -70,14 +75,28 @@ class HostManager:
     def _idle(self):
         return [h for h in self.hosts.values() if h.session_id is None and h.ready.is_set()]
 
+    def capacity(self):
+        """How many more games could get a server now: free ports, servers nobody has claimed (an idle or booting
+        standby), and empty servers allocate() would reclaim, less the allocate() calls already waiting for one.
+        The matchmaker forms a match only while this is above the matches it has not started yet."""
+        now = time.time()
+        unclaimed = sum(1 for h in self.hosts.values() if h.session_id is None)
+        reclaimable = sum(1 for h in self.hosts.values() if (t := self.empty_for(h, now)) is not None and t > 0)
+        return max(0, len(self.free_ports()) + unclaimed + reclaimable - self._allocating)
+
     async def allocate(self, session_id, match=None):
         """A ready game server for `session_id` (a standby one if available, else a new one). `match`:
-        {'size', 'map', 'map_name'} for matchmade games, handed to FangsHost via fangshost_match.json."""
-        host = await self._claim_idle(session_id)
-        if host is None:
-            if not self.free_ports():
-                await self._reclaim()
-            host = await self._start()
+        {'size', 'map', 'map_name'} for matchmade games, handed to FangsHost via fangshost_match.json.
+        Raises NoFreeSlot when every slot is taken, RuntimeError when the server failed to start."""
+        self._allocating += 1
+        try:
+            host = await self._claim_idle(session_id)
+            if host is None:
+                if not self.free_ports():
+                    await self._reclaim()
+                host = await self._start()
+        finally:
+            self._allocating -= 1
         host.session_id, host.started = session_id, time.time()
         if match:
             (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_match.json').write_text(json.dumps(match))
@@ -139,7 +158,7 @@ class HostManager:
         for attempt in range(1, self.attempts + 1):
             ports = await self._free_port_soon()
             if not ports:
-                raise RuntimeError('no free game server slots')
+                raise NoFreeSlot('no free game server slots')
             port = ports[0]
             host = await self._spawn(port)
             try:

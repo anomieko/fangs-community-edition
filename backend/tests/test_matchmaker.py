@@ -51,14 +51,18 @@ class FakeHosts:
     `gate` if set (a server booting)."""
 
     def __init__(self, ports=2):
-        self.ports, self.allocated, self.gate = ports, [], None
+        self.ports, self.allocated, self.gate, self.waiting = ports, [], None, 0
 
-    def free_ports(self):
-        return list(range(self.ports - len(self.allocated)))
+    def capacity(self):   # as HostManager.capacity: slots neither taken nor being allocated
+        return self.ports - len(self.allocated) - self.waiting
 
     async def allocate(self, session_id, match=None):
-        if self.gate:
-            await self.gate.wait()
+        self.waiting += 1
+        try:
+            if self.gate:
+                await self.gate.wait()
+        finally:
+            self.waiting -= 1
         self.allocated.append((session_id, match))
         return SimpleNamespace(port=7776 + len(self.allocated), session_id=session_id)
 
@@ -271,9 +275,8 @@ class Queue(MatchmakerCase):
         self.assertEqual(hosts.allocated[0][1]['size'], 3)   # asked before c left: FangsHost starts with whoever comes
         self.assertEqual((self.mm.matches, self.mm.match_of), ({}, {}))
 
-    @unittest.expectedFailure
     async def test_a_match_cancelled_while_an_accept_is_announced_does_not_start(self):
-        # bug: accept() checks the match before its awaits and starts it after them, see report
+        # accept() announces, then starts: a match cancelled while it announced must not start (review P2)
         self.matchmaker(size=2)
         await self.queue('a', 'b')
         await self.mm.tick()
@@ -471,9 +474,8 @@ class Capacity(MatchmakerCase):
         self.assertEqual((self.place('a'), self.mm.match_of), (None, {}))   # out of line: they press PLAY again
         self.assertEqual([e['error'] for e in self.logs if e.get('mm') == 'start failed'], ['game server failed to start'])
 
-    @unittest.expectedFailure
     async def test_matches_never_outnumber_the_free_servers(self):
-        # bug: tick() only checks that some port is free; matches in their accept phase hold none, see report
+        # a match in its accept dialog holds a server too, so no more matches form than there are servers (review M2)
         self.servers([P1])
         self.matchmaker(size=2)
         await self.queue(*'abcd')   # four players press PLAY at once; one server
@@ -481,9 +483,8 @@ class Capacity(MatchmakerCase):
         await self.mm.tick()
         self.assertEqual(self.statuses('abcd'), {'a': 'Matched', 'b': 'Matched', 'c': 'Queued', 'd': 'Queued'})
 
-    @unittest.expectedFailure
     async def test_two_servers_take_two_matches_not_three(self):
-        # bug: as above, in the live shape (standby + one free port): the third match gets no server, see report
+        # as above, in the live shape (standby + one free port): no third match forms (review M2)
         self.servers([P1, P2], standby=1)
         self.plant(P1)
         self.matchmaker(size=2)
@@ -492,9 +493,8 @@ class Capacity(MatchmakerCase):
             await self.mm.tick()
         self.assertEqual(self.statuses('ef'), {'e': 'Queued', 'f': 'Queued'})
 
-    @unittest.expectedFailure
     async def test_a_match_that_finds_no_server_goes_back_in_line(self):
-        # bug: start() handles "no free game server slots" like a boot failure: the players lose their place, see report
+        # a lobby took the last server during the accept dialog: the players go back in line with their place (review M2)
         self.servers([P1])
         self.matchmaker(size=2)
         await self.queue(*'abc')
@@ -505,9 +505,8 @@ class Capacity(MatchmakerCase):
         await self.until(lambda: not self.mm.matches)
         self.assertEqual(({u: self.place(u) for u in 'ab'}, self.statuses('ab')), (places, {'a': 'Queued', 'b': 'Queued'}))
 
-    @unittest.expectedFailure
     async def test_a_server_booted_for_a_match_everyone_left_is_not_kept_for_it(self):
-        # bug: start() hands the server to the match even when all its players left during the boot, see report
+        # all its players left during the boot: the server isn't kept for nobody (review M2)
         hosts = self.servers([P1])
         self.matchmaker(size=2)
         await self.queue('a', 'b')
@@ -519,9 +518,8 @@ class Capacity(MatchmakerCase):
         await self.until(lambda: not self.mm.matches)
         self.assertEqual([h.session_id for h in hosts.hosts.values() if h.session_id], [])
 
-    @unittest.expectedFailure
     async def test_an_idle_standby_server_is_free_for_a_match(self):
-        # bug: tick() counts free ports, and an idle standby holds its port, see report
+        # an idle standby is a free server for a match, not a busy slot (review M1)
         self.servers([P1, P2])
         self.plant(P1, session='lobby')
         self.plant(P2)   # the booted standby, idle

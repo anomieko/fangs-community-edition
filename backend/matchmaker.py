@@ -33,6 +33,7 @@ import asyncio, base64, json, random, time, uuid
 from aiohttp import web, WSMsgType
 
 import allocator, ranked
+from hosts import NoFreeSlot
 
 AUTH_PREFIX = 'Bearer secret-token:accelbyte/'
 STARTING_EXPIRY_MS = 240_000   # keeps the accept dialog open while the game server boots
@@ -94,6 +95,7 @@ class Match:
         self.accepted = set()
         self.deadline = time.time() + accept_secs + 2   # the client rejects by itself at accept_secs
         self.starting = False
+        self.allocating = False                 # asked the host manager for its server (which counts it from then)
 
 
 class Matchmaker:
@@ -254,8 +256,12 @@ class Matchmaker:
             return
         m.accepted.add(uid)
         left = max(0, int((m.deadline - 2 - time.time()) * 1000))
-        for p in m.players:
+        for p in list(m.players):
+            if self.matches.get(mid) is not m:   # cancelled while we announced it: its players are told already
+                return
             await self.status(p, 'Accepted', match={'id': m.id, 'accepted': len(m.accepted), 'expiresInMillis': left})
+        if self.matches.get(mid) is not m or m.starting:
+            return
         if m.accepted >= set(m.players):
             m.starting = True
             asyncio.create_task(self.start(m))
@@ -281,13 +287,25 @@ class Matchmaker:
             match = {'size': len(m.players)}
             if (game_map := self.pick_map('RankedMaps' if m.ranked else 'CasualMaps')):
                 match.update(map=game_map['Map'], map_name=game_map.get('Name', game_map['Map']))
+            m.allocating = True
             host = await self.app['hosts'].allocate(m.id, match=match)
-        except Exception as e:  # noqa: BLE001 - tell the players instead of leaving them waiting
+        except NoFreeSlot as e:   # a lobby took the last server meanwhile: back in line, keeping their place
+            self.log('start failed', match=m.id, error=str(e))
+            for t in m.tickets:                           # without those who left while it was starting
+                t.joined = [p for p in t.joined if p in m.players]
+            m.tickets = [t for t in m.tickets if t.joined]
+            await self.cancel(m, drop=set(), reason='no free game server')
+            return
+        except Exception as e:  # noqa: BLE001 - the server failed to start: tell the players instead of leaving them waiting
             self.log('start failed', match=m.id, error=str(e))
             self.matches.pop(m.id, None)
             for p in m.players:
                 self.match_of.pop(p, None)
                 await self.status(p, 'Idle', id=p)
+            return
+        if not m.players:   # everyone left while it booted: don't keep a server for nobody
+            self.matches.pop(m.id, None)
+            await self.app['hosts'].stop(host, 'everyone left before the match started')
             return
         address = f"{self.app['cfg'].public_ip}:{host.port}"
         if m.ranked:
@@ -313,8 +331,8 @@ class Matchmaker:
         now = time.time()
         for m in [m for m in self.matches.values() if not m.starting and now > m.deadline]:
             await self.cancel(m, drop=set(m.players) - m.accepted, reason='not accepted in time')
-        if not self.app['hosts'].free_ports():
-            return   # all game server slots busy: keep everyone queued
+        if self.free_servers() <= 0:
+            return   # every game server is taken or promised to a match: keep everyone queued
         m = self.casual_match(now) or self.ranked_match(now)
         if m is None:
             return
@@ -325,8 +343,16 @@ class Matchmaker:
                 self.ticket_of.pop(p, None)
         for p in m.players:
             self.match_of[p] = m.id
+        for p in m.players:
             await self.status(p, 'Matched', match={'id': m.id, 'expiresInMillis': self.accept_secs * 1000})
         self.log('matched', match=m.id, players=m.players, teams=m.team, **({'ranked': m.ranked} if m.ranked else {}))
+
+    def free_servers(self):
+        """Game servers a new match could get: what the host manager can still serve (HostManager.capacity), less
+        the matches that hold none yet. A match is counted until it asks for its server, then the host manager counts
+        it, so more matches never form than there are servers (with a small population, queued players wait for the
+        next server instead of being matched into a game that can't start)."""
+        return self.app['hosts'].capacity() - sum(1 for m in self.matches.values() if not m.allocating)
 
     def casual_match(self, now):
         """First come, first served: the oldest tickets that fill a game (or fewer after `wait`)."""
