@@ -39,7 +39,18 @@ Current deploy: `deploy-2026-10-15-0317` (`d06573a`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing.
+1. **Ranked: skill-based matchmaking and rating** (`6a0baa9`, 15 Oct; `docs/recon/ranked.md`). The game's
+   Ranked tile (unlocks at 10 wins, parties of up to 2) now opens its own queue: teams chosen and balanced by a
+   TrueSkill-style Gaussian team rating with party offsets, ported from the user's matchmaking research
+   (`backend/skill.py`, `allocator.py`, `ranked.py`, Ranked/Casual split in `matchmaker.py`). Only Ranked games change
+   the rating; the profile's rank points and the leaderboard show it; everyone starts fresh (1500 / 450, 750 points).
+   Casual is unchanged (first come, no rating); custom lobbies have no rating any more. Tests: `tools/test/test_ranked.py`
+   (the research's rating examples and 71 queue fixtures reproduce exactly; gate oracle 2v2-4v4; 24-player community
+   simulation; CPU), `tools/test/test_ranked_queue.py` (queues, accept, settlement, voids, parties), and
+   `tools/run/test_ranked.sh`: two real clients, Ranked tile → draft hero select → match → result → ratings (passed).
+   The server runs `--ranked-widen-speed 2` (in a 24-player simulation the research schedule's fairness at a
+   ~2.5 min median wait instead of ~4.5 min) and `--ranked-size` 8 (4v4). Open: the end screen's rank
+   change (after Continue) unchecked; a matched player who never joins can stall the 16 s draft rounds (untested).
 
 ## In progress
 
@@ -104,9 +115,13 @@ Nothing.
 - Capacity: 2 game servers (RAM). Each Training session takes a whole server; when both are busy, creating a
   lobby fails. A server boots in 20-25 s but the client gives up after ~18 s, so a first try without a ready
   standby can fail (the retry then works). Idea: run Training on the player's own PC.
-- PLAY needs 8 queued players; the server can lower it (`--match-size`) if the group prefers.
+- PLAY needs 8 queued players; the server can lower it (`--match-size`) if the group prefers. Ranked likewise
+  (`--ranked-size`, even), and it waits for a fair game: a player far above everyone queued can wait indefinitely.
 
 ## Decisions
+
+- Ranked uses skill ratings; Casual stays quick matches without a rating, since the population is small (user,
+  15 Oct). Custom lobbies have no rating either. The server runs `--ranked-widen-speed 2` (user, 15 Oct).
 
 - Deploys: ask the user every time; never while people play (`server/deploy.sh` also refuses then).
 - Load tests may use the VPS's game slots when nobody plays (user, 14 Oct); no deploys/restarts from tests.

@@ -15,7 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Server only (no player update). Ranked ratings start fresh for everyone (750 rank points); the old ratings from casual
+and custom games are no longer shown, and the leaderboard lists only players with a Ranked game.
+
+| Change | Commits | Off switch |
+|---|---|---|
+| Ranked: the game's Ranked tile (10 wins, parties of up to 2) opens a skill-based queue: teams chosen and balanced by a TrueSkill-style rating (`docs/recon/ranked.md`), the game's own draft hero select (16 s per round). Only Ranked changes the rating, rank points and leaderboard; Casual and custom games have none. The server runs `--ranked-widen-speed 2` (limits widen twice as fast as the research schedule) and `--ranked-size` 8 | `6a0baa9` | `RANKED = False` in `backend/seed/make_seed.py` hides the tile; revert the commit for the old casual ratings |
 
 ## deploy-2026-10-15-0317 (`d06573a`, Feb 2023 build)
 
