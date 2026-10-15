@@ -35,6 +35,7 @@ game regression (`tools/run/test_lobby.sh`, `test_queue.sh`, `test_social.sh`, `
 | Second review of the above: a player may still add or remove themselves in a lobby (rejoining a started custom match needs it); the lobby lookup lists the newest lobby first; a watcher error no longer ends a live match (the server is stopped when it exits); a request that gives up leaves its server claimable; a 500 also prints its full traceback | `645086d` | none |
 | Match results: each player's history and levels change all at once or not at all; a record that can't be read costs only that player the match (it used to stop the update halfway, the rest of the players got nothing) | `d34da0b` | none |
 | A Ranked game whose server stops without a result (crash, nobody came) releases its roster at once | `d985523` | none |
+| Ranked fixes from a review: a player who quits mid-match still counts for their team (quitting can't void a lost game); a game where a matched player never joined is void; rank points no longer drop by hundreds when the rating reopens a player's uncertainty; a party member in the other mode stops the party; `--ranked-size` only 2/4/6/8 (`docs/recon/ranked.md`) | `d764f5f` | revert the commit |
 
 ## deploy-2026-10-15-1714 (`09c27b1`, Feb 2023 build)
 
