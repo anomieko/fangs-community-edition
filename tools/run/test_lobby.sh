@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # End-to-end test: backend + 2 GPU-rendered headless clients. alice creates a custom lobby,
-# bob finds it in the lobby browser and joins. Logs end up in work/logs/.
+# bob finds it in the lobby browser and joins. Logs end up in work/logs/. Own backend data and game-server directory
+# (work/run/lobby-*), so local play is untouched.
+# Usage: CLIENT_DIR=clients/<build> tools/run/test_lobby.sh
 set -u
-cd "$(dirname "$0")/../.."
-rm -rf work/hosts; rm -f work/logs/backend.jsonl backend/data/store.json
+cd "$(dirname "$0")/../.." || exit 1
+R=lobby
+rm -rf work/run/$R-hosts work/run/$R-store.json
 A=work/run/alice/MOBA/Binaries/Win64/fangsctl_cmd.txt; B=work/run/bob/MOBA/Binaries/Win64/fangsctl_cmd.txt
 (
   sleep 40
@@ -27,6 +30,8 @@ A=work/run/alice/MOBA/Binaries/Win64/fangsctl_cmd.txt; B=work/run/bob/MOBA/Binar
   sleep 60
   echo "$WHERE" >> $A; echo "$WHERE" >> $B
 ) &
-UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 tools/run/headless.sh "${DURATION:-200}" "${CLIENT_DIR:-clients/playtest-main_v0_0_444}" \
+UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
+  BACKEND_ARGS="--data $PWD/work/run/$R-store.json --instances $PWD/work/run/$R-hosts" \
+  tools/run/headless.sh "${DURATION:-200}" "${CLIENT_DIR:-clients/playtest-main_v0_0_444}" \
   -- alice:0:"-TestUser=alice -TestPass=x" -- bob:3:"-TestUser=bob -TestPass=x" 2>&1 | grep -v Segmentation
 wait

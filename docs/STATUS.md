@@ -52,6 +52,10 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
 
 ## Gotchas learned
 
+- Every `tools/run/test_*.sh` runs its backend on its own data and game-server directories (`work/run/<run>-*`, via
+  `BACKEND_ARGS`) and deletes only those. Never let a test use the backend's defaults (`backend/data/store.json`,
+  `work/hosts`): those are local play's (`test_lobby.sh` and `test_solo.sh` did until 15 Oct and deleted them).
+
 - Game-target exe can't `-server`; "dedicated" = local player removed + listen server. Its
   `IsDedicatedServer()` is false, so DS-only BP init is replicated in FangsHost.
 - Server SDK settings are only loaded from config in Server builds → set via
