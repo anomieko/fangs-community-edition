@@ -242,7 +242,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         await self.until(lambda: hm._idle() and not hm._booting, 'next standby ready')
         self.assertEqual(hm._idle()[0].port, PORT + 1)
 
-    @unittest.expectedFailure  # bug: a standby claimed as soon as it is ready is never replaced, see report
+    # a bug until the review sprint fixed it: a standby claimed as soon as it is ready is never replaced
     async def test_standby_claimed_the_moment_it_is_ready_is_replaced(self):
         hm = self.manager(ports=2, standby=1)
         hm.replenish()
@@ -281,7 +281,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertIsNot(a, b)
         self.assertEqual((a.session_id, b.session_id), ('a', 'b'))
 
-    @unittest.expectedFailure  # bug: a server allocate() boots for itself is claimable by another once ready, see report
+    # a bug until the review sprint fixed it: a server allocate() boots for itself is claimable by another once ready
     async def test_server_booted_for_one_allocate_is_not_claimed_by_another(self):
         hm = self.manager(ports=2)
         first = asyncio.create_task(hm.allocate('a'))
@@ -297,7 +297,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         b = await other[0]
         self.assertIsNot(a, b, f'both lobbies got {a.id} (its session: {a.session_id})')
 
-    @unittest.expectedFailure  # bug: allocate() waiting for a port being freed loses it to a new standby (H3), see report
+    # a bug until the review sprint fixed it: allocate() waiting for a port being freed loses it to a new standby (H3)
     async def test_allocate_waiting_for_a_releasing_port_gets_a_server(self):
         hm = self.manager(standby=1)
         hm.run_script = self.stubborn()   # its port stays taken until stop() kills it
@@ -353,7 +353,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.events('starting')), 2)
         self.assertEqual((hm.hosts, hm._releasing, hm.free_ports()), ({}, set(), [PORT]))
 
-    @unittest.expectedFailure  # bug: a standby whose boots all failed is not tried again (H3), see report
+    # a bug until the review sprint fixed it: a standby whose boots all failed is not tried again (H3)
     async def test_standby_that_failed_to_boot_is_tried_again_later(self):
         self.mode('die')
         hm = self.manager(standby=1, attempts=2)
@@ -363,7 +363,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.clock.advance(600)
         await self.until(lambda: hm._idle(), 'a standby again', timeout=2)
 
-    @unittest.expectedFailure  # bug: a server whose process can't be started keeps its port forever (H3), see report
+    # a bug until the review sprint fixed it: a server whose process can't be started keeps its port forever (H3)
     async def test_server_that_cannot_be_launched_frees_its_port(self):
         hm = self.manager()
         hm.run_script = str(self.tmp / 'missing.sh')
@@ -380,7 +380,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertEqual([p.returncode for p in self.aio.procs], [-signal.SIGTERM] * 2)
         self.assert_clean(hm)
 
-    @unittest.expectedFailure  # bug: a ready timeout leaves _ready_or_exit's ready.wait() task pending (H3), see report
+    # a bug until the review sprint fixed it: a ready timeout leaves _ready_or_exit's ready.wait() task pending (H3)
     async def test_ready_timeout_leaves_no_task_behind(self):
         self.mode('hang')
         hm = self.manager(ready_timeout=0.3, attempts=1)
@@ -437,7 +437,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         await self.until(lambda: hm._idle() and hm._idle()[0] is not standby and not hm._booting, 'new standby')
         self.assertEqual(self.reasons(), ['process exited (3)'])
 
-    @unittest.expectedFailure  # bug: a watcher that raises leaves its server running, port taken (H1), see report
+    # a bug until the review sprint fixed it: a watcher that raises leaves its server running, port taken (H1)
     async def test_server_whose_watcher_failed_is_still_stopped(self):
         hm = self.manager()
         host = await hm.allocate('lobby')
@@ -461,7 +461,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.stopped, [host])
         self.assert_clean(hm)
 
-    @unittest.expectedFailure  # bug: stop() leaves the status file; deploy.sh counts its players (H4), see report
+    # a bug until the review sprint fixed it: stop() leaves the status file; deploy.sh counts its players (H4)
     async def test_stopped_server_leaves_no_status_behind(self):
         hm = self.manager()
         host = await self.playing(hm)
@@ -518,7 +518,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         await hm.stop(host, 'test')
         self.assertEqual(len(self.results), 1)
 
-    @unittest.expectedFailure  # bug: the old server's result marks the new server's match as over (H3), see report
+    # a bug until the review sprint fixed it: the old server's result marks the new server's match as over (H3)
     async def test_result_left_by_a_dead_server_does_not_end_the_next_servers_lobby(self):
         hm = self.manager(post_match=60)
         self.result(f'host-{PORT}', {'winning_team': 1})
@@ -656,7 +656,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.reasons(), [])
         self.assert_clean(hm, live=[a])
 
-    @unittest.expectedFailure  # bug: a match empty 20 s (still loading) is reclaimed despite idle_grace (H5), see report
+    # a bug until the review sprint fixed it: a match empty 20 s (still loading) is reclaimed despite idle_grace (H5)
     async def test_full_slots_never_reclaim_a_match_within_idle_grace(self):
         hm = self.manager(lobby_grace=20, idle_grace=180)
         b = await self.playing(hm, 'b', game_map=ARENA, launched=True)
@@ -680,7 +680,7 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.events('starting')), 2)
         self.assert_clean(hm)
 
-    @unittest.expectedFailure  # bug: a boot under way when the backend shuts down starts another server (H3), see report
+    # a bug until the review sprint fixed it: a boot under way when the backend shuts down starts another server (H3)
     async def test_shutdown_during_a_boot_leaves_no_server_running(self):
         self.mode('hang')
         hm = self.manager(ports=2, standby=1, attempts=2)

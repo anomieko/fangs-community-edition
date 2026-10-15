@@ -27,6 +27,7 @@ class Host:
         self.perf_logged = 0.0
         self.perf = None         # FangsHost heartbeats since the last perf line (see HostManager._perf)
         self.match_over = None   # when its match's result arrived: no longer listed or joinable, stopped soon after
+        self.reserved = False    # booted by allocate() for its own request: never handed to another one as idle
 
     @property
     def log_path(self):
@@ -56,6 +57,7 @@ class HostManager:
         self.ready_timeout, self.idle_grace, self.unused_timeout = ready_timeout, idle_grace, unused_timeout
         self.lobby_grace, self.post_match = lobby_grace, post_match
         self.standby, self.attempts = standby, attempts
+        self.standby_retry = 60  # seconds before a standby whose boots all failed is tried again
         self.hosts = {}          # id -> Host
         self.on_stopped = []     # callbacks(host)
         self.on_result = []      # callbacks(host, result): a finished match (FangsHost's fangshost_result-*.json)
@@ -63,6 +65,13 @@ class HostManager:
         self._allocating = 0     # allocate() calls still waiting for their server
         self._releasing = set()  # ports of stopped servers whose process hasn't exited yet
         self._closing = False
+        self._tasks = set()      # background tasks (asyncio keeps only weak references to them)
+
+    def _background(self, coro):
+        task = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
 
     def free_ports(self):
         used = {h.port for h in self.hosts.values()} | self._releasing
@@ -73,7 +82,7 @@ class HostManager:
         return self.hosts.get(host.id) is host
 
     def _idle(self):
-        return [h for h in self.hosts.values() if h.session_id is None and h.ready.is_set()]
+        return [h for h in self.hosts.values() if h.session_id is None and h.ready.is_set() and not h.reserved]
 
     def capacity(self):
         """How many more games could get a server now: free ports, servers nobody has claimed (an idle or booting
@@ -94,10 +103,14 @@ class HostManager:
             if host is None:
                 if not self.free_ports():
                     await self._reclaim()
-                host = await self._start()
+                try:
+                    host = await self._start()
+                except NoFreeSlot:   # the port we waited for went to the standby stop() tops up: wait for that one
+                    if (host := await self._claim_idle(session_id)) is None:
+                        raise
         finally:
             self._allocating -= 1
-        host.session_id, host.started = session_id, time.time()
+        host.session_id, host.started, host.reserved = session_id, time.time(), False
         if match:
             (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_match.json').write_text(json.dumps(match))
         self.replenish()
@@ -119,22 +132,26 @@ class HostManager:
             await asyncio.sleep(0.5)
 
     def empty_for(self, host, now=None):
-        """Seconds an assigned server has been without players (None if it has players or isn't assigned).
-        A new server gets 90 s for its players to arrive."""
+        """Seconds an assigned server has been empty past its grace (None if it has players or isn't assigned): the
+        same graces as _watch (a lobby `lobby_grace`, a match `idle_grace`: players are empty for a while when they
+        load the arena or reconnect). A new server gets 90 s for its players to arrive."""
         now = now or time.time()
-        if host.session_id is None or not host.ready.is_set() or host.status.get('players', 0):
+        st = host.status
+        if host.session_id is None or not host.ready.is_set() or st.get('players', 0):
             return None
-        # players drop out for a few seconds on the way from lobby to arena: give a server that had players
-        # 20 s before it counts as empty, a new one 90 s for its players to arrive
-        return now - (host.empty_since or now) - 20 if host.had_players else now - host.started - 90
+        if not host.had_players:
+            return now - host.started - 90
+        in_lobby = st.get('map', '').endswith('LE_Lobby_Map') and not st.get('launched')
+        return now - (host.empty_since or now) - (self.lobby_grace if in_lobby else self.idle_grace)
 
     async def _reclaim(self):
-        """Every slot is taken: stop the server that has been empty the longest, if any."""
+        """Every slot is taken: stop the server that has been empty the longest past its grace, if any."""
         now = time.time()
         empty = [(t, h) for h in self.hosts.values() if (t := self.empty_for(h, now)) is not None and t > 0]
         if empty:
-            t, host = max(empty, key=lambda e: e[0])
-            await self.stop(host, f'slot needed, empty for {t + 20:.0f} s' if host.had_players else 'slot needed, nobody came')
+            _, host = max(empty, key=lambda e: e[0])
+            await self.stop(host, f'slot needed, empty for {now - (host.empty_since or now):.0f} s' if host.had_players
+                            else 'slot needed, nobody came')
 
     def replenish(self):
         """Top up the idle standby servers (in the background)."""
@@ -143,24 +160,34 @@ class HostManager:
         missing = self.standby - len(self._idle()) - self._booting
         for _ in range(max(0, min(missing, len(self.free_ports())))):
             self._booting += 1
-            asyncio.create_task(self._boot_standby())
+            self._background(self._boot_standby())
 
     async def _boot_standby(self):
         try:
             if self.free_ports():                      # a lobby may have taken the slot meanwhile
                 await self._start(standby=True)
-        except Exception as e:  # noqa: BLE001 - logged; the next replenish tries again
+        except Exception as e:  # noqa: BLE001 - logged, and tried again after standby_retry
             self.log({'host': 'standby', 'event': 'start failed', 'error': str(e)})
+            if not self._closing:
+                self._background(self._retry_standby())
+            return
         finally:
             self._booting -= 1
+        self.replenish()   # it may have been claimed the moment it was ready, while replenish still counted it booting
+
+    async def _retry_standby(self):
+        await asyncio.sleep(self.standby_retry)
+        self.replenish()
 
     async def _start(self, standby=False):
         for attempt in range(1, self.attempts + 1):
+            if self._closing:
+                raise RuntimeError('backend shutting down')
             ports = await self._free_port_soon()
             if not ports:
                 raise NoFreeSlot('no free game server slots')
             port = ports[0]
-            host = await self._spawn(port)
+            host = await self._spawn(port, reserved=not standby)
             try:
                 await asyncio.wait_for(self._ready_or_exit(host), self.ready_timeout)
             except asyncio.TimeoutError:
@@ -201,28 +228,45 @@ class HostManager:
     async def _ready_or_exit(self, host):
         waiter = asyncio.create_task(host.ready.wait())
         exited = asyncio.create_task(host.proc.wait())
-        await asyncio.wait({waiter, exited}, return_when=asyncio.FIRST_COMPLETED)
-        for t in (waiter, exited):
-            t.cancel()
+        try:
+            await asyncio.wait({waiter, exited}, return_when=asyncio.FIRST_COMPLETED)
+        finally:   # also when the ready timeout cancels us
+            for t in (waiter, exited):
+                t.cancel()
 
-    async def _spawn(self, port):
+    async def _spawn(self, port, reserved=False):
         hid = f'host-{port}'
         host = Host(hid, port, self.inst_root / hid)
+        host.reserved = reserved
         self.hosts[hid] = host
         for stale in ('fangshost_match.json', 'fangshost_status.json'):   # left by the previous server here
             (host.inst / 'MOBA' / 'Binaries' / 'Win64' / stale).unlink(missing_ok=True)
         self.collect_results(host)   # a match a previous server here finished just before it died
+        host.match_over = None       # (that match was the old server's, not this one's)
         env = dict(os.environ, FANGS_BACKEND=self.backend_addr)
-        self.inst_root.mkdir(parents=True, exist_ok=True)
-        logf = open(self.inst_root / f'{hid}.stdout', 'w')
-        host.proc = await asyncio.create_subprocess_exec(
-            self.run_script, self.game_dir, str(host.inst), str(port), f'-FangsData={self.data_dir}',
-            stdout=logf, stderr=asyncio.subprocess.STDOUT, env=env, start_new_session=True)
+        try:
+            self.inst_root.mkdir(parents=True, exist_ok=True)
+            with open(self.inst_root / f'{hid}.stdout', 'w') as logf:   # the server keeps its own copy of the fd
+                host.proc = await asyncio.create_subprocess_exec(
+                    self.run_script, self.game_dir, str(host.inst), str(port), f'-FangsData={self.data_dir}',
+                    stdout=logf, stderr=asyncio.subprocess.STDOUT, env=env, start_new_session=True)
+        except BaseException:   # not launched: the slot is free again
+            del self.hosts[hid]
+            raise
         self.log({'host': hid, 'event': 'starting', 'port': port})
-        asyncio.create_task(self._watch(host))
+        self._background(self._watch(host))
         return host
 
     async def _watch(self, host):
+        """Decides when a running server ends. Whatever goes wrong in here ends in stop() too: a server is never left
+        running unwatched."""
+        try:
+            await self._watch_until_stopped(host)
+        except Exception as e:  # noqa: BLE001 - logged; the server is stopped like any other
+            self.log({'host': host.id, 'event': 'watcher failed', 'error': repr(e)})
+            await self.stop(host, 'watcher failed')
+
+    async def _watch_until_stopped(self, host):
         needle = READY_LINE.format(port=host.port)
         while host.proc.returncode is None:
             await asyncio.sleep(2)
@@ -303,6 +347,8 @@ class HostManager:
                     await host.proc.wait()
         finally:
             self._releasing.discard(host.port)
+        # the heartbeat of a stopped server must not count as players (deploy.sh's busy check reads these files)
+        (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_status.json').unlink(missing_ok=True)
         self.collect_results(host)
         for cb in self.on_stopped:
             cb(host)
