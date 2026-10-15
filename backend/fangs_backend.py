@@ -735,6 +735,13 @@ def ingest_match(store, result, log):
 # ---------------------------------------------------------------- Session browser (custom lobbies)
 # Sessions live in memory; a session becomes joinable once its game host is up (see lobby createDSRequest).
 
+def lobby_open(host):
+    """A custom lobby can be listed and joined while its server is on the lobby map and its match hasn't started
+    (or finished: a server whose match is over stays on the arena map until it is stopped)."""
+    st = host.status
+    return st.get('map', '').endswith('LE_Lobby_Map') and not st.get('launched') and host.match_over is None
+
+
 def session_view(sess):
     host = sess.get('_host')
     if host is not None:  # live player count from the host's FangsHost heartbeat
@@ -772,7 +779,8 @@ async def session_list(request):
     q = request.query
     mode = q.get('game_mode', '').lower()
     out = [session_view(s) for s in request.app['sessions'].values()
-           if s['joinable'] and s['session_type'] == q.get('session_type', s['session_type'])
+           if s['joinable'] and s['_host'] is not None and lobby_open(s['_host'])
+           and s['session_type'] == q.get('session_type', s['session_type'])
            and (not mode or s['game_session_setting'].get('mode', '').lower() == mode)]
     return web.json_response({'sessions': out, 'pagination': {'first': '', 'last': '', 'next': '', 'previous': ''}})
 
@@ -792,7 +800,14 @@ async def session_one(request):
         return err(404, 9014, 'session not found')
     sub, m = request.match_info['sub'] or '', request.method
     if sub == '/join':
-        return web.json_response(session_view(sess)) if sess['joinable'] else err(409, 9015, 'session not ready')
+        if not sess['joinable']:
+            return err(409, 9015, 'session not ready')
+        host = sess['_host']
+        # an open lobby, or back into a running match by one of its players; never a finished match
+        if host is not None and not lobby_open(host) and (host.match_over is not None
+                                                          or caller(request).get('user_id') not in sess['players']):
+            return err(409, 9015, 'match already started')
+        return web.json_response(session_view(sess))
     if sub == '/player' and m == 'POST':
         body = await request.json()
         lst = sess['spectators'] if body.get('as_spectator') else sess['players']
@@ -973,7 +988,7 @@ async def zeuz_list(request):
     lines = []
     for sid, s in app['zeuz'].items():
         st, conf = s['host'].status, s['config']
-        if not st.get('map', '').endswith('LE_Lobby_Map'):      # gone to the arena (or gone)
+        if not lobby_open(s['host']):                           # gone to the arena, match over (or gone)
             continue
         players, max_players = int(st.get('players', 0)), int(conf.get('max_players', '8') or 8)
         if players >= max_players or (s['host'].had_players and not players):   # full, or abandoned
