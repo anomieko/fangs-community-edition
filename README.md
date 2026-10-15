@@ -22,11 +22,12 @@ built and played the game can run private custom matches again.
 
 ## Status
 
-Players can queue for matches (PLAY: a simple matchmaker puts whoever is queueing into a game, parties
-together) or create and join custom lobbies, pick heroes and play on a self-hosted server. Friends, parties,
-chat, match history, levels and a leaderboard work; all heroes and cosmetics are unlocked.
+Players can queue for matches (PLAY: Casual starts full 4v4 games, parties together; Ranked builds fair teams
+from skill ratings) or create and join custom lobbies, pick heroes and play on a self-hosted server. Friends,
+parties, chat, match history, levels and a leaderboard work; all heroes and cosmetics are unlocked.
 Target game build: **15 February 2023 (Steam build 10554626)**.
-See **[docs/STATUS.md](docs/STATUS.md)** and **[docs/SERVER.md](docs/SERVER.md)**.
+See **[docs/STATUS.md](docs/STATUS.md)** and **[docs/SERVER.md](docs/SERVER.md)**. How the code fits together:
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**; backend tests: `python3 -m unittest discover -s backend/tests`.
 
 ## Playing (Windows)
 
