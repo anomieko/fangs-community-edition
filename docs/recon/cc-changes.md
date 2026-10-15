@@ -3,7 +3,8 @@
 Players report that a patch between the Aug 2022 build (`alpha7.0.7.51`) and the Feb 2023 build we run
 (`Playtest021523v1_v0_0_02`) turned several crowd-control (CC) effects into roots and changed durations. This file
 lists every such change, with the Dec 2023 playtest (`main_v0_0_444`) as "did the developers keep it", and a plan
-to revert them on our game server. Research only (2026-10-15): nothing here is implemented.
+to revert them. The revert of the root conversions and Somnia's ult lock is built as a patch pak; see "The revert as
+built" below.
 
 **How it was compared.**
 - Every Blueprint's pseudocode was diffed (Aug `work/shard/bp-aug`, Feb `work/bp-2023-02-15`, Dec `work/bp`).
@@ -277,7 +278,57 @@ E Spear Throw is unchanged: the wall pin is a stun in every build, although the 
 | All root-motion dashes and displacements | ~25 abilities (`AbilityTask_ApplyRootMotionJumpForce`) | `VelocityOnFinishMode` 1 → 0 (bytecode constant) | stop dead at the end | keep momentum | 0 |
 | Cast tasks | `MOBAWaitCastTime` callers | new `SubtractRoundTripTime` = true (netcode compensation) | – | most abilities | – |
 
-## Reverting on our server
+## The revert as built: a patch pak (15 Oct)
+
+**The user's decisions (15 Oct):**
+- Revert the stun/charm → root conversions and Somnia's ult lock. Duration changes elsewhere stay as they are for now.
+- The changes must be permanent once validated, so the game's own data is changed and runtime hooks are not used.
+- Nothing is deployed before the user has tested it locally.
+
+How it is done: `tools/patch/patches/ccrevert.json`, built into `FangsCE_P.pak` for players and servers alike
+(`docs/PATCHING.md`). The A–D mechanisms below were the server-only plan and are not used.
+
+| Change | Edit in the asset |
+|---|---|
+| Somnia, Allure | call `MakeRootEffectSpec` → `MakeCharmEffectSpec`; `BaseCharmDuration`/`CharmDuration` 1.25 → 0.75; Glamorfume `CCStackDurationIncrease` 0.035 → 0.05 |
+| Somnia, ult | `PreCastLock`: `LockAbilities(0.0)` → `LockAbilities(0.5)`, so the lock covers the 0.5 s cast (`CastTime`), not the tether |
+| Brutus, Earthquake centre | → `MakeStunEffectSpec`; `CenterStunRadius` 350 → 150 |
+| Ethryn, Knightseeker wall | → `MakeStunEffectSpec`; `Stun Duration` 1.5 → 0.75 |
+| Fiorne, Earthbreaker Pommel | → `MakeStunEffectSpec`; `DHRootDuration` 1.5 → 1.0 |
+| Astrada, Flame Cage | → `MakeStunEffectSpec`; `StunEffectClass` `BP_GE_Root_C` → `BP_GE_Stun_C` (the cage's hit effects use it too); `StunDuration` 1.25 → 1.0; `CageDuration` 2 → 3 |
+| Astrada, Repulsing Scepter | → `MakeStunEffectSpec`; `RMBKnockbackItemStunDuration` 1.5 → 0.5 |
+| Zoey, Spirit Scratch | → `MakeStunEffectSpec` on all three hit paths; `Stun Duration` 1.3 → 0.9; the hit-extension heirloom path's target from Zoey herself to the enemy hit |
+| Rowan, Dourling Dive | → `MakeStunEffectSpec`; `StunDuration` 1.0 → 0.75 |
+| Rowan, Glade Slash (LMB) | both swings' `LockAbilities(0.0)` → `LockAbilities(0.01)`: no lock while LMB is held (Aug had none; Dec removed it) |
+
+**Tested** with `tools/run/test_patch.sh` (15 Oct): each run was done with the pak and once more without it as the
+control. The game server logs the effects on both heroes.
+
+| What | Control (Feb) | Patched |
+|---|---|---|
+| Patched class defaults loaded by the server, alice and bob | 0/11 | 11/11 |
+| Allure on Rowan | `BP_GE_Root` 1.3 s | `BP_GE_Charm` 0.75 s |
+| Dourling Dive on Brutus | `BP_GE_Root` 1.1 s | `BP_GE_Stun` 0.75 s |
+| Somnia's ult: `BP_GE_LockAbilities` on Somnia | 3.2 s | 0.5 s |
+| Rowan's LMB: `BP_GE_LockAbilities` on Rowan | 0.4 s | none |
+
+Earthquake's centre, Ethryn, Fiorne, Astrada and Zoey haven't been seen in a match yet. They use the same edits,
+and their values are loaded. The test's Earthquake only hit with the first tremor (0.25 s stun, unchanged).
+
+**Findings while building it:**
+- **The calls are by name.** Every `Make…EffectSpec` call is an `EX_VirtualFunction` on the library's default object,
+  not an import, so swapping root for stun only changes the called name.
+- **Zoey's hit-extension heirloom bug.** That path (new in Feb) applied the root to `self.Player`, which is Zoey
+  herself, and not to the enemy it had just damaged. Dec applies it to the enemy (`CallFunc_Array_Get_Item`). A
+  plain root → stun swap would have stunned Zoey, so the patch also retargets that call to the enemy, as in Dec.
+- **Ethryn's Vortex Pauldrons stays a root.** The Aug heirloom was a flip behind Ethryn plus a slow, and the flip code
+  is gone. A revert would leave an heirloom that does nothing extra: with the item, `HasVacuumItem` is set to false,
+  which picks the root branch, while without it the base slow applies.
+- **Somnia's other self-lock is unchanged.** `Activate Tether Lock` (a `TetherLockDuration` 2.5 s
+  `BP_GE_LockAbilities`) belongs to the heirloom `Item.BookMage.TetherLock` and is the same in all three builds.
+- **Petunia follows Allure's charm duration.** It charms again, now from Allure as well, for 0.75 s (Aug 0.5 s).
+
+## Reverting on our server (first plan, not used)
 
 All gameplay effects are made and applied on the game server: spec creation, projectile hits, GE application. A
 FangsHost-only change therefore changes what players get hit by.

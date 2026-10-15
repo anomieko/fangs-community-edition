@@ -52,6 +52,7 @@ whatever is missing.
 | Game servers | `server/run-host.sh` | Runs an unmodified game client headless under Wine as a dedicated lobby/match server (one per lobby). |
 | UE4SS mods | `tools/ue4ss/` | Small Lua mods for [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS): `FangsBoot` (player side: skip the dead Epic login, use username login), `FangsHost` (server side: dedicated-server setup and replacements for server-only code missing from the client build), `FangsCtl` (remote control for automated tests). |
 | Client config | `tools/run/config/Engine.ini.template` | User-level config that points the game at your backend. No game files are modified. |
+| Patch pak | `tools/patch/` | Gameplay changes to the game's own data (e.g. ability effects and numbers) as one extra pak that the game loads after its own. It is built from your game files at deploy, never committed (`docs/PATCHING.md`). |
 | Research tools | `tools/pak`, `tools/bpdump`, `tools/re` | Pak reader, Blueprint bytecode decompiler (built on [UAssetAPI](https://github.com/atenfyr/UAssetAPI)), and small x64 helpers used to understand the client. |
 | Notes | `docs/` | Findings about the client and the backend API it expects. |
 

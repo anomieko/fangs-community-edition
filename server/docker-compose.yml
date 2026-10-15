@@ -14,6 +14,7 @@ services:
       PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST to the address players connect to}
       FANGS_JOIN_CODE: ${FANGS_JOIN_CODE:-}
       HOST_PORTS: ${HOST_PORTS:-7777-7778}   # ~3 GB RAM per running game server
+      FANGS_PAKS: /downloads/overlay/MOBA/Content/Paks   # our patch pak, the same file players download
     volumes:
       - ${GAME_DIR:?set GAME_DIR to the FANGS install}:/game:ro
       - fangs-data:/data

@@ -7,7 +7,8 @@
 #
 # Each name gets its own game copy per build (work/play/<name>.<build>, reflink/hard-link view of the install)
 # and its own Wine prefix. Intro/background movies are removed from that copy: Wine's video decoding hangs on them.
-# Env: CLIENT_DIR (default clients/fangs-2022-08-26-b9396481), PLAY_HEADLESS=1 (off-screen, for tests).
+# Env: CLIENT_DIR (default clients/fangs-2022-08-26-b9396481), PLAY_HEADLESS=1 (off-screen, for tests),
+#      PATCHES="<patch> ..." | none: the patch paks of a local backend (default: the enabled ones; docs/PATCHING.md).
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 # Playing on a server: use the local game copy of the build that server runs (its file list names it)
@@ -38,11 +39,49 @@ fi
 name=${1:?usage: local.sh <name> | stop}
 [[ $name =~ ^[A-Za-z0-9_]{3,16}$ ]] || { echo "name: 3-16 letters/numbers/_" >&2; exit 1; }
 
+# Patch paks (docs/PATCHING.md), for the game copy and, with the local backend, for its game servers.
+# Local backend: PATCHES="<patch> ..." builds those (default: the enabled patches for this build; PATCHES=none: none).
+# On a server: the patch paks in the server's file list.
+if [[ -n ${SERVER:-} ]]; then
+  export FANGS_PAKS=$REPO/work/play/server-paks/$build; mkdir -p "$FANGS_PAKS"
+  python3 - "$SERVER" "${JOIN_CODE:-}" "$CLIENT_DIR" "$FANGS_PAKS" <<'PY' || echo "warning: couldn't get the server's patch paks" >&2
+import hashlib, json, os, sys, urllib.request
+server, code, game, paks = sys.argv[1:]
+base = f'http://{server}/download/{code}/'
+files = json.load(urllib.request.urlopen(base + 'manifest.json', timeout=10))['files']
+want = {f['path'].rsplit('/', 1)[1]: f for f in files if f['path'].startswith('MOBA/Content/Paks/')
+        and f['path'].endswith('.pak') and not os.path.exists(os.path.join(game, f['path']))}
+for name in os.listdir(paks):
+    if name.endswith('.pak') and name not in want:
+        os.remove(os.path.join(paks, name))
+for name, f in want.items():
+    dst = os.path.join(paks, name)
+    if os.path.exists(dst) and hashlib.sha256(open(dst, 'rb').read()).hexdigest() == f['sha256']:
+        continue
+    data = urllib.request.urlopen(base + 'files/' + f['path'], timeout=120).read()
+    if hashlib.sha256(data).hexdigest() != f['sha256']:
+        sys.exit(f'{name}: checksum mismatch')
+    open(dst, 'wb').write(data)
+    print(f'patch pak from the server: {name}')
+PY
+else
+  export FANGS_PAKS=$REPO/work/play/paks/$build; mkdir -p "$FANGS_PAKS"
+  if [[ ${PATCHES:-} == none ]]; then rm -f "$FANGS_PAKS"/*.pak
+  else OUT=$FANGS_PAKS/FangsCE_P.pak "$REPO/tools/patch/build.sh" "$CLIENT_DIR" ${PATCHES:-}
+  fi
+fi
+paksum() { { cat "$FANGS_PAKS"/*.pak 2>/dev/null || true; } | sha256sum | cut -c1-16; }
+
 if [[ -n ${SERVER:-} ]]; then
   backend=$SERVER
 else
   backend=127.0.0.1:8080
+  if backend_up && [[ "$(paksum)" != "$(cat "$REPO/work/play/backend.paks" 2>/dev/null)" ]]; then
+    echo "note: the patch paks changed since the local backend started; its standby game server still has the old" \
+         "ones. To be sure: tools/play/local.sh stop, then start again."
+  fi
   if ! backend_up; then
+    paksum > "$REPO/work/play/backend.paks"
     [[ -x $REPO/backend/.venv/bin/python ]] || { python3 -m venv "$REPO/backend/.venv"; "$REPO/backend/.venv/bin/pip" install -q aiohttp; }
     python3 "$REPO/backend/seed/make_seed.py" "$backend" >/dev/null
     [[ -d $REPO/work/wine/prefix ]] || WINEPREFIX=$REPO/work/wine/prefix WINEDEBUG=-all wineboot -i >/dev/null 2>&1
@@ -62,6 +101,7 @@ if [[ ! -e $inst/MOBA/Binaries/Win64/$exe ]]; then
   find "$inst/MOBA/Content/Movies" -name '*.mp4' -delete 2>/dev/null || true
 fi
 "$REPO/player/install-player-files.sh" "$inst" "$backend" >/dev/null
+"$REPO/server/install-paks.sh" "$CLIENT_DIR" "$inst"
 
 # own Wine prefix with DXVK (D3D11 -> Vulkan on your GPU)
 export WINEPREFIX=$inst.prefix WINEDEBUG=-all WINEDLLOVERRIDES="dwmapi,d3d11,dxgi,d3d10core=n,b"

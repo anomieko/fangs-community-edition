@@ -81,12 +81,26 @@ Nothing.
 5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
-6. **Revert the Feb 2023 CC changes** (players' request; the user picks the scope on 15 Oct): research done, nothing implemented
-   (`docs/recon/cc-changes.md`). Nine stuns/charms became roots (Somnia's Allure, Brutus' Earthquake, Ethryn,
-   Fiorne, Astrada, Zoey, Rowan), Somnia's ult locks her abilities for the whole tether, and many CC durations changed.
-   Plan: FangsHost-only (default overrides at match start, GE-class swap via native pre-hooks, deferred
-   `UnlockAbilities` for the ult). Next: the user picks which groups to revert; a 1-hour test that a UE4SS native
-   pre-hook can swap a parameter.
+6. **Revert the Feb 2023 CC changes** (players' request): **built and tested automatically, off** (`"enabled": false`).
+   - What it is: a patch pak, the first one (`tools/patch/patches/ccrevert.json`; process in `docs/PATCHING.md`,
+     details in `docs/recon/cc-changes.md`).
+   - What it reverts:
+     - Roots back to stuns: Brutus' Earthquake centre, Ethryn's Knightseeker wall hit, Fiorne's Earthbreaker
+       Pommel, Astrada's Flame Cage and Repulsing Scepter, Zoey's Spirit Scratch, Rowan's Dourling Dive.
+     - Somnia's Allure: a charm again.
+     - Each of these with its Aug duration.
+     - Somnia's ult locks abilities only during its 0.5 s cast.
+     - Rowan's LMB doesn't lock abilities.
+     - Ethryn's Vortex Pauldrons stays a root: its Aug flip is gone.
+   - Tested with `tools/run/test_patch.sh` (Somnia or Brutus vs Rowan, with the pak and without it as the control):
+     - The server and both clients load 11/11 patched values (control: 0/11).
+     - Allure charms for 0.75 s (control: roots for 1.3 s).
+     - Dourling Dive stuns for 0.75 s (control: roots for 1.1 s).
+     - Somnia's ability lock in her ult lasts 0.5 s (control: 3.2 s).
+     - Rowan's LMB doesn't lock (control: 0.4 s).
+   - Not seen in a match yet (same kinds of edits, values loaded): Earthquake's centre (the test's Earthquake only
+     hit with the first tremor), Ethryn, Fiorne, Astrada, Zoey.
+   - Next: the user tests it locally. Then `"enabled": true`, a CHANGELOG line and a deploy, with the user's OK.
 
 ## Known issues and small ideas
 
@@ -122,3 +136,10 @@ Nothing.
 - Unreleased heroes: separated from released ones, with a disclaimer.
 - Old Shard system (carry-and-turn-in, channeled Health Shrines): in, behind one switch, on by default (user, 14 Oct);
   the user tests it in multiplayer before it is deployed.
+- Gameplay changes to the game's own data are permanent and go into the patch pak, the same file for players and
+  servers (`docs/PATCHING.md`). Runtime hooks are not used for them (user, 15 Oct).
+- CC revert scope (user, 15 Oct):
+  - Reverted: the stun/charm → root conversions and Somnia's ult lock (plus Rowan's LMB lock, which the developers
+    removed again by Dec).
+  - Not reverted for now: the other CC duration changes.
+  - The user tests it locally before it is enabled and deployed.

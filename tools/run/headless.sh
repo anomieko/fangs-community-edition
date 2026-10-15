@@ -13,12 +13,14 @@
 #      GPU=1 renders on the real GPU, off-screen: gamescope --backend headless + DXVK prefix (work/wine/prefix-gpu).
 #      NOMOVIES=1 deletes the .mp4s from each instance copy (media playback crashes -nullrhi clients).
 #      SAVES=<dir> copies <dir>/*.sav into each instance's MOBA/Saved/SaveGames.
+#      FANGS_PAKS=<dir> puts the patch paks in <dir> into each instance and the game servers (docs/PATCHING.md).
 # Example:
 #   tools/run/headless.sh 120 clients/playtest-main_v0_0_444 \
 #     -- host:0:"LE_Lobby_Map?listen" -- c1:30:"127.0.0.1"
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 secs=$1; client=$(realpath "$2"); shift 2
+[[ -n ${FANGS_PAKS:-} ]] && export FANGS_PAKS=$(realpath "$FANGS_PAKS")
 [[ ${1:-} == -- ]] && shift
 export WINEPREFIX=$REPO/work/wine/prefix WINEDEBUG=-all
 [[ ${UE4SS:-0} == 1 ]] && export WINEDLLOVERRIDES="dwmapi=n,b"
@@ -52,6 +54,7 @@ nsfile=$(mktemp)
     name=${s%%:*}; rest=${s#*:}; delay=${rest%%:*}; margs=${rest#*:}
     dir=$REPO/work/run/$name
     rm -rf "$dir"; cp -a --reflink=always "$client" "$dir"
+    "$REPO/server/install-paks.sh" "$client" "$dir"   # FANGS_PAKS (game servers of RUN_BACKEND get them too)
     bin=$dir/MOBA/Binaries/Win64
     [[ ${NOMOVIES:-0} == 1 ]] && find "$dir/MOBA/Content/Movies" -name '*.mp4' -delete
     if [[ ${UE4SS:-0} == 1 ]]; then

@@ -1,13 +1,13 @@
 # original game installs — huge and proprietary; hashes are tracked instead
 /clients/*/
 # extracted / generated data
-/work/
+/work
 # third-party tool checkouts and builds
-/third_party/
+/third_party
 bin/
 obj/
 __pycache__/
-/backend/.venv/
+/backend/.venv
 /backend/data/
 /dist/
 # UE4SS zip copied in by server/deploy.sh for the Docker build
