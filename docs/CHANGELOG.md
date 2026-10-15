@@ -15,7 +15,19 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-15-2144 (`4f83b89`, Feb 2023 build)
+
+Deployed with the user's OK, forced (`FANGS_DEPLOY_FORCE=1`) with 8 players on: nothing server-side had changed since
+`deploy-2026-10-15-2104` (only `launcher/` and docs), so the image was rebuilt the same and the container kept running
+(same container, start time unchanged; compose: "Running"). Smoke test passed. The server serves the new launcher
+(its hash matches the signed file list).
+
 Launcher only: players' launchers update themselves on their next start.
+
+Then the public launcher on GitHub: release `launcher-4f83b89` (built by `launcher/release.sh` from this commit; no join
+code, server address or invite in it), now "latest", so the README's download link serves it; `launcher-1d34ff1` stays.
 
 | Change | Commits | Off switch |
 |---|---|---|
