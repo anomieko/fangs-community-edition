@@ -15,7 +15,11 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Server only.
+
+| Change | Commits | Off switch |
+|---|---|---|
+| Chat: team and all chat work in custom lobbies, hero select and matches (they were dropped unless the players were friends or in a party) | `1aaf6a5` | `LOBBY_CHAT = False` in `backend/social.py` |
 
 ## deploy-2026-10-15-0309 (`cfb453c`, Feb 2023 build)
 
