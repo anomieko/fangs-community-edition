@@ -15,6 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-15-1637 (`48efa57`, Feb 2023 build)
+
+Nobody online.
+
 Server only (no player update). Ranked ratings start fresh for everyone (750 rank points); the old ratings from casual
 and custom games are no longer shown, and the leaderboard lists only players with a Ranked game.
 
