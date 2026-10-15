@@ -162,6 +162,12 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
 
 ## Decisions
 
+- Next deploy (user, 15 Oct, through the coordinating session fangs-4a): merge into `main` in this order:
+  `ranked-fixes` → `install-ux` → `fast-download` → the review sprint's party fix. Then ONE headless regression covering all
+  four (test_lobby, test_queue, test_social, test_chat, test_ranked, NOSHOW=1 test_ranked, test_match, test_download,
+  one after another, never while the user plays on the dev machine), then ONE deploy with the user's OK at the time,
+  nobody playing, after the 16 Oct external review. BBR on the VPS goes in with that deploy, not before. The
+  party-of-one fix is part of this deploy.
 - Casual (PLAY) starts only full games (8 players); the early start stays off (`--match-wait` 0) (user, 15 Oct).
 - Trio custom mode removed (`ac76b9a`): the user's call (15 Oct).
 - The old `.bat` client (FangsCE.bat, unsigned updates over HTTP) is retired; `FangsCE.exe` is the only installer

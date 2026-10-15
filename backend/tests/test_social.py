@@ -363,8 +363,10 @@ class Parties(LobbyCase):
     async def test_invites_go_only_to_online_friends_outside_a_party(self):
         a, b, c, d, e = [await self.connect(n) for n in ('ann', 'ben', 'cat', 'dan', 'eve')]
         await self.befriend(a, b, c, d)
+        f = await self.connect('fay')
+        await self.befriend(b, f)
+        await self.make_party(b, f)                                # b is in a party with someone
         await a.request('partyCreateRequest')
-        await b.request('partyCreateRequest')                      # b is in a party of their own
         await self.drop(d)                                         # d is offline (even within the grace period)
         cant = str(social.ERR_CANT_INVITE)
         for who in (a, b, d, e):                                   # self, in a party, offline, not a friend
@@ -489,13 +491,49 @@ class Parties(LobbyCase):
         self.assertEqual(self.social.parties[first].members, [a.uid])
         self.assertEqual(self.social.party_id(b.uid), second)
 
-    async def test_one_party_at_a_time_and_an_invite_creates_one(self):
+    async def test_one_party_at_a_time(self):
+        a, b, c = await self.connect('ann'), await self.connect('ben'), await self.connect('cat')
+        await self.befriend(a, b)
+        await self.befriend(c, a)
+        await self.make_party(a, b)
+        self.assertEqual((await a.request('partyCreateRequest'))['code'], str(social.ERR_IN_PARTY))
+        self.assertEqual((await c.request('partyInviteRequest', friendID=a.uid))['code'], str(social.ERR_CANT_INVITE))
+        self.assertEqual(self.social.party(c.uid).leader, c.uid)   # an invite makes a party (the client creates one first)
+
+    async def test_a_party_of_one_is_no_party(self):
+        # the client shows a party of one as none; it used to block that player from invites and a new party (review P1)
         a, b = await self.connect('ann'), await self.connect('ben')
         await self.befriend(a, b)
-        await a.request('partyCreateRequest')
-        self.assertEqual((await a.request('partyCreateRequest'))['code'], str(social.ERR_IN_PARTY))
-        self.assertEqual((await b.request('partyInviteRequest', friendID=a.uid))['code'], str(social.ERR_CANT_INVITE))
-        self.assertEqual(self.social.party(b.uid).leader, b.uid)   # the client normally creates one first
+        pid, _ = await self.make_party(a, b)
+        await b.request('partyLeaveRequest')                      # a is left alone
+        r = await a.request('partyCreateRequest')
+        self.assertEqual((r['code'], r['partyID'], ids(r['members'])), ('0', pid, [a.uid]))   # theirs again, not 11221
+        self.assertEqual((await b.request('partyInviteRequest', friendID=a.uid))['code'], '0')
+        second = self.social.party_id(b.uid)
+        r = await a.request('partyJoinRequest', partyID=second, invitationToken=self.social.parties[second].token)
+        self.assertEqual((r['code'], ids(r['members'])), ('0', [b.uid, a.uid]))
+        self.assertNotIn(pid, self.social.parties)                 # the party of one is gone
+
+    async def test_an_invitee_who_joined_another_party_holds_no_slot(self):
+        # their open invite held a slot in the other party for good, and a later invite was swallowed (review P1)
+        a, b, c, d, e, f = [await self.connect(n) for n in ('ann', 'ben', 'cat', 'dan', 'eve', 'fay')]
+        await self.befriend(a, b, d, e, f)
+        await self.befriend(c, b)
+        await a.request('partyInviteRequest', friendID=b.uid)
+        await c.request('partyInviteRequest', friendID=b.uid)
+        joined = self.social.party_id(c.uid)
+        await b.request('partyJoinRequest', partyID=joined, invitationToken=self.social.parties[joined].token)
+        for x in (d, e, f):                                   # a's party: a + 3 more, b's old invite holds no slot
+            self.assertEqual((await a.request('partyInviteRequest', friendID=x.uid))['code'], '0', x.name)
+        for x in (d, e, f):
+            await x.request('partyRejectRequest', partyID=self.social.party_id(a.uid))
+        await b.request('partyLeaveRequest')
+        await self.settle(a, b, c)
+        b.take()
+        with mock.patch.object(social, 'REINVITE_SECS', 0):     # later: a new invite reaches b again
+            self.assertEqual((await a.request('partyInviteRequest', friendID=b.uid))['code'], '0')
+        await self.settle(a, b)
+        self.assertEqual([f['type'] for f in b.take()], ['partyGetInvitedNotif'])
 
 
 class Chat(LobbyCase):
