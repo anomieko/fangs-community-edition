@@ -17,7 +17,7 @@ Last updated: 2026-10-15.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-0317` (`d06573a`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-1637` (`48efa57`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -36,21 +36,12 @@ Current deploy: `deploy-2026-10-15-0317` (`d06573a`); what each deploy changed: 
   leaves loses the Shard after 2 s.
 - since 15 Oct 03:09 UTC: lobbies close when their match starts; a finished match's server stops.
 - since 15 Oct 03:17 UTC: team and all chat in custom lobbies, hero select and matches (`docs/recon/chat.md`).
+- since 15 Oct 16:37 UTC: Ranked (tile at 10 wins, parties of up to 2): skill-based teams and a rating, the game's
+  draft hero select; Casual and custom games without a rating; ratings start fresh (`docs/recon/ranked.md`).
 
 ## Done, not deployed
 
-1. **Ranked: skill-based matchmaking and rating** (`6a0baa9`, 15 Oct; `docs/recon/ranked.md`). The game's
-   Ranked tile (unlocks at 10 wins, parties of up to 2) now opens its own queue: teams chosen and balanced by a
-   TrueSkill-style Gaussian team rating with party offsets, ported from the user's matchmaking research
-   (`backend/skill.py`, `allocator.py`, `ranked.py`, Ranked/Casual split in `matchmaker.py`). Only Ranked games change
-   the rating; the profile's rank points and the leaderboard show it; everyone starts fresh (1500 / 450, 750 points).
-   Casual is unchanged (first come, no rating); custom lobbies have no rating any more. Tests: `tools/test/test_ranked.py`
-   (the research's rating examples and 71 queue fixtures reproduce exactly; gate oracle 2v2-4v4; 24-player community
-   simulation; CPU), `tools/test/test_ranked_queue.py` (queues, accept, settlement, voids, parties), and
-   `tools/run/test_ranked.sh`: two real clients, Ranked tile → draft hero select → match → result → ratings (passed).
-   The server runs `--ranked-widen-speed 2` (in a 24-player simulation the research schedule's fairness at a
-   ~2.5 min median wait instead of ~4.5 min) and `--ranked-size` 8 (4v4). Open: the end screen's rank
-   change (after Continue) unchecked; a matched player who never joins can stall the 16 s draft rounds (untested).
+Nothing.
 
 ## In progress
 

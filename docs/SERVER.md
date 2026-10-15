@@ -111,5 +111,7 @@ sudo docker compose restart            # restart everything (kicks players)
 sudo fail2ban-client status sshd       # banned IPs
 ```
 
-Deploying an update from your machine: rerun `server/deploy.sh` (fast after the first time).
+Deploying an update from your machine: rerun `server/deploy.sh` (fast after the first time). The live server's
+SSH target and game dir are kept in `work/deploy-target` (one line, `<admin>@<host> clients/<build>`; local only,
+never committed), so: `FANGS_JOIN_CODE=$(cat work/joincode) server/deploy.sh $(cat work/deploy-target)`.
 Player data (names, profiles) lives in the Docker volume `fangs-data` (`/data/backend/store.json`).
