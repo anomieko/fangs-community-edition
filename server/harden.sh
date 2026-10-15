@@ -6,6 +6,7 @@
 #  - admin user with your SSH key + passwordless sudo; root login and password logins disabled
 #  - firewall (nftables): deny inbound except SSH + game ports
 #  - fail2ban for SSH, unattended security upgrades, root password locked
+#  - TCP BBR (faster game downloads for players far away or on lossy lines)
 # Safe to re-run.
 set -euo pipefail
 admin=${1:?admin user}; keys=${2:?authorized_keys file for the admin user}
@@ -100,6 +101,14 @@ kernel.kptr_restrict = 2
 kernel.dmesg_restrict = 1
 fs.protected_hardlinks = 1
 fs.protected_symlinks = 1
+EOF
+# BBR: a player's download keeps its speed over long or lossy paths (Debian's cubic cuts it on every loss) and
+# doesn't fill the queues on the way, which game traffic shares. fq paces it (from the next boot on).
+echo tcp_bbr > /etc/modules-load.d/fangs-bbr.conf
+modprobe tcp_bbr
+cat > /etc/sysctl.d/90-fangs-network.conf <<'EOF'
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
 EOF
 sysctl -q --system
 

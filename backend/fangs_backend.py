@@ -940,6 +940,19 @@ async def download_file(request):
     return err(404, 404, 'not found')
 
 
+@route('GET', r'/download/(?P<code>[^/]+)/chunks/(?P<name>[0-9a-f]{64}\.gz)')
+async def download_chunk(request):
+    """Big files as gzipped pieces, named by the SHA-256 of the unpacked piece (player/build-manifest.py). Sent as
+    they are: no Content-Encoding, so nothing on the way unpacks them before the launcher checks them."""
+    cfg = request.app['cfg']
+    if not cfg.downloads or not cfg.join_code or not hmac.compare_digest(request.match_info['code'], cfg.join_code):
+        return err(404, 404, 'not found')
+    path = Path(cfg.downloads) / 'chunks' / request.match_info['name']
+    if not path.is_file():
+        return err(404, 404, 'not found')
+    return web.FileResponse(path, headers={'Content-Type': 'application/octet-stream'})
+
+
 # ---------------------------------------------------------------- Telemetry (accept and drop)
 
 @route('POST', r'/game-telemetry/.*')
