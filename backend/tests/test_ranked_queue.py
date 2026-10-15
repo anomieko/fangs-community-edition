@@ -35,8 +35,8 @@ class FakeHosts:
     def __init__(self, ports=2):
         self.ports, self.allocated = ports, []
 
-    def free_ports(self):
-        return list(range(self.ports - len(self.allocated)))
+    def capacity(self):   # as HostManager.capacity: slots not taken yet
+        return self.ports - len(self.allocated)
 
     async def allocate(self, session_id, match=None):
         self.allocated.append((session_id, match))
