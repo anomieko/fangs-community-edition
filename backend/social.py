@@ -9,11 +9,13 @@ for "0", any other code is a failure (11232 is special: the client re-requests p
 Friends and friend requests are kept in the store; presence and parties only in memory. A player whose lobby
 connection drops is kept (party, "online") for GRACE seconds: the game reconnects after map changes.
 Party members tell each other their hero, skin, matchmaking token, ... with signalingP2PNotif messages, which
-are relayed (only between friends and party mates) with destinationId set to the sender.
+are relayed (only between friends and party mates) with destinationId set to the sender. Team and all chat in custom
+lobbies and matches are signaling messages too ("/t <text>", "/a <text>"); those are relayed between any two players.
 """
 import asyncio, time, uuid
 
 GRACE = 60
+LOBBY_CHAT = True      # team/all chat between any two players (False: only friends and party mates, as before 15 Oct)
 MAX_PARTY = 4          # a matchmade game is 4 vs 4 and a party always plays on one team
 AVAILABILITY = ('offline', 'online', 'busy', 'invisible')   # EAvailability, by name
 ERR_BAD_REQUEST, ERR_IN_PARTY, ERR_NOT_IN_PARTY, ERR_CANT_INVITE, ERR_BAD_INVITE, ERR_NOT_LEADER, ERR_FRIEND, \
@@ -46,6 +48,13 @@ def chat_text(s):
     if s.endswith('"'):
         s += '​'
     return s[:500]
+
+
+def lobby_chat(msg):
+    """Team ("/t <text>") and all ("/a <text>") chat: the game sends each line as a signaling message to every other
+    player of its custom lobby / match (UChat's LobbyUsers, filled in the lobby and hero select) and shows a received
+    one only if the sender is in its own LobbyUsers (docs/recon/chat.md). Same test as the receiving game's."""
+    return msg[:2].lower() in ('/t', '/a')
 
 
 def iso(t):
@@ -421,14 +430,17 @@ class Social:
                 await self.send(m, 'partyChatNotif', id=uuid.uuid4().hex, **{'from': me}, to=p.id,
                                 payload=chat_text(text), receivedAt=iso(time.time()))
 
-    # party member details (hero, skin, matchmaking token, ...), sent player to player
+    # party member details (hero, skin, matchmaking token, ...) and lobby/match chat, sent player to player
 
     async def on_signalingP2PNotif(self, me, ws, t, mid, f):
-        to = f.get('destinationId', '').strip()
-        p = self.party(me)
-        if to == me or not (to in self.friends_of(me) or (p and to in p.members + p.invitees)):
+        to, msg = f.get('destinationId', '').strip(), f.get('message', '')
+        p, chat = self.party(me), lobby_chat(msg)
+        if to == me or not (to in self.friends_of(me) or (p and to in p.members + p.invitees)
+                            or (LOBBY_CHAT and chat and self.online(to))):
             return self.log(event='signaling dropped', user=me, to=to)
-        await self.send(to, 'signalingP2PNotif', destinationId=me, message=f.get('message', ''))
+        if chat:   # the receiver looks for party commands ("ReportLeaveQueueCommand", ...) anywhere in a message
+            msg = chat_text(msg.replace('Report', 'Re\u200bport'))
+        await self.send(to, 'signalingP2PNotif', destinationId=me, message=msg)
 
     # ------------------------------------------------------------ REST helpers
 
