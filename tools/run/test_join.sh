@@ -155,7 +155,7 @@ d = json.load(open(sys.argv[1]))
 for u in d['users'].values():
     r = d['player_records'].get(u['user_id'], {})
     print(u['display_name'], 'history', len(r.get('PROFILE_HISTORY_KEY', {}).get('Matches', [])), 'mastery', r.get('PROFILE_MASTERY_KEY'),
-          'rating', (r.get('PROFILE_RATINGS_KEY') or {}).get('ranked_rating'))
+          'ranked', (d.get('ranked') or {}).get('players', {}).get(u['user_id']))   # custom games: none
 PY
   for n in alice bob; do
     mkdir -p work/logs/$R-shots/$n; rm -f work/logs/$R-shots/$n/*

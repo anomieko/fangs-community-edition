@@ -58,8 +58,19 @@ the smaller band, the favorite's mean-strength chance at most 55% (→ 70% with 
 provisional players (< 10 games or sigma > 350) balanced, and mirrored party shapes before uneven ones (60 / 180 /
 300 s). Best split by `((p − .5) / .1)² + .05 (span / 800)²`. Physical sides by a random bit.
 
+Settlement (`ranked.settle_match`): the teams **as assigned** when the game's server was ready are rated, not just
+who shows up in the result, so a player who quits mid-match still counts for their team (abandonment is a normal
+result, as in the research; quitting in round 1 can't void a lost game). Token team index 0 takes the even seats,
+TeamA (`BP_PC_Lobby_PlayerController.GetFreeTeamSlot`: slot = index, index + 2, …). Void (nothing changes) when the
+server's heartbeats never saw the whole roster connected at once (a no-show: `Host.peak_players`), when someone
+left while the server booted (assigned teams not n vs n), when the result puts a player on another team than
+assigned (or lists someone who wasn't matched), or without a winner. The snapshot lives in memory only: a backend
+restart also restarts the container and its game servers, so there is no result to settle anyway.
+
 Checked against the research's own fixtures (when its checkout sits next to this repo): its 6 rating examples, the
 party worked example and all 71 dev-queue scenarios reproduce exactly through our port (`backend/tests/test_ranked.py`).
+The n vs n generalization (1v1, 2v2, 3v3, 6v6, with party offsets) is checked against a Monte Carlo of the model
+itself (win chance, posterior mean and variance within 5 standard errors; a wrongly scaled noise is off by 20+).
 
 ## Measurements (15 Oct 2026, local machine)
 
@@ -94,9 +105,35 @@ stored casual one (second run: winner 28.514 / 7.556 on the game's scale).
 
 The server runs `--ranked-widen-speed 2` (`server/entrypoint.sh`; the user, 15 Oct).
 
+## Review follow-ups (15 Oct 2026, independent review of `6a0baa9`)
+
+- Fixed: quitting in round 1 voided a lost game (now the assigned teams are rated, see Settlement).
+- Fixed: rank points could drop by hundreds when the model reopened a player's uncertainty (to 300), even after a
+  win. Players now see the lowest uncertainty they have had (`ranked.shown`, `shown_uncertainty` in the store),
+  so points follow the skill estimate.
+- Fixed: a party member asking for the other mode (`QueueJoinRequest` id) joined the leader's ticket; now the whole
+  party ticket stops (never the leader alone). A member sending no id follows the leader (party queueing through
+  our matchmaker is still untested with real clients).
+- Fixed: `allocate(limit=1)`: the matchmaker stops after the first lobby; `--ranked-size` only 2 / 4 / 6 / 8 (the
+  draft order has 8 seats; above that the allocator's solo quota could never fill a game).
+- No-show, seen in the real game (`NOSHOW=1 tools/run/test_ranked.sh`, 1 vs 1): the player who did join waits on
+  the lobby screen and gives up after ~45 s ("Failed to Connect to Match.", FangsBoot logs it), the same moment
+  FangsHost's no-show start (`NO_SHOW_SECS` 45) comes due, so no game starts and nothing is rated. Probably the same
+  in Casual (same lobby screen). If a game does start short-handed, settlement voids it (heartbeats never saw the
+  whole roster).
+- Left as is: leaving while the server boots, or never joining, voids the game for everyone and the player can
+  queue again at once. A queue cooldown would show players nothing (the client gets "Idle" with no reason), so it
+  would look broken; in a small community this is better handled socially. The pre-game roster lives in memory:
+  a backend restart restarts its game servers too, so nothing is lost that could have been rated.
+
+## End screen
+
+After the match the main menu shows `WB_EndResults` (`ShowLastMatchResults`; `test_ranked.sh` leaves the match with
+`disconnect`): VICTORY, +350 Soul Cores, +70 Battlepass, "There are no missions available." No rank change is
+shown in this build's Progression tab, so nothing wrong is shown either.
+
 ## Open
 
-- The end screen's rank change in mode 3 (`WB_EndResults`, after Continue): not captured yet; it should show our
-  served `ranked_rating`.
 - Party effects (60 / 100 / 140) are untested guesses; with Ranked parties capped at 2 only the duo value (60)
   matters.
+- A Ranked party (duo) through the real client is untested, as is a full 4v4 Ranked game.

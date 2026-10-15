@@ -68,7 +68,7 @@ print('history:', len(h), 'matches', (h[-1].get('GameMode'), h[-1].get('MapLevel
 if h and h[-1].get('MatchResults'):
     print('first row:', {k: v for k, v in h[-1]['MatchResults'][0]['RoundResults'][0].items() if k in ('UserId', 'Name', 'Type', 'Team', 'Kills')})
 print('mastery:', recs.get('PROFILE_MASTERY_KEY'))
-print('ratings:', recs.get('PROFILE_RATINGS_KEY'))
+print('ranked rating:', (d.get('ranked') or {}).get('players', {}).get(uid), '(custom games have none)')
 EOF
 rm -rf work/logs/$R-shots; mkdir -p work/logs/$R-shots
 cp work/run/$R.prefix/drive_c/users/*/AppData/Local/MOBA/Saved/Screenshots/WindowsNoEditor/*.png work/logs/$R-shots/ 2>/dev/null
