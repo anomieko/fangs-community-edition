@@ -122,6 +122,10 @@ Nothing.
    the invite-first order; until then the old release asks for the folder first, and the server's launcher fixes the
    answer. Open: a player who starts `MOBA-Win64-Shipping.exe` (e.g. pinned to the taskbar while the game ran) still
    gets no login; FangsBoot could start the launcher instead.
+   Done, not deployed (branch `defender-check`, user's OK to deploy, 15 Oct): the launcher checks the mod loader files
+   before and 5 s after starting the game, puts back what an antivirus removed and tells the player how to add the
+   exclusion, instead of leaving them at "Steam authorization" (a new player's report, 15 Oct; it resolved on the
+   player's side). Then the GitHub release.
 
 ## Known issues and small ideas
 

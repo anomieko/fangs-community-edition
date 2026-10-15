@@ -15,7 +15,11 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Launcher only: players' launchers update themselves on their next start.
+
+| Change | Commits | Off switch |
+|---|---|---|
+| Launcher: the mod loader files (`dwmapi.dll`, `ue4ss/UE4SS.dll`, FangsBoot's `main.lua`) are checked before the game starts. If one went missing since the last start, or right after the download, it is put back and the launcher says that Windows Security (or another antivirus) removed it and how to add the game folder to the exclusions. If it is gone again 5 s after the game started, the launcher says the game can't log in ("Steam authorization") and waits for Enter instead of closing | (this commit) | revert the commit and deploy |
 
 ## deploy-2026-10-15-2104 (`8de8382`, Feb 2023 build)
 

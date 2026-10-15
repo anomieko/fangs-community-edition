@@ -45,6 +45,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -184,6 +185,7 @@ func run() error {
 	if err := switchBuild(st.InstallDir, m); err != nil {
 		return err
 	}
+	removed := removedMods(st.InstallDir, m)
 	for {
 		err := syncFiles(base, st.InstallDir, m)
 		var full *noSpaceError
@@ -202,6 +204,12 @@ func run() error {
 			}
 			fmt.Printf("  The game goes into %s%s%s\n\n", bold, dir, reset)
 		}
+	}
+	// mod loader files gone since the last start, or right after this download: an antivirus, most likely
+	removed = append(removed, restoreMods(base, st.InstallDir, m)...)
+	slices.Sort(removed)
+	if removed = slices.Compact(removed); len(removed) > 0 {
+		warnRemoved(st.InstallDir, removed, false)
 	}
 	setUp(self, cfgPath, &st, m)
 	return launch(st, m)
@@ -804,13 +812,7 @@ func syncFiles(base, installDir string, m *manifest) error {
 	p := &progress{total: fetchSize, start: time.Now()}
 	for _, f := range todo {
 		dst := filepath.Join(installDir, filepath.FromSlash(f.Path))
-		var err error
-		if len(f.Chunks) > 0 {
-			err = downloadChunked(base, dst, f, p)
-		} else {
-			err = download(base+"files/"+escapePath(f.Path), dst, f, p)
-		}
-		if err != nil {
+		if err := fetch(base, dst, f, p); err != nil {
 			fmt.Println()
 			return fmt.Errorf("downloading %s failed: %v\n  Run the launcher again to resume.", f.Path, err)
 		}
@@ -824,6 +826,77 @@ func syncFiles(base, installDir string, m *manifest) error {
 	p.draw(true)
 	fmt.Printf("\n  %sDone!%s\n", green, reset)
 	return nil
+}
+
+// fetch downloads one file of the list into dst: in pieces if it has them, else whole.
+func fetch(base, dst string, f manifestFile, p *progress) error {
+	if len(f.Chunks) > 0 {
+		return downloadChunked(base, dst, f, p)
+	}
+	return download(base+"files/"+escapePath(f.Path), dst, f, p)
+}
+
+// ---------------------------------------------------------------- mod loader files
+//
+// Without these the game can't log in: it waits at "Steam authorization" forever. Antivirus programs (Windows
+// Security most of all) like to remove the mod loader, sometimes right after it is written.
+
+var modFiles = []string{
+	"MOBA/Binaries/Win64/dwmapi.dll",
+	"MOBA/Binaries/Win64/ue4ss/UE4SS.dll",
+	"MOBA/Binaries/Win64/ue4ss/Mods/FangsBoot/scripts/main.lua",
+}
+
+// missingMods: the mod loader files of the list that aren't in installDir at their size.
+func missingMods(installDir string, m *manifest) []manifestFile {
+	var gone []manifestFile
+	for _, f := range m.Files {
+		if !slices.Contains(modFiles, f.Path) {
+			continue
+		}
+		if info, err := os.Stat(filepath.Join(installDir, filepath.FromSlash(f.Path))); err != nil || info.Size() != f.Size {
+			gone = append(gone, f)
+		}
+	}
+	return gone
+}
+
+// removedMods: mod loader files installed earlier that are gone now (the update puts them back).
+func removedMods(installDir string, m *manifest) []string {
+	state := loadState(installDir)
+	var removed []string
+	for _, f := range missingMods(installDir, m) {
+		if _, ok := state[f.Path]; ok {
+			removed = append(removed, f.Path)
+		}
+	}
+	return removed
+}
+
+// restoreMods fetches mod loader files that went missing since the update downloaded them, and names them.
+func restoreMods(base, installDir string, m *manifest) []string {
+	var names []string
+	for _, f := range missingMods(installDir, m) {
+		names = append(names, f.Path)
+		_ = fetch(base, filepath.Join(installDir, filepath.FromSlash(f.Path)), f, &progress{total: downloadSize(f), start: time.Now()})
+	}
+	return names
+}
+
+func warnRemoved(installDir string, paths []string, again bool) {
+	fmt.Println()
+	for _, p := range paths {
+		fmt.Printf("  %sWindows Security (or another antivirus) removed %s%s\n", yellow, filepath.FromSlash(p), reset)
+	}
+	end := "."
+	if again {
+		fmt.Printf("  %sThe game can't log in without it (it waits at \"Steam authorization\"). Close the game,%s\n", red, reset)
+		end = ", then start the launcher again."
+	} else {
+		fmt.Printf("  %sIt's back now. So that it stays,%s\n", yellow, reset)
+	}
+	fmt.Printf("  %sadd %s under Windows Security → Virus & threat protection →\n  Manage settings → Exclusions%s%s\n",
+		yellow, installDir, end, reset)
 }
 
 func escapePath(p string) string {
@@ -1294,6 +1367,9 @@ func gameInstalled(st settings) bool {
 	return err == nil
 }
 
+// how long the launcher stays after starting the game (and then checks the mod loader is still there)
+var launchWait = 5 * time.Second
+
 func launch(st settings, m *manifest) error {
 	exeRel, iniRel := "MOBA/Binaries/Win64/MOBA-Win64-Shipping.exe", "FangsCE/Engine.ini"
 	if m != nil {
@@ -1329,6 +1405,18 @@ func launch(st settings, m *manifest) error {
 		return fmt.Errorf("couldn't start the game: %v", err)
 	}
 	fmt.Printf("\n  %sStarting FANGS as %s - have fun!%s\n", green, st.Name, reset)
-	time.Sleep(3 * time.Second)
+	time.Sleep(launchWait)
+	if m == nil {
+		return nil
+	}
+	// removed again as the game loaded it: say so instead of leaving the player at "Steam authorization"
+	var gone []string
+	for _, f := range missingMods(st.InstallDir, m) {
+		gone = append(gone, f.Path)
+	}
+	if len(gone) > 0 {
+		warnRemoved(st.InstallDir, gone, true)
+		pause()
+	}
 	return nil
 }
