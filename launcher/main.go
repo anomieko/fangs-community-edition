@@ -16,6 +16,11 @@
 // With main.pubKey set (server/deploy.sh does), the file list must carry a valid Ed25519 signature
 // (manifest.json.sig) from the server owner's key, which never leaves their machine: neither a taken-over
 // server nor someone on the network path can make the launcher install anything.
+//
+// On Windows it keeps a copy of itself in %LOCALAPPDATA%\Programs\Fangs Community Edition and makes desktop and
+// Start menu shortcuts to it, so players needn't find the FangsCE.exe their browser saved. The game folder's
+// FANGS.exe (the game's own starter, which can't log in) is also a copy of the launcher (server/deploy.sh puts it
+// there); it hands over to the installed copy.
 package main
 
 import (
@@ -85,14 +90,17 @@ type settings struct {
 	Secret     string `json:"secret"`
 	Server     string `json:"server,omitempty"`
 	JoinCode   string `json:"join_code,omitempty"`
+	Shortcuts  bool   `json:"shortcuts,omitempty"` // made once; a player who deletes them doesn't get them back
 }
 
 var stdin = bufio.NewReader(os.Stdin)
 
+// set for a launcher started by its own self-update: the old one already showed the banner and the welcome
+const restartedEnv = "FANGSCE_RESTARTED"
+
 func main() {
 	enableTerminalColors()
 	fmt.Print("\033]0;Fangs: Community Edition\007")
-	banner()
 	if err := run(); err != nil {
 		fmt.Printf("\n  %s%s%s\n", red, err, reset)
 		pause()
@@ -103,16 +111,21 @@ func main() {
 func run() error {
 	self, _ := os.Executable()
 	_ = os.Remove(self + ".old") // left behind by a self-update
+	if handOff(self) {
+		return nil // the game folder's FANGS.exe: the installed launcher has taken over
+	}
+	restarted := os.Getenv(restartedEnv) != ""
+	if !restarted {
+		banner()
+	}
 
 	cfgPath := settingsPath()
-	st, err := loadSettings(cfgPath)
-	if err != nil {
-		st, err = firstRun(cfgPath)
-		if err != nil {
-			return err
-		}
-	} else {
+	st, err := loadSettings(cfgPath) // incomplete settings still carry an accepted invite
+	newPlayer := err != nil
+	if !newPlayer {
 		fmt.Printf("  Welcome back, %s%s%s!\n\n", bold, st.Name, reset)
+	} else if !restarted {
+		welcome()
 	}
 	if err := useInvite(cfgPath, &st); err != nil {
 		return err
@@ -122,7 +135,7 @@ func run() error {
 	fmt.Printf("  %sChecking for updates...%s\n", dim, reset)
 	m, err := fetchManifest(base + "manifest.json")
 	if err != nil {
-		if gameInstalled(st) {
+		if !newPlayer && gameInstalled(st) {
 			fmt.Printf("  %sCan't reach the server (%v) - starting the version you have.%s\n", yellow, err, reset)
 			return launch(st, nil)
 		}
@@ -131,12 +144,41 @@ func run() error {
 	if m.Launcher != nil && selfUpdate(base, self, m.Launcher) {
 		return nil // the new launcher has taken over
 	}
-	if err := switchBuild(st.InstallDir, m.Build); err != nil {
+	// the questions come after the self-update, so they are always the server's current launcher's
+	if newPlayer {
+		if err := firstRun(cfgPath, &st, m); err != nil {
+			return err
+		}
+	} else if dir := settleInstallDir(st.InstallDir, filepath.Dir(self)); dir != st.InstallDir {
+		st.InstallDir = dir
+		if err := saveSettings(cfgPath, st); err != nil {
+			return err
+		}
+		fmt.Printf("  The game goes into %s%s%s\n\n", bold, dir, reset)
+	}
+	if err := switchBuild(st.InstallDir, m); err != nil {
 		return err
 	}
-	if err := syncFiles(base, st.InstallDir, m); err != nil {
-		return err
+	for {
+		err := syncFiles(base, st.InstallDir, m)
+		var full *noSpaceError
+		if !errors.As(err, &full) {
+			if err != nil {
+				return err
+			}
+			break
+		}
+		fmt.Printf("  %sNot enough disk space: the download needs %s, the drive of %s has %s free.%s\n",
+			yellow, human(full.need), full.dir, human(full.free), reset)
+		if dir, ok := askOtherDir(m, "Free up space and press Enter, or type another folder for the game"); ok {
+			st.InstallDir = dir
+			if err := saveSettings(cfgPath, st); err != nil {
+				return err
+			}
+			fmt.Printf("  The game goes into %s%s%s\n\n", bold, dir, reset)
+		}
 	}
+	setUp(self, cfgPath, &st, m)
 	return launch(st, m)
 }
 
@@ -174,32 +216,220 @@ func ask(prompt, def string) string {
 
 var nameRx = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
 
-func firstRun(cfgPath string) (settings, error) {
+func welcome() {
 	fmt.Printf("  %sWelcome to Fangs: Community Edition!%s\n\n", bold, reset)
 	fmt.Println("  FANGS is back - kept alive by the people who made and loved it.")
 	fmt.Println("  This launcher installs the game, keeps it updated and starts it for you.")
 	fmt.Printf("  %sNot affiliated with or endorsed by the owners of FANGS. Free, no purchases, no data sold.%s\n\n", dim, reset)
+}
 
-	dir := ask("Where should the game go?", defaultInstallDir())
-	dir = filepath.Clean(dir)
+func firstRun(cfgPath string, st *settings, m *manifest) error {
+	def := defaultInstallDir()
+	fmt.Printf("  Where should the game go? It needs about %s of disk space.\n", human(missingBytes(def, m)))
+	fmt.Printf("  Press Enter for %s%s%s\n", bold, def, reset)
+	dir, ok := askOtherDir(m, `or type another folder (e.g. D:\Games)`)
+	for !ok { // Enter: the default, if the game fits there
+		problem := checkInstallDir(def, missingBytes(def, m))
+		if problem == "" {
+			dir = def
+			break
+		}
+		fmt.Printf("  %s%s%s\n", yellow, problem, reset)
+		dir, ok = askOtherDir(m, "Type another folder")
+	}
+	fmt.Printf("  The game goes into %s%s%s\n\n", bold, dir, reset)
 	var name string
 	for {
 		name = ask("Pick your player name (3-16 letters, numbers or _)", "")
 		if nameRx.MatchString(name) {
 			break
 		}
+		if looksLikeInvite(name) {
+			fmt.Printf("  %sThat's the invite code (already done) - now pick a name for yourself.%s\n", yellow, reset)
+			continue
+		}
 		fmt.Printf("  %sThat name doesn't work - 3 to 16 characters, letters, numbers and _ only.%s\n", yellow, reset)
 	}
 	secret := make([]byte, 16)
 	if _, err := rand.Read(secret); err != nil {
-		return settings{}, err
+		return err
 	}
-	st := settings{InstallDir: dir, Name: name, Secret: hex.EncodeToString(secret)}
-	if err := saveSettings(cfgPath, st); err != nil {
-		return settings{}, err
+	st.InstallDir, st.Name, st.Secret = dir, name, hex.EncodeToString(secret)
+	if err := saveSettings(cfgPath, *st); err != nil {
+		return err
 	}
 	fmt.Printf("\n  Nice to meet you, %s%s%s! Your name is tied to this PC (%s).\n\n", bold, name, reset, cfgPath)
-	return st, nil
+	return nil
+}
+
+// ---------------------------------------------------------------- install folder
+
+// askOtherDir asks for a folder until the game can go there. An empty answer means the default folder (first run)
+// or the same one (after freeing space); ok is false if that one still doesn't work.
+func askOtherDir(m *manifest, prompt string) (dir string, ok bool) {
+	for {
+		ans := ask(prompt, "")
+		if ans == "" {
+			return "", false
+		}
+		if looksLikeInvite(ans) {
+			fmt.Printf("  %sThat's an invite code, not a folder. Press Enter for the suggested folder, or type one like D:\\Games.%s\n", yellow, reset)
+			continue
+		}
+		dir = gameDirIn(resolveDir(ans))
+		if problem := checkInstallDir(dir, missingBytes(dir, m)); problem != "" {
+			fmt.Printf("  %s%s%s\n", yellow, problem, reset)
+			continue
+		}
+		return dir, true
+	}
+}
+
+// resolveDir makes a typed folder absolute: quotes (Explorer's "Copy as path") go, and a bare name like "Games" is
+// taken from the user's folder rather than from wherever the launcher happens to run (often Downloads).
+func resolveDir(s string) string {
+	s = strings.Trim(strings.TrimSpace(s), `"'`)
+	if !filepath.IsAbs(s) {
+		if home, err := os.UserHomeDir(); err == nil && filepath.VolumeName(s) == "" && !strings.HasPrefix(s, `\`) && !strings.HasPrefix(s, "/") {
+			s = filepath.Join(home, s)
+		} else if abs, err := filepath.Abs(s); err == nil { // \Games, C:Games
+			s = abs
+		}
+	}
+	return filepath.Clean(s)
+}
+
+const installFolderName = "Fangs Community Edition"
+
+// gameDirIn: a folder that already holds other things (Downloads, D:\Games, a whole drive) gets the game in a
+// subfolder of its own; a new or empty folder, or one that already holds the game, is used as it is.
+func gameDirIn(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) == 0 {
+		return dir
+	}
+	for _, e := range entries {
+		if e.Name() == ".fangsce" || strings.EqualFold(e.Name(), "MOBA") {
+			return dir
+		}
+	}
+	return filepath.Join(dir, installFolderName)
+}
+
+// looksLikeInvite: an invite code or download link pasted where a folder or name was asked for.
+func looksLikeInvite(s string) bool {
+	s = strings.Trim(strings.TrimSpace(s), `"'`)
+	_, _, ok := parseInvite(s)
+	return ok || strings.HasPrefix(strings.ToUpper(s), "FCE-") || strings.Contains(s, "://")
+}
+
+// settleInstallDir fixes a folder an older launcher took as it was typed. It kept relative answers relative, so
+// the game went wherever that launcher was started from (often Downloads), and players pasted their invite code
+// there ("FCE-..."). An install found where it went stays (an invite-named folder is renamed); with nothing installed
+// yet, the answer gets the same treatment as a new one, and an invite code gives the default folder.
+func settleInstallDir(dir, exeDir string) string {
+	invite := looksLikeInvite(filepath.Base(dir)) || looksLikeInvite(dir)
+	if !filepath.IsAbs(dir) {
+		var found string
+		if abs, err := filepath.Abs(dir); err == nil && hasInstall(abs) {
+			found = abs
+		} else if p := filepath.Join(exeDir, dir); exeDir != "" && hasInstall(p) {
+			found = p
+		}
+		if found != "" {
+			dir = found
+		} else if invite {
+			return defaultInstallDir()
+		} else {
+			dir = resolveDir(dir)
+		}
+	}
+	if hasInstall(dir) {
+		if invite {
+			if p := filepath.Join(filepath.Dir(dir), installFolderName); !exists(p) && os.Rename(dir, p) == nil {
+				return p
+			}
+		}
+		return dir
+	}
+	if invite {
+		return defaultInstallDir()
+	}
+	return gameDirIn(dir)
+}
+
+func exists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
+
+func hasInstall(dir string) bool {
+	_, err := os.Stat(statePath(dir))
+	return err == nil
+}
+
+// spare room on top of a download (shader cache, logs, settings): as much again, up to 512 MB
+const spaceMargin = 512 << 20
+
+func fits(free, need int64) bool { return free >= need+min(need, spaceMargin) }
+
+// checkInstallDir says what is wrong with a folder for the game ("" if nothing).
+func checkInstallDir(dir string, need int64) string {
+	if od := oneDrive(dir); od != "" {
+		return "That folder is in OneDrive, which would upload the whole game to the cloud - pick one outside " + od + "."
+	}
+	_, statErr := os.Stat(dir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Sprintf("Can't use %s: %v", dir, err)
+	}
+	probe := filepath.Join(dir, ".fangsce-write-test")
+	err := os.WriteFile(probe, nil, 0o644)
+	_ = os.Remove(probe)
+	problem := ""
+	if err != nil {
+		problem = fmt.Sprintf("Can't write to %s - pick a folder of your own, like the one suggested above.", dir)
+	} else if free, ok := freeSpace(dir); ok && !fits(free, need) {
+		problem = fmt.Sprintf("Not enough space there: %s free, the game needs %s. Pick a folder on another drive.", human(free), human(need))
+	}
+	if problem != "" && statErr != nil {
+		_ = os.Remove(dir) // made just now for the check (only removed while empty)
+	}
+	return problem
+}
+
+// oneDrive returns the OneDrive folder dir is in, if any (Desktop and Documents often are).
+func oneDrive(dir string) string {
+	for _, v := range []string{"OneDrive", "OneDriveConsumer", "OneDriveCommercial"} {
+		od := os.Getenv(v)
+		if od == "" {
+			continue
+		}
+		od = filepath.Clean(od)
+		if strings.EqualFold(dir, od) || strings.HasPrefix(strings.ToLower(dir), strings.ToLower(od)+string(filepath.Separator)) {
+			return od
+		}
+	}
+	return ""
+}
+
+// missingBytes: roughly what still has to be downloaded into dir (files that aren't there at the right size).
+func missingBytes(dir string, m *manifest) int64 {
+	var n int64
+	for _, f := range m.Files {
+		if info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(f.Path))); err != nil || info.Size() != f.Size {
+			n += f.Size
+		}
+	}
+	return n
+}
+
+type noSpaceError struct {
+	dir        string
+	need, free int64
+}
+
+func (e *noSpaceError) Error() string {
+	return fmt.Sprintf("not enough disk space in %s: need %s, %s free", e.dir, human(e.need), human(e.free))
 }
 
 // ---------------------------------------------------------------- invite
@@ -410,10 +640,16 @@ func parkedDir(installDir, build string) string {
 	return strings.TrimRight(installDir, `\/`) + " [" + build + "]"
 }
 
-func switchBuild(installDir, want string) error {
+func switchBuild(installDir string, m *manifest) error {
+	want := m.Build
 	have := installedBuild(installDir)
 	if have == "" || have == want || !buildRx.MatchString(have) || !buildRx.MatchString(want) {
 		return nil // nothing installed yet, same build, or names we don't trust as folder names: just sync
+	}
+	if other := foreignEntry(installDir, m); other != "" {
+		fmt.Printf("  The server now runs %s%s%s: updating the game where it is (its folder also holds %q, so it isn't moved).\n\n",
+			bold, want, reset, other)
+		return nil
 	}
 	if _, err := os.Stat(parkedDir(installDir, have)); err == nil {
 		return fmt.Errorf("can't set build %s aside: %s already exists - move it away and start again", have, parkedDir(installDir, have))
@@ -431,6 +667,29 @@ func switchBuild(installDir, want string) error {
 	}
 	fmt.Printf("  The server now runs %s%s%s. Your %s stays next to it, so switching back later is instant.\n\n", bold, want, reset, have)
 	return os.MkdirAll(installDir, 0o755)
+}
+
+// foreignEntry names something in the install folder that is neither part of the game nor installed by us ("" if
+// nothing): older launchers installed straight into folders like Downloads, and those are never moved.
+func foreignEntry(installDir string, m *manifest) string {
+	ours := map[string]bool{".fangsce": true}
+	addTop := func(p string) {
+		top, _, _ := strings.Cut(p, "/")
+		ours[strings.ToLower(top)] = true
+	}
+	for _, f := range m.Files {
+		addTop(f.Path)
+	}
+	for p := range loadState(installDir) {
+		addTop(p)
+	}
+	entries, _ := os.ReadDir(installDir)
+	for _, e := range entries {
+		if !ours[strings.ToLower(e.Name())] {
+			return e.Name()
+		}
+	}
+	return ""
 }
 
 func statePath(installDir string) string {
@@ -491,6 +750,9 @@ func syncFiles(base, installDir string, m *manifest) error {
 	if len(todo) == 0 {
 		fmt.Printf("  %sUp to date%s (%s).\n", green, reset, m.Build)
 		return nil
+	}
+	if free, ok := freeSpace(installDir); ok && !fits(free, total) {
+		return &noSpaceError{dir: installDir, need: total, free: free}
 	}
 	if len(state) == 0 {
 		fmt.Printf("  Installing FANGS (%s): %s to download into\n  %s\n\n", m.Build, human(total), installDir)
@@ -680,11 +942,117 @@ func selfUpdate(base, self string, want *manifestFile) bool {
 	_ = os.Chmod(self, 0o755) // (non-Windows test builds)
 	cmd := exec.Command(self, os.Args[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	cmd.Env = append(os.Environ(), restartedEnv+"=1")
 	if err := cmd.Start(); err != nil {
 		return false
 	}
 	_ = cmd.Wait() // keep the console attached until the new launcher is done
 	return true
+}
+
+// ---------------------------------------------------------------- installed launcher and shortcuts (Windows)
+
+// installedLauncher: where the launcher keeps a copy of itself for the shortcuts ("" where there is none).
+func installedLauncher() string {
+	d := os.Getenv("LOCALAPPDATA")
+	if runtime.GOOS != "windows" || d == "" {
+		return ""
+	}
+	return filepath.Join(d, "Programs", installFolderName, "FangsCE.exe")
+}
+
+// shortcutFolders: the desktop and the Start menu (tests use their own)
+var shortcutFolders = func() []string { return []string{shellFolder(folderDesktop), shellFolder(folderPrograms)} }
+
+// handOff: the game folder's FANGS.exe starts the installed launcher and exits at once, so the game folder isn't in
+// use when a build switch moves it. False: carry on as the launcher.
+func handOff(self string) bool {
+	inst := installedLauncher()
+	if inst == "" || !strings.EqualFold(filepath.Base(self), "FANGS.exe") {
+		return false
+	}
+	if !exists(inst) && copyLauncher(self, inst) != nil {
+		return false
+	}
+	cmd := exec.Command(inst, os.Args[1:]...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr // the same console window
+	return cmd.Start() == nil
+}
+
+// setUp keeps the installed launcher the current one and makes the shortcuts to it, once.
+func setUp(self, cfgPath string, st *settings, m *manifest) {
+	inst := installedLauncher()
+	if inst == "" {
+		return
+	}
+	if !strings.EqualFold(filepath.Clean(self), filepath.Clean(inst)) {
+		// only the launcher the server lists replaces it (this one is, after its self-update)
+		sum, _ := hashFile(self)
+		have, _ := hashFile(inst) // "" if there is none
+		if have != sum && (have == "" || (m.Launcher != nil && sum == m.Launcher.SHA256)) {
+			if err := copyLauncher(self, inst); err != nil {
+				fmt.Printf("  %sCouldn't put the launcher into %s: %v%s\n", dim, filepath.Dir(inst), err, reset)
+				return
+			}
+		}
+	}
+	if st.Shortcuts {
+		return
+	}
+	icon := filepath.Join(st.InstallDir, filepath.FromSlash(m.Exe))
+	made := 0
+	for _, dir := range shortcutFolders() {
+		if dir == "" {
+			continue
+		}
+		err := createShortcut(filepath.Join(dir, installFolderName+".lnk"), inst, filepath.Dir(inst), icon,
+			"Updates Fangs: Community Edition and starts it")
+		if err != nil {
+			fmt.Printf("  %sCouldn't make a shortcut in %s: %v%s\n", dim, dir, err, reset)
+			continue
+		}
+		made++
+	}
+	st.Shortcuts = true
+	_ = saveSettings(cfgPath, *st)
+	if made > 0 {
+		fmt.Printf("\n  To play next time, use %s%q%s on your desktop or in the Start menu:\n", bold, installFolderName, reset)
+		fmt.Println("  it updates the game and logs you in (the game's own .exe can't log in).")
+	}
+}
+
+// copyLauncher copies the running launcher to dst (via a temporary file, so a half-copied launcher never runs).
+func copyLauncher(self, dst string) error {
+	src, err := os.Open(self)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	tmp := dst + ".new"
+	out, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, src); err != nil {
+		out.Close()
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := out.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if os.Remove(dst) != nil && exists(dst) {
+		_ = os.Rename(dst, dst+".old") // running: Windows renames it but won't delete it; it removes its .old on start
+	}
+	if err := os.Rename(tmp, dst); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------- launch

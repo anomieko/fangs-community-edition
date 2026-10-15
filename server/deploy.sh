@@ -94,6 +94,8 @@ mkdir -p "$dist"; rm -rf "$dist/overlay" "$dist/FangsCE.exe"
 (cd "$REPO/launcher" && GOOS=windows GOARCH=amd64 "$go" build -trimpath -ldflags "-s -w -X main.server=$public:8080 \
    -X main.joinCode=$code -X main.pubKey=$pub -X main.version=$(git -C "$REPO" rev-parse --short HEAD)" -o "$dist/FangsCE.exe" .)
 "$REPO/player/install-player-files.sh" "$dist/overlay" >/dev/null
+# the game's own FANGS.exe can't log in; players who start it get the launcher instead (it hands over to its installed copy)
+cp "$dist/FangsCE.exe" "$dist/overlay/FANGS.exe"
 mkdir -p "$dist/overlay/FangsCE"
 sed "s/@BACKEND@/$public:8080/g" "$REPO/tools/run/config/Engine.ini.template" > "$dist/overlay/FangsCE/Engine.ini"
 # patch pak (docs/PATCHING.md): the enabled patches for this build, built here from the game files. Players get it

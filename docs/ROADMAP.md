@@ -57,6 +57,11 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
   a no-show the others' lobby screen gives up after ~45 s ("Failed to Connect to Match.") just as FangsHost would
   start without the missing player.
 
+- Install help in the launcher (item 8): the questions players got wrong are checked, the game no longer lands in
+  Downloads or a folder named after the invite code, desktop and Start menu shortcuts, and the game folder's
+  `FANGS.exe` starts the launcher. Launcher tests pass on Linux and under Wine (`launcher/*_test.go`; Windows ones:
+  `GOOS=windows go test -c`, run with Wine in a prefix of its own). Deploy with the user's OK.
+
 ## In progress
 
 1. **Unreleased heroes.** Playable with full kits: Warlock (Withergrim), Priest (Ellis), WaterBlade (Nuali),
@@ -112,6 +117,21 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
    plays. `ranked-fixes` rebases onto it: conflicts in `hosts.py` (keep both new `Host` fields and both `allocate()`
    lines), the `matchmaker.py` docstring (theirs, path `backend/tests/`), CHANGELOG and `ranked.md`; its test edits move
    with the files to `backend/tests/`.
+8. **Players' install trouble** (user, 15 Oct): players installed into Downloads and it didn't work, pasted their
+   invite code as the install folder (the old launcher asked for the folder first and took any answer as it was, so
+   the game went into a folder named after the code, relative to wherever the launcher ran), and didn't know
+   `FangsCE.exe` is how they start the game. Branch `install-ux`, worktree `../fangs-install`. Done (not deployed):
+   invite asked first, then the folder (after the self-update, so the server's launcher asks); an invite code is
+   refused as a folder or name; a full folder gets a `Fangs Community Edition` subfolder; writable, free space and
+   OneDrive checks; a bare name is taken from the user's folder; an install from the old question is found and fixed
+   on the next start; a folder with other things in it is never moved on a build switch; the launcher copies itself
+   to `%LOCALAPPDATA%\Programs\Fangs Community Edition` and makes desktop and Start menu shortcuts once; the game
+   folder's `FANGS.exe` is a copy of the launcher that hands over to that copy (`server/deploy.sh`).
+   Next: deploy (user's OK); then a new GitHub release (`launcher/release.sh`, after the deploy: before it, the
+   release's launcher would update itself to the old server launcher, which asks the old questions) so newcomers get
+   the invite-first order; until then the old release asks for the folder first, and the server's launcher fixes the
+   answer. Open: a player who starts `MOBA-Win64-Shipping.exe` (e.g. pinned to the taskbar while the game ran) still
+   gets no login; FangsBoot could start the launcher instead.
 
 ## Known issues and small ideas
 
