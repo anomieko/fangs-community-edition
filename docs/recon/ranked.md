@@ -2,8 +2,8 @@
 
 Build: **15 Feb 2023** (paths under `work/bp-2023-02-15/MOBA/Content/`) unless noted. Backend: `backend/skill.py`
 (rating math), `backend/allocator.py` (queue decision), `backend/ranked.py` (store, settlement, leaderboard),
-`backend/matchmaker.py` (Ranked and Casual queues). Tests: `tools/test/test_ranked.py`,
-`tools/test/test_ranked_queue.py`, `tools/run/test_ranked.sh` (two real clients).
+`backend/matchmaker.py` (Ranked and Casual queues). Tests: `backend/tests/test_ranked.py`,
+`backend/tests/test_ranked_queue.py`, `tools/run/test_ranked.sh` (two real clients).
 
 Decision (the user, 15 Oct 2026): Ranked uses skill ratings; Casual stays quick matches with no rating (the
 population is small). Custom lobbies change no rating either.
@@ -59,7 +59,7 @@ provisional players (< 10 games or sigma > 350) balanced, and mirrored party sha
 300 s). Best split by `((p − .5) / .1)² + .05 (span / 800)²`. Physical sides by a random bit.
 
 Checked against the research's own fixtures (when its checkout sits next to this repo): its 6 rating examples, the
-party worked example and all 71 dev-queue scenarios reproduce exactly through our port (`tools/test/test_ranked.py`).
+party worked example and all 71 dev-queue scenarios reproduce exactly through our port (`backend/tests/test_ranked.py`).
 
 ## Measurements (15 Oct 2026, local machine)
 
@@ -67,7 +67,7 @@ party worked example and all 71 dev-queue scenarios reproduce exactly through ou
   of 3 waits). The matchmaker decides at most once per second and only while a full game's worth of ranked players
   is queued; settling a result is a few dozen float operations. No measurable load on the game servers.
 - **Simulated community** (24 players with hidden skills spread like a real group, sd 300; 400 sessions of 8-14
-  queuing over two minutes; `simulate()` in `tools/test/test_ranked.py`):
+  queuing over two minutes; `simulate()` in `backend/tests/test_ranked.py`):
 
   | widening (`--ranked-widen-speed`) | rating vs true skill (r) | true favorite's win chance | ranked wait median / 90% |
   |---|---|---|---|

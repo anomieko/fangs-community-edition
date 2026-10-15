@@ -1,7 +1,7 @@
 """Ranked and Casual queues end to end inside the backend: the real Matchmaker and ingest_match with fake
 websockets, a fake host manager and a throwaway store (no game, no network, nothing under backend/data).
 
-    backend/.venv/bin/python -I tools/test/test_ranked_queue.py
+    backend/.venv/bin/python -I backend/tests/test_ranked_queue.py
 """
 import asyncio
 import base64

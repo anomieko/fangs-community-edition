@@ -12,7 +12,7 @@ Among feasible lobbies of the lowest composition level it minimizes ((p - .5) / 
 exact ties prefer fewer exact repeats of a player's last opponents, then ticket ids.
 
 `widen_speed` scales the whole wait schedule (bands, favorite cap, composition, late placement): the research
-uses 1; a small community gets the same fairness from a faster one (tools/test/test_ranked.py, docs/recon/ranked.md).
+uses 1; a small community gets the same fairness from a faster one (backend/tests/test_ranked.py, docs/recon/ranked.md).
 
 Search is bounded (anchor = oldest ticket; 32 index neighbours each side; per-size quotas; 4 anchored teams per
 shape; 64 opposing teams per anchored team and level), so its cost doesn't grow with the queue. Not modelled

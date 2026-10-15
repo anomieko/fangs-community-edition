@@ -1,6 +1,6 @@
 """Ranked rating + queue tests (stdlib only, no game, no network).
 
-    python3 -I tools/test/test_ranked.py            # or: python3 -I -m unittest tools/test/test_ranked.py -v
+    python3 -I backend/tests/test_ranked.py            # or: python3 -I -m unittest backend/tests/test_ranked.py -v
 
 With the user's matchmaking research checked out next to this repo (or ELOMMR_DIR=<path>), it also replays that
 handoff's own fixtures (rating examples, party example, the 71 dev-queue scenarios) through backend/skill.py and
