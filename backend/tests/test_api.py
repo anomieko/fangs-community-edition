@@ -842,6 +842,16 @@ class MatchResults(ApiCase):
         fb.ingest_match(fb.Store(self.tmp / 'store.json'), result, log.append)
         self.assertEqual(log[-1]['skipped'], 'duplicate')
 
+    async def test_one_unreadable_record_costs_only_its_player(self):
+        # e.g. a mastery record written by a player before records were protected (review R2: it stopped the loop
+        # halfway, and the match counted as seen)
+        self.app['store'].data['player_records'][self.a] = {'PROFILE_MASTERY_KEY': {'Level': 'x', 'XPToNext': []}}
+        self.finish()
+        self.assertEqual(self.app['store'].data['player_records'][self.a],
+                         {'PROFILE_MASTERY_KEY': {'Level': 'x', 'XPToNext': []}})          # alice's untouched, not half-done
+        self.assertEqual((await self.record(self.bob, 'PROFILE_MASTERY_KEY'))['MatchesPlayed'], 1)   # bob counted
+        self.assertIn('records not updated', next(e['error'] for e in self.logs if e.get('player') == self.a))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
