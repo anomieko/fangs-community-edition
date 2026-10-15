@@ -108,6 +108,23 @@ Each reviewer looked for these first:
 | X6 [X2-3, X2-4, X2-5] | **Path list kept (user, 15 Oct).** `docs/recon/playtest-source-paths.txt` (261 internal source paths from the playtest exe's strings), the class-name list, and a build-farm path in `docs/clients/playtest-main_v0_0_444.md`. | |
 | X7 [X2-10, X2-13] | Local refs `backup-before-scrub` and `refs/original` hold pre-scrub history; `.gitignore` gaps (`.claude/`, files directly in `clients/`, `*.pak`, `*.key`, `.env`). | |
 
+## Second review: the fixes themselves
+
+A fresh reviewer read the sprint's own diff, looking for regressions the fixes introduced. It found none that breaks a
+verified player flow. It found one fix resting on evidence that couldn't rule out a client path (R2-1), and four
+lows. All five are corrected and tested:
+
+| id | sev | what the fix had broken or risked | state |
+|---|---|---|---|
+| R2-1 | medium | S2 made "register player in a lobby" owner-only. It is the SDK's own call and the only way a player gets back into a started custom match. The evidence (no such call in local test logs) can't rule out paths the tests don't cover, because every headless client is local. | corrected: a player may add or remove themselves; `test_join_needs_a_ready_lobby_and_a_started_match_takes_only_its_players` |
+| R2-2 | low | With L1 an owner can have a running match next to a new lobby; the bulk lookup listed the old one first. | corrected: newest first; `test_bulk_lookup_lists_the_newest_session_first` |
+| R2-3 | low | H1 stopped a server at once when its watcher failed, which ends a live match. | corrected: logged, stopped when the process exits; `test_server_whose_watcher_failed_is_stopped_when_it_exits` |
+| R2-4 | low | A cancelled `allocate()` left its booting server reserved for nobody (not reachable today). | corrected: it becomes claimable; `test_allocate_that_gives_up_leaves_its_server_claimable` |
+| R2-5 | low | O2 turned every JSON parse error into a 400 and stopped printing tracebacks to stderr. | corrected: only a bad request body is a 400; 500s print their traceback |
+
+Noted, not changed: a standby whose boots keep failing (e.g. a broken game install) is retried every minute without
+backoff; each failure is logged.
+
 ## Lifecycle matrix
 
 Every way a lobby, match, party or backend session ends, against every piece of state it must release (server
