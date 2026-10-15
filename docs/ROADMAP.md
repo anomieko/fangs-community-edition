@@ -69,8 +69,9 @@ Nothing.
    `backend/hosts.py`; findings and numbers in `docs/recon/server-performance.md`, load test `tools/run/test_perf.sh`).
    Cause of the ~200 ms hitches: FangsHost's 2 s / 3 s loops scanned all objects on the game thread. Locally with
    3 active players + 9 bots: before 10 frames > 50 ms in 140 s (longest 99 ms), after 0 (longest 18 ms); servers
-   also skip movies, CEF and the `-log` console. Next: compare the VPS `perf` lines of the
-   next real match (`frame_ms`, `slow`, `fps_min`). Open: ntsync on the VPS (capacity, needs kernel + Wine change);
+   also skip movies, CEF and the `-log` console. On the VPS (seven 4-8 player matches, 15 Oct): 58-60 fps,
+   typical gaps 12-15 ms, one single 75-240 ms frame every 1-3 minutes (`docs/recon/server-performance.md`).
+   Next: find what those single frames are (GC? wineserver?), and a 6v6 when enough people are on. Open: ntsync on the VPS (capacity, needs kernel + Wine change);
    replication runs at ~20-25 Hz whatever `NetServerMaxTickRate` says, so no 60 Hz net tick from config.
    FangsBoot (players' mod) still cancels finished loops the way that sometimes stopped other loops in FangsHost:
    switch it to idling too (needs a player update; watch for menu lists that stop refreshing).
@@ -88,6 +89,11 @@ Nothing.
    against a control without the pak (`tools/run/test_patch.sh`). Not seen in a match yet: Earthquake's centre (the
    Quakebreak Talisman augment), Ethryn, Fiorne, Astrada, Zoey. Next: players' feedback. Off switch:
    `"enabled": false` in `tools/patch/patches/ccrevert.json` and a deploy.
+7. **Review sprint** (external backend review on 16 Oct): branch `review`, worktree `../fangs-review` (owns
+   `docs/review/`, the backend tests and fixes from the review). Plan, rubric and safety rules in
+   `docs/review/SPRINT.md` on that branch; verified findings in `docs/review/FINDINGS.md`. Phase 1 (read-only
+   review per component, plus lifecycle / removal / hygiene audits) started 15 Oct. Next: verify each finding, then
+   triage with the user. No fixes before triage, and nothing merged into `main` or deployed without the user's OK.
 
 ## Known issues and small ideas
 

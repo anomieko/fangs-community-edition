@@ -83,6 +83,18 @@ Client connects with `Authorization: Bearer secret-token:accelbyte/<token>`. JSO
 - Lobby (`BP_GM_Lobby_GameMode`) gets its config from the lobby owner's `UserMatch` SaveGame
   (`LoadMatchInfo`) → `InitLobbyState` → `GMSetupLobbyState`; launches with `servertravel /Game/Environment/Maps/<Level>`.
 - Server fetches each player's `PROFILE_INFO_KEY` (server token) and retries forever on failure.
+- How a lobby server ends itself (Feb 2023 blueprints; `BP_GM_Lobby_GameMode`, `WB_LobbyMenu`). Each goes through
+  `KickAllPlayers` and then `UnreserveServer`/`QuitGameServer`, so the process exits with code 0 and the backend logs
+  `process exited (0)`:
+  - **the owner presses Leave**: `WB_LobbyMenu` calls `EndLobbyOnServer("")` when `IsLobbyOwner`, which kicks
+    everyone with an **empty** message (FangsHost logs `lobby: kicking everyone: ` with nothing after it, and no
+    `the game stops the server` line). On prod 9 of the 10 `process exited (0)` exits between 14 Oct 23:00 and
+    15 Oct 03:00 UTC were this (the 10th: a player didn't lock in), some 2-3 s after the owner joined their own new
+    lobby;
+  - `StopServer` (logs `the game stops the server`, with a message): a player didn't lock in a hero
+    (`error_player_didnt_lockin`), a player left during hero select (`CheckAllPlayersPresent`, `error_player_left_lobby`),
+    entry timeout (`error_player_didnt_join_lobby`, not in custom mode 4), empty or ownerless lobby every
+    `CheckUnReserveTime` (300 s; FangsHost resets the timer while the lobby is empty).
 - Custom games: `WB_PlayMenu.CreateZeuzServer` → if `ABArmadaDeploymentName` set, AccelByte SessionBrowser
   (`CreateCustomGameSessions`, settings `lobby_name/lobby_owner/map_level`) and `GetGameSessionsByTypeEnum`;
   otherwise Zeuz IMS payload APIs.
