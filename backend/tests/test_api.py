@@ -15,7 +15,7 @@ from unittest import mock
 
 from aiohttp import WSMsgType
 
-from support import BackendCase, fb
+from support import BackendCase, backend_args, fb
 import hosts  # after support, which puts backend/ on sys.path
 from hosts import LOBBY_MAP, Host
 
@@ -124,12 +124,29 @@ class Login(ApiCase):
         self.assertEqual((status, me['userId'], me['userName'], me['displayName']),
                          (200, alice['user_id'], 'alice', alice['display_name']))
 
-    # bug: "ALICE" with any secret logs into alice's account (one user id per lowercased name), see report
-    @unittest.expectedFailure
     async def test_a_name_in_other_case_cannot_log_into_an_account(self):
+        # the user id comes from the lower-cased name: "ALICE" is alice's account and needs her secret (review S1)
         alice = await self.login('alice', 's1')
         status, body = await self.token(grant_type='password', username='ALICE', password='other')
-        self.assertNotEqual(body.get('user_id'), alice['user_id'], (status, body))
+        self.assertEqual((status, body.get('errorCode')), (401, 10130), body)
+        again = await self.login('ALICE', 's1')
+        self.assertEqual((again['user_id'], again['display_name']), (alice['user_id'], alice['display_name']))
+        self.assertEqual(list(self.app['store'].data['users']), ['alice'])
+
+    def test_names_stored_twice_in_other_case_log_in_as_the_first(self):
+        # stores from before the fix can hold "Alice" and "ALICE" with one user id and two secrets
+        store = fb.Store(self.tmp / 'old.json')
+        for name, secret in (('Alice', 's1'), ('ALICE', 's2')):
+            store.data['users'][name] = {'user_id': 'u1', 'display_name': name}
+            store.check_secret(store.data['users'][name], secret)
+        user = store.user_for('alice')
+        self.assertEqual(user['display_name'], 'Alice')
+        self.assertTrue(store.check_secret(user, 's1'))
+        self.assertFalse(store.check_secret(user, 's2'))
+        logs = []
+        fb.make_app(backend_args(self.tmp, '--data', str(self.tmp / 'old.json')), logs.append)
+        self.assertIn({'store': 'names that differ only in case (the first one is the account)',
+                       'names': [['Alice', 'ALICE']]}, logs)
 
     async def test_names_are_3_to_16_letters_digits_or_underscores(self):
         for name, ok in (('ab', False), ('abc', True), ('a_b_9' * 3 + 'x', True), ('a' * 17, False),
