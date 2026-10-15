@@ -17,7 +17,7 @@ Last updated: 2026-10-15.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-2104` (`8de8382`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -41,32 +41,15 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
 - since 15 Oct 17:14 UTC: the Feb 2023 CC changes reverted by the first patch pak (`FangsCE_P.pak`, players get it
   from the launcher): roots back to stuns, Allure charms again (with its Aug visual), Somnia's ult locks only her cast,
   no LMB lock for Rowan, tooltips say stun (`docs/recon/cc-changes.md`, `docs/PATCHING.md`).
+- since 15 Oct 21:04 UTC (forced with 7 players on, headless regression skipped: the user's decisions): the review
+  sprint's fixes (login names case-insensitive, lobby login and ownership checks, protected records, PLAY next to a
+  running lobby or game, game-server lifecycle, social and match-result fixes), Ranked review fixes, a party of one is
+  no party, launcher install help (invite first, checked folder, shortcuts, `FANGS.exe` starts the launcher), faster
+  downloads (gzipped 32 MiB pieces, 4 at a time) and BBR on the VPS.
 
 ## Done, not deployed
 
-- Review sprint fixes (item 7; `docs/CHANGELOG.md` "Next deploy" lists each with its commit): login names
-  case-insensitive, lobby login and ownership checks, protected records, PLAY usable next to a running lobby or game and
-  never more matches than servers, game-server lifecycle and social fixes, match results per player. 199 backend unit
-  tests pass. **Blocked on:** the headless game regression on these commits (not run yet: the user was playing on the
-  dev machine). Deploy only after it passes, with the user's OK.
-- Ranked review fixes (`d764f5f`, branch `ranked-fixes`, worktree `~/repos/fangs-ranked`; `docs/recon/ranked.md`
-  "Review follow-ups"): quitters count, no-shows void, steady rank points, party mode check, limits. Tests:
-  `backend/tests/test_ranked*.py` (incl. a Monte Carlo check of the n vs n math); `tools/run/test_ranked.sh` (real
-  clients: rated game, end screen; `NOSHOW=1`: nothing rated) passed before the rebase onto the review sprint and
-  needs a rerun on top of it, with the headless regression. Seen on the way (pre-existing, Casual probably too): with
-  a no-show the others' lobby screen gives up after ~45 s ("Failed to Connect to Match.") just as FangsHost would
-  start without the missing player.
-- **Faster player downloads** (branch `fast-download`, `docs/recon/downloads.md`): big files as gzipped 32 MiB
-  pieces, 4 at a time; the 12.6 GB pak becomes ~7 GB to download. Players complained (15 Oct); measured: one TCP
-  stream per player, cubic, the pak uncompressed. Tests: `tools/run/test_download.sh`, `launcher/download_test.go`.
-  Next: merged after `install-ux`, then the one headless regression (incl. `test_download.sh`) and one deploy with
-  the user's OK. User's decision (15 Oct): BBR goes on the VPS (the `harden.sh` lines) together with that deploy, not
-  before; the deploy uploads the pieces (~7 GB) from the deploying machine.
-
-- Install help in the launcher (item 8): the questions players got wrong are checked, the game no longer lands in
-  Downloads or a folder named after the invite code, desktop and Start menu shortcuts, and the game folder's
-  `FANGS.exe` starts the launcher. Launcher tests pass on Linux and under Wine (`launcher/*_test.go`; Windows ones:
-  `GOOS=windows go test -c`, run with Wine in a prefix of its own). Deploy with the user's OK.
+Nothing.
 
 ## In progress
 
@@ -118,23 +101,23 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
    Done on the branch (not merged, not deployed): 8 independent reviews; 20 findings fixed (ledger rows), code ones
    each with a test that failed first; a second review of the fixes themselves (5 corrections). 199 backend unit tests run on production's
    Python and aiohttp; CI runs them with ruff. The `deploy.sh` fix is already on `main` (`90ebe4e`, user's OK).
-   Merged into `main` and pushed on 15 Oct (user's request; not deployed); the party-of-one fix and the test-data
-   guards (no test touches `backend/data` or `work/hosts`) merged last, after `ranked-fixes`, `install-ux`, `fast-download`. Next: the headless game regression on
-   `main` (not while the user plays on this machine), then a deploy with the user's OK, after the review, when nobody
-   plays. `ranked-fixes` rebases onto it: conflicts in `hosts.py` (keep both new `Host` fields and both `allocate()`
-   lines), the `matchmaker.py` docstring (theirs, path `backend/tests/`), CHANGELOG and `ranked.md`; its test edits move
-   with the files to `backend/tests/`.
+   Merged into `main` and pushed on 15 Oct (user's request); the party-of-one fix and the test-data
+   guards (no test touches `backend/data` or `work/hosts`) merged last, after `ranked-fixes`, `install-ux`, `fast-download`. Live
+   since `deploy-2026-10-15-2104` (forced; the headless regression was skipped, both the user's decisions). Next: that
+   regression as an after-the-fact check, from a worktree and never while the user plays (`pgrep -af
+   '[M]OBA-Win64-Shipping.exe'`): test_lobby, test_queue, test_social, test_chat, test_ranked, `NOSHOW=1 RUN=rankedns`
+   test_ranked, test_match, test_download; then tomorrow's external review.
 8. **Players' install trouble** (user, 15 Oct): players installed into Downloads and it didn't work, pasted their
    invite code as the install folder (the old launcher asked for the folder first and took any answer as it was, so
    the game went into a folder named after the code, relative to wherever the launcher ran), and didn't know
-   `FangsCE.exe` is how they start the game. Branch `install-ux`, worktree `../fangs-install`. Done (not deployed):
+   `FangsCE.exe` is how they start the game. Live since `deploy-2026-10-15-2104`:
    invite asked first, then the folder (after the self-update, so the server's launcher asks); an invite code is
    refused as a folder or name; a full folder gets a `Fangs Community Edition` subfolder; writable, free space and
    OneDrive checks; a bare name is taken from the user's folder; an install from the old question is found and fixed
    on the next start; a folder with other things in it is never moved on a build switch; the launcher copies itself
    to `%LOCALAPPDATA%\Programs\Fangs Community Edition` and makes desktop and Start menu shortcuts once; the game
    folder's `FANGS.exe` is a copy of the launcher that hands over to that copy (`server/deploy.sh`).
-   Next: deploy (user's OK); then a new GitHub release (`launcher/release.sh`, after the deploy: before it, the
+   Next: a new GitHub release (`launcher/release.sh`, after the deploy: before it, the
    release's launcher would update itself to the old server launcher, which asks the old questions) so newcomers get
    the invite-first order; until then the old release asks for the folder first, and the server's launcher fixes the
    answer. Open: a player who starts `MOBA-Win64-Shipping.exe` (e.g. pinned to the taskbar while the game ran) still
@@ -142,6 +125,8 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
 
 ## Known issues and small ideas
 
+- Ranked (and probably Casual): with a no-show, the others' lobby screen gives up after ~45 s ("Failed to Connect to
+  Match.") just as FangsHost would start without the missing player (seen in `NOSHOW=1 tools/run/test_ranked.sh`).
 - Underworld (`LE_UnderWorldArena`, own "stocks" mode: team lives, random spawns; Aug 2022 + Feb 2023 paks) and
   Arena (`LE_Arena01_Map`, prototype) load on the server, but players stay on the loading screen ("Waiting for
   players"; `RUN=... MAP=... tools/run/test_match.sh`). Off in the seed; Underworld worth a look (user wants it).
