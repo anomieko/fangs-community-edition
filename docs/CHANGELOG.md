@@ -15,6 +15,15 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+| Change | Commits | Off switch |
+|---|---|---|
+| Patch pak build: no `FangsCE_P.patches` note next to the pak (it went into the players' download folder; harmless) | (this commit) | none |
+
+## deploy-2026-10-15-1714 (`09c27b1`, Feb 2023 build)
+
+Deployed with the user's OK. Live check after the deploy: the players' file list has `FangsCE_P.pak` (1,366,002 bytes), and both game
+servers' game copies have it.
+
 Server + player update: players' launchers download `FangsCE_P.pak` (1.4 MB) the next time they start.
 
 | Change | Commits | Off switch |
