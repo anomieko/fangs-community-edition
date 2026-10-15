@@ -103,7 +103,7 @@ python3 "$REPO/player/build-manifest.py" "$game" "$dist" "$(tr -d '\r\n' < "$gam
 "$sign" sign "$key" "$dist/manifest.json"
 "$sign" verify "$pub" "$dist/manifest.json" | sed 's/^/   /'
 rm -rf "$(dirname "$sign")"
-# only what the launcher needs; --delete drops older packages (zips for the old .bat launcher: unsigned)
+# only what the launcher needs; --delete drops anything else left there (e.g. zips of the retired .bat client)
 ssh_ "sudo mkdir -p $remote/repo/server/downloads"
 rsync_ -a --delete --exclude .hashcache.json "$dist/" "$target:$remote/repo/server/downloads/"
 
@@ -124,4 +124,4 @@ stamp=$(date -u +%Y-%m-%d-%H%M)
 echo "$commit ${dirty:+(with uncommitted changes) }$build $stamp" | ssh_ "sudo tee $remote/repo/DEPLOYED >/dev/null"
 git -C "$REPO" tag -a "deploy-$stamp" -m "deployed $build${dirty:+ (with uncommitted changes)}" "$commit"
 echo "==> deployed ${commit:0:7} as tag deploy-$stamp (add it to docs/CHANGELOG.md; push tags with the commits)"
-echo "==> server is up at $public:8080 (full client zip: ssh $target 'cd $remote/repo/server && sudo ./build-client.sh')"
+echo "==> server is up at $public:8080"
