@@ -17,7 +17,7 @@ Last updated: 2026-10-14.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-14-2306` (`88eb27e`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-0003` (`ce9f713`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -31,13 +31,13 @@ Current deploy: `deploy-2026-10-14-2306` (`88eb27e`); what each deploy changed: 
 - since 14 Oct 23:06 UTC: old carry Shards and channeled Health Shrines on the arena maps (`OLD_SHARDS` switch;
   see Shards below), the nine shard artifacts restored, game-server stutter fix (no object scans,
   no movies/CEF/console), launcher remembers its invite, item texts fixed.
+- since 15 Oct 00:03 UTC: maps Embersong, Stormheart, Crownwatch (all three in PLAY; Arena and Payload II gone),
+  custom modes 6vs6 … Duel, Solo (Battle = 3vs3; Trio and AI gone), friends fix for mutual requests, a carrier who
+  leaves loses the Shard after 2 s.
 
 ## Done, not deployed
 
-- Old Shard system: the "round-2 HoldingOrb tag loss" was a test artifact (the test removed the carrier's hero
-  right after that pickup); no game bug. FangsHost's safety net now returns a removed carrier's Shard after 2 s
-  instead of after garbage collection (15-48 s); `tools/run/test_shards.sh` got a round-2 mode (`SEQ=round2`) and
-  its own data folder per run (branch `shards`, `docs/recon/shards.md`).
+Nothing.
 
 ## In progress
 
