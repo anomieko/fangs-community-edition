@@ -692,6 +692,23 @@ def level_up(level, xp, table, strict):
     return level, xp
 
 
+def mastery_after(m, p, won, secs, levels, result):
+    """PROFILE_MASTERY_KEY `m` after one match of player `p` ({'team', 'hero'}): XP into account and hero levels, wins."""
+    per_sec, base = XP_WIN if won else XP_LOSE
+    xp = int(secs * per_sec + base)
+    m['Level'], m['XPToNext'] = level_up(m.get('Level', 1), m.get('XPToNext', 0) + xp, levels.get('Account', []), True)
+    m['MatchesPlayed'] = m.get('MatchesPlayed', 0) + 1
+    m['MatchesWon'] = m.get('MatchesWon', 0) + won
+    m['RoundsWon'] = m.get('RoundsWon', 0) + int(result.get('rounds_a' if p['team'] == 'TeamA' else 'rounds_b') or 0)
+    if p['hero']:
+        h = m.get(p['hero']) if isinstance(m.get(p['hero']), dict) else {'Level': 1, 'XPToNext': 0}
+        h['Level'], h['XPToNext'] = level_up(h.get('Level', 1), h.get('XPToNext', 0) + xp, levels.get('Hero', []), False)
+        h['MatchesPlayed'] = h.get('MatchesPlayed', 0) + 1
+        h['MatchesWon'] = h.get('MatchesWon', 0) + won
+        m[p['hero']] = h
+    return m
+
+
 def ingest_match(store, result, log, ranked_parties=None):
     """A match FangsHost saved at its end (fangshost_result-*.json): the game's own match-history entry plus the
     winner. Every player with an account gets it in PROFILE_HISTORY_KEY and XP/levels/wins in PROFILE_MASTERY_KEY.
@@ -710,31 +727,24 @@ def ingest_match(store, result, log, ranked_parties=None):
             if user and row.get('Team') in TEAMS.values():
                 players[user['user_id']] = {'user': user, 'team': row['Team'], 'hero': str(row.get('Type', ''))}
                 row['Name'] = user['display_name']
-    seen.append(match_id)
-    del seen[:-200]
     mode, levels = result.get('game_mode'), store.data['game_records'].get('CELevels') or {}
     secs = min(float(result.get('match_time') or sum(r.get('TotalRoundTime', 0) for r in rounds)), XP_MATCH_CAP)
     for uid, p in players.items():
-        recs, won = store.data['player_records'].setdefault(uid, {}), p['team'] == winner
-        history = stats_record(store, uid, 'PROFILE_HISTORY_KEY')
-        history['Matches'] = (history.get('Matches') or [])[-(HISTORY_LENGTH - 1):] + [entry]
-        recs['PROFILE_HISTORY_KEY'] = history
-        if mode not in XP_MODES:
+        # each player's records change all at once or not at all: computed on copies, stored when complete; a stored
+        # record that can't be read costs only that player this match (it used to stop the loop halfway)
+        try:
+            history = json.loads(json.dumps(stats_record(store, uid, 'PROFILE_HISTORY_KEY')))
+            history['Matches'] = (history.get('Matches') or [])[-(HISTORY_LENGTH - 1):] + [entry]
+            update = {'PROFILE_HISTORY_KEY': history}
+            if mode in XP_MODES:
+                update['PROFILE_MASTERY_KEY'] = mastery_after(json.loads(json.dumps(stats_record(store, uid, 'PROFILE_MASTERY_KEY'))),
+                                                              p, p['team'] == winner, secs, levels, result)
+        except (TypeError, ValueError, AttributeError) as e:
+            log({'match': match_id, 'player': uid, 'error': f'records not updated: {e!r}'})
             continue
-        per_sec, base = XP_WIN if won else XP_LOSE
-        xp = int(secs * per_sec + base)
-        m = stats_record(store, uid, 'PROFILE_MASTERY_KEY')
-        m['Level'], m['XPToNext'] = level_up(m.get('Level', 1), m.get('XPToNext', 0) + xp, levels.get('Account', []), True)
-        m['MatchesPlayed'] = m.get('MatchesPlayed', 0) + 1
-        m['MatchesWon'] = m.get('MatchesWon', 0) + won
-        m['RoundsWon'] = m.get('RoundsWon', 0) + int(result.get('rounds_a' if p['team'] == 'TeamA' else 'rounds_b') or 0)
-        if p['hero']:
-            h = m.get(p['hero']) if isinstance(m.get(p['hero']), dict) else {'Level': 1, 'XPToNext': 0}
-            h['Level'], h['XPToNext'] = level_up(h.get('Level', 1), h.get('XPToNext', 0) + xp, levels.get('Hero', []), False)
-            h['MatchesPlayed'] = h.get('MatchesPlayed', 0) + 1
-            h['MatchesWon'] = h.get('MatchesWon', 0) + won
-            m[p['hero']] = h
-        recs['PROFILE_MASTERY_KEY'] = m
+        store.data['player_records'].setdefault(uid, {}).update(update)
+    seen.append(match_id)
+    del seen[:-200]
     rating = None
     if ranked_parties is not None:
         teams = {t: [uid for uid, p in players.items() if p['team'] == t] for t in TEAMS.values()}
