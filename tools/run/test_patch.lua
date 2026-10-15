@@ -8,6 +8,7 @@
 --   aim(a, b, range) server: hero b where a's targeted abilities land (a's pointer, clamped to the ability's range).
 --   fill(name)       server: the hero's mana to full (ults cost mana).
 --   fire(pattern)    client: activates the own hero's ability whose class name contains pattern.
+--   count(class)     client: how many live objects of a class exist (e.g. a gameplay cue's actor: the visual played).
 FCE_PATCH = FCE_PATCH or {}
 local T = FCE_PATCH
 
@@ -131,6 +132,14 @@ function T.fill(name)   -- full mana (ults cost mana), on the server: replicated
 end
 
 -- ---------------------------------------------------------------------------------------------- client
+function T.count(className)   -- live objects of a class, e.g. a gameplay cue's actor (an object scan)
+    local n = 0
+    for _, o in ipairs(FindAllOf(className) or {}) do
+        if valid(o) and not o:GetFullName():find("Default__", 1, true) then n = n + 1 end
+    end
+    return string.format("count %s: %d", className, n)
+end
+
 function T.fire(pattern)
     local gi = FindFirstOf("BP_MOBAInstance_C")
     GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")

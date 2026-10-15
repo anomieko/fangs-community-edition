@@ -41,10 +41,12 @@ stage=$(mktemp -d "$REPO/work/patch/stage.XXXXXX"); trap 'rm -rf "$stage"' EXIT
 dotnet build "$REPO/tools/patch/AssetPatch/AssetPatch.csproj" -c Release -o "$REPO/work/bin/assetpatch" \
   -p:UAssetAPIDir="$(realpath "$REPO/third_party/UAssetAPI")" > "$stage/dotnet.log" 2>&1 || { cat "$stage/dotnet.log" >&2; exit 1; }
 
-# the game's own copies of every asset a patch changes (.uasset + .uexp)
+# the game's own copies of every asset a patch changes or copies from (.uasset + .uexp)
 for p in "${patches[@]}"; do
   python3 -I -c 'import json,sys
-for a in json.load(open(sys.argv[1]))["assets"]: print(a["path"] + ".uasset"); print(a["path"] + ".uexp")' "$patchdir/$p.json"
+for a in json.load(open(sys.argv[1]))["assets"]:
+    for path in [a["path"]] + [e["from"] for e in a["edits"] if e["op"] == "copy-default"]:
+        print(path + ".uasset"); print(path + ".uexp")' "$patchdir/$p.json"
 done | sort -u > "$stage/files.txt"
 for pak in "$game"/MOBA/Content/Paks/*.pak; do   # in load order; never our own pak
   [[ $(basename "$pak") == FangsCE_P.pak ]] && continue

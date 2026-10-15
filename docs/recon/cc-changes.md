@@ -71,7 +71,7 @@ shake on the target.
 | Hero | Ability (key) | Aug | Feb | Dec |
 |---|---|---|---|---|
 | Somnia | **Allure** (E): the first enemy hit by the projectile | charm 0.75 s (+0.5 empowered) | **root 1.25 s** (+0.5) | root 1.25 s |
-| Brutus | **Earthquake** (Shift): centre of the first tremor | stun 1.5 s, radius 150 | **root 1.5 s, radius 350** | root |
+| Brutus | **Earthquake** (Shift): centre of the first tremor (augment Quakebreak Talisman) | stun 1.5 s, radius 150 | **root 1.5 s, radius 350** | root |
 | Ethryn | **Knightseeker** (Space): enemy pushed into a wall | stun 0.75 s | **root 1.5 s** | root 0.85 s |
 | Ethryn | Ironclad Slam (Shift) + heirloom **Vortex Pauldrons** | slow 50 % 1.25 s + flip behind her | **root 2 s** | slow |
 | Fiorne | Hiari Smash (Shift) + heirloom **Earthbreaker Pommel** | stun 1.0 s | **root 1.5 s** | reworked (fading slow) |
@@ -292,7 +292,7 @@ How it is done: `tools/patch/patches/ccrevert.json`, built into `FangsCE_P.pak` 
 |---|---|
 | Somnia, Allure | call `MakeRootEffectSpec` → `MakeCharmEffectSpec`; `BaseCharmDuration`/`CharmDuration` 1.25 → 0.75; Glamorfume `CCStackDurationIncrease` 0.035 → 0.05 |
 | Somnia, ult | `PreCastLock`: `LockAbilities(0.0)` → `LockAbilities(0.5)`, so the lock covers the 0.5 s cast (`CastTime`), not the tether |
-| Brutus, Earthquake centre | → `MakeStunEffectSpec`; `CenterStunRadius` 350 → 150 |
+| Brutus, Earthquake centre (augment Quakebreak Talisman) | → `MakeStunEffectSpec`; `CenterStunRadius` 350 → 150 |
 | Ethryn, Knightseeker wall | → `MakeStunEffectSpec`; `Stun Duration` 1.5 → 0.75 |
 | Fiorne, Earthbreaker Pommel | → `MakeStunEffectSpec`; `DHRootDuration` 1.5 → 1.0 |
 | Astrada, Flame Cage | → `MakeStunEffectSpec`; `StunEffectClass` `BP_GE_Root_C` → `BP_GE_Stun_C` (the cage's hit effects use it too); `StunDuration` 1.25 → 1.0; `CageDuration` 2 → 3 |
@@ -300,6 +300,8 @@ How it is done: `tools/patch/patches/ccrevert.json`, built into `FangsCE_P.pak` 
 | Zoey, Spirit Scratch | → `MakeStunEffectSpec` on all three hit paths; `Stun Duration` 1.3 → 0.9; the hit-extension heirloom path's target from Zoey herself to the enemy hit |
 | Rowan, Dourling Dive | → `MakeStunEffectSpec`; `StunDuration` 1.0 → 0.75 |
 | Rowan, Glade Slash (LMB) | both swings' `LockAbilities(0.0)` → `LockAbilities(0.01)`: no lock while LMB is held (Aug had none; Dec removed it) |
+| Charm visual | `BP_GE_Charm` gets `GameplayCue.BookMage.Skill4.CharmVFX` (Aug Allure's), see below |
+| Tooltips | "roots" → "stuns" in the 8 texts listed below |
 
 **Tested** with `tools/run/test_patch.sh` (15 Oct): each run was done with the pak and once more without it as the
 control. The game server logs the effects on both heroes.
@@ -313,7 +315,7 @@ control. The game server logs the effects on both heroes.
 | Rowan's LMB: `BP_GE_LockAbilities` on Rowan | 0.4 s | none |
 
 Earthquake's centre, Ethryn, Fiorne, Astrada and Zoey haven't been seen in a match yet. They use the same edits,
-and their values are loaded. The test's Earthquake only hit with the first tremor (0.25 s stun, unchanged).
+and their values are loaded. The test's Earthquake only hit with the first tremor (0.25 s stun, unchanged): the centre CC needs the Quakebreak Talisman augment.
 
 **Augments that interact with the reverted CC** (code review of the Feb build, 15 Oct; no test):
 
@@ -332,14 +334,25 @@ checks a target's movement or cast locks.
   caster, not about augments.
 - `GA_State_Listener` handles root, stun and grounded alike.
 
-Two client-side differences from Aug remain:
-- **No charm visual on Allure's target.** The generic `BP_GE_Charm` has no gameplay cue; Petunia's and Soul Mine's
-  charms look the same way in Feb. Aug's Allure used `BP_GE_BookMage_Skill4_Charm`, with cue
-  `GameplayCue.BookMage.Skill4.CharmVFX`. Feb deleted that effect, but the cue (`BP_GC_BookMage_Skill4CharmVFX`,
-  `NS_Somnia_Skill4_Charmed`) and its tag are still in the game. Adding the cue to `BP_GE_Charm`, which only Somnia's
-  charms use, would bring it back, with a new AssetPatch edit.
-- **Tooltips still say "roots"**: Zoey's Spirit Scratch, Rowan's Dourling Dive, Ethryn's Knightseeker wall hit,
-  Astrada's Flame Cage, and likely Fiorne's Earthbreaker Pommel. A string-table edit in the pak would fix them.
+Two client-side differences from Aug that the review found, now fixed in the patch (user, 15 Oct):
+- **Charm visual.**
+  - The generic `BP_GE_Charm` had no gameplay cue, so Allure's charm showed nothing on the target (Petunia's and
+    Soul Mine's charms look that way in Feb).
+  - Aug's Allure used `BP_GE_BookMage_Skill4_Charm`, with cue `GameplayCue.BookMage.Skill4.CharmVFX`. Feb deleted
+    that effect, but the cue (`BP_GC_BookMage_Skill4CharmVFX`, a `GameplayCueNotify_Actor` spawning
+    `NS_Somnia_Skill4_Charmed`) and its tag are still in the game.
+  - The patch gives `BP_GE_Charm` that cue (`copy-default` from the ult charm's `GameplayCues`, tag renamed).
+  - Only Somnia's charms use `BP_GE_Charm`: Allure, Petunia and Soul Mine. The ult's charm
+    (`BP_GE_BookMage_Skill3_Charm`) sets its own cues and keeps them.
+- **Tooltips that said "roots"** now say stun (`replace-text` in the `LOC_EN_*` string tables). Changed:
+  - Spirit Scratch, Dourling Dive, Knightseeker, Flame Cage;
+  - Quakebreak Talisman, Earthbreaker Pommel, Spiked Targe (and an unused Ethryn row with the same text).
+  - Already right: Allure, Repulsing Scepter, and the short help texts (`LOC_EN_ABILITIES_F1`).
+  - Vortex Pauldrons still roots.
+
+**Brutus' Earthquake centre is the Quakebreak Talisman augment.** `ActivateOnCenterStun` is only bound in
+`Apply Items Pre Cast`, and the augment's text is "enemies caught in the center … are rooted". The tables above call
+it Earthquake's centre.
 
 **Findings while building it:**
 - **The calls are by name.** Every `Make…EffectSpec` call is an `EX_VirtualFunction` on the library's default object,
