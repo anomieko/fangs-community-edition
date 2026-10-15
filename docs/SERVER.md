@@ -28,6 +28,9 @@ make launchers install anything; at worst they can break downloads.
   to the server's copy.
 - `FangsCE.exe` is the only way to install. The old `.bat` client (unsigned updates over plain HTTP) was retired on
   15 Oct (user's decision).
+- Big files are also offered as gzipped pieces (`server/downloads/chunks/`, built by `player/build-manifest.py` on the
+  deploying machine, ~7 GB): the launcher fetches 4 at a time and checks each against the signed list
+  (`docs/recon/downloads.md`). Without the folder, launchers fetch the same pieces as ranges of the whole files.
 
 ## Game server lifecycle
 
@@ -54,7 +57,7 @@ ssh root@SERVER 'LOCK_ROOT=0 bash /root/harden.sh <admin> /root/<keys-file>'
 ssh <admin>@SERVER 'sudo -n true && echo ok'          # verify BEFORE the next step
 ssh <admin>@SERVER 'sudo passwd -l root && sudo rm -f /root/.ssh/authorized_keys /root/harden.sh'
 
-# 3. deploy (uploads ~13 GB the first time; later runs only send changes)
+# 3. deploy (uploads ~13 GB of game files and ~7 GB of download pieces the first time; later runs only send changes)
 python3 -c "import secrets; print(secrets.token_urlsafe(9))" > work/joincode   # keep it private
 FANGS_JOIN_CODE=$(cat work/joincode) server/deploy.sh <admin>@SERVER clients/<build> SERVER
 

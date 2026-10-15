@@ -8,6 +8,8 @@ booted server without a process.
 """
 import asyncio
 import contextlib
+import gzip
+import hashlib
 import io
 import json
 import logging
@@ -705,6 +707,21 @@ class Downloads(ApiCase):
         self.assertEqual(await self.call('GET', f'/download/{CODE}/files/FangsCE/Engine.ini'), (200, 'ini'))   # overlay
         async with self.client.get(f'/download/{CODE}/files/MOBA/game.pak', headers={'Range': 'bytes=6-'}) as r:
             self.assertEqual((r.status, await r.text()), (206, '6789'))   # from the game install; resumable
+
+    async def test_chunks_are_sent_as_they_are(self):
+        """The launcher's gzipped pieces: /download/<code>/chunks/<sha256>.gz, no login token needed, no
+        Content-Encoding (nothing on the way may unpack a piece before the launcher checks it)."""
+        piece = gzip.compress(b'piece of the pak', mtime=0)
+        name = hashlib.sha256(b'piece of the pak').hexdigest() + '.gz'
+        (self.tmp / 'downloads' / 'chunks').mkdir()
+        (self.tmp / 'downloads' / 'chunks' / name).write_bytes(piece)
+        for enc in ('identity', 'gzip'):
+            async with self.client.get(f'/download/{CODE}/chunks/{name}', headers={'Accept-Encoding': enc}) as r:
+                self.assertEqual((r.status, await r.read()), (200, piece))
+                self.assertNotIn('Content-Encoding', r.headers)
+        for path in (f'/download/wrong/chunks/{name}', f'/download/{CODE}/chunks/{"0" * 64}.gz',   # wrong code, missing
+                     f'/download/{CODE}/chunks/{name[:-3]}', f'/download/{CODE}/chunks/../manifest.json'):
+            self.assertEqual((await self.raw_get(path))[0], 404, path)
 
     async def test_wrong_or_no_join_code_serves_nothing(self):
         for path in ('/download/wrong/FangsCE.exe', '/download/wrong/files/MOBA/game.pak'):

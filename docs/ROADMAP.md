@@ -56,6 +56,12 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
   needs a rerun on top of it, with the headless regression. Seen on the way (pre-existing, Casual probably too): with
   a no-show the others' lobby screen gives up after ~45 s ("Failed to Connect to Match.") just as FangsHost would
   start without the missing player.
+- **Faster player downloads** (branch `fast-download`, `docs/recon/downloads.md`): big files as gzipped 32 MiB
+  pieces, 4 at a time; the 12.6 GB pak becomes ~7 GB to download. Players complained (15 Oct); measured: one TCP
+  stream per player, cubic, the pak uncompressed. Tests: `tools/run/test_download.sh`, `launcher/download_test.go`.
+  Next: merged after `install-ux`, then the one headless regression (incl. `test_download.sh`) and one deploy with
+  the user's OK. User's decision (15 Oct): BBR goes on the VPS (the `harden.sh` lines) together with that deploy, not
+  before; the deploy uploads the pieces (~7 GB) from the deploying machine.
 
 - Install help in the launcher (item 8): the questions players got wrong are checked, the game no longer lands in
   Downloads or a folder named after the invite code, desktop and Start menu shortcuts, and the game folder's

@@ -11,7 +11,8 @@
 //
 // Server side: <server>/download/<join code>/manifest.json lists the files (player/build-manifest.py),
 // <server>/download/<join code>/files/<path> serves them, <server>/download/<join code>/FangsCE.exe is the
-// current launcher (it replaces itself when that changes).
+// current launcher (it replaces itself when that changes). Big files are listed as pieces too, gzipped at
+// <server>/download/<join code>/chunks/<SHA-256 of the piece>.gz: several are fetched at once (downloadChunked).
 //
 // With main.pubKey set (server/deploy.sh does), the file list must carry a valid Ed25519 signature
 // (manifest.json.sig) from the server owner's key, which never leaves their machine: neither a taken-over
@@ -25,6 +26,8 @@ package main
 
 import (
 	"bufio"
+	"compress/gzip"
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -43,6 +46,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -65,9 +69,30 @@ const (
 )
 
 type manifestFile struct {
-	Path   string `json:"path"`
+	Path   string  `json:"path"`
+	Size   int64   `json:"size"`
+	SHA256 string  `json:"sha256"`
+	Chunks []chunk `json:"chunks,omitempty"` // the file in order, piece by piece
+}
+
+type chunk struct {
+	SHA256 string `json:"sha256"` // of the unpacked piece; also its name on the server
 	Size   int64  `json:"size"`
-	SHA256 string `json:"sha256"`
+	CSize  int64  `json:"csize"` // gzipped, what is downloaded
+}
+
+var sha256Rx = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// downloadSize: what fetching f costs (its pieces are gzipped).
+func downloadSize(f manifestFile) int64 {
+	if len(f.Chunks) == 0 {
+		return f.Size
+	}
+	var n int64
+	for _, c := range f.Chunks {
+		n += c.CSize
+	}
+	return n
 }
 
 type manifest struct {
@@ -553,7 +578,13 @@ func writeFileAtomic(path string, b []byte) error {
 // ---------------------------------------------------------------- manifest / sync
 
 var shortClient = &http.Client{Timeout: 20 * time.Second}
-var longClient = &http.Client{} // big downloads: no overall timeout
+
+// big downloads: no overall timeout; one connection per piece fetched in parallel stays open
+var longClient = func() *http.Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConnsPerHost = parallel
+	return &http.Client{Transport: t}
+}()
 
 func fetchSmall(u string) ([]byte, error) {
 	resp, err := shortClient.Get(u)
@@ -587,6 +618,16 @@ func fetchManifest(u string) (*manifest, error) {
 	for _, f := range append([]manifestFile{{Path: m.Exe}}, m.Files...) {
 		if !safeRel(f.Path) {
 			return nil, fmt.Errorf("refusing unsafe path in file list: %q", f.Path)
+		}
+		var sum int64
+		for _, c := range f.Chunks {
+			if !sha256Rx.MatchString(c.SHA256) || c.Size <= 0 {
+				return nil, fmt.Errorf("bad file list: broken piece of %s", f.Path)
+			}
+			sum += c.Size
+		}
+		if len(f.Chunks) > 0 && sum != f.Size {
+			return nil, fmt.Errorf("bad file list: the pieces of %s don't add up", f.Path)
 		}
 	}
 	return &m, nil
@@ -714,7 +755,7 @@ func saveState(installDir string, st map[string]installedFile) {
 func syncFiles(base, installDir string, m *manifest) error {
 	state := loadState(installDir)
 	var todo []manifestFile
-	var total int64
+	var total, fetchSize int64 // installed size (for the free-space check), what comes over the network
 	wanted := map[string]bool{}
 	checking := 0
 	for _, f := range m.Files {
@@ -734,6 +775,7 @@ func syncFiles(base, installDir string, m *manifest) error {
 		}
 		todo = append(todo, f)
 		total += f.Size
+		fetchSize += downloadSize(f)
 	}
 	if checking > 0 {
 		fmt.Println()
@@ -755,14 +797,20 @@ func syncFiles(base, installDir string, m *manifest) error {
 		return &noSpaceError{dir: installDir, need: total, free: free}
 	}
 	if len(state) == 0 {
-		fmt.Printf("  Installing FANGS (%s): %s to download into\n  %s\n\n", m.Build, human(total), installDir)
+		fmt.Printf("  Installing FANGS (%s): %s to download into\n  %s\n\n", m.Build, human(fetchSize), installDir)
 	} else {
-		fmt.Printf("  Update available: %d file(s), %s.\n\n", len(todo), human(total))
+		fmt.Printf("  Update available: %d file(s), %s.\n\n", len(todo), human(fetchSize))
 	}
-	p := &progress{total: total, start: time.Now()}
+	p := &progress{total: fetchSize, start: time.Now()}
 	for _, f := range todo {
 		dst := filepath.Join(installDir, filepath.FromSlash(f.Path))
-		if err := download(base+"files/"+escapePath(f.Path), dst, f, p); err != nil {
+		var err error
+		if len(f.Chunks) > 0 {
+			err = downloadChunked(base, dst, f, p)
+		} else {
+			err = download(base+"files/"+escapePath(f.Path), dst, f, p)
+		}
+		if err != nil {
 			fmt.Println()
 			return fmt.Errorf("downloading %s failed: %v\n  Run the launcher again to resume.", f.Path, err)
 		}
@@ -828,7 +876,7 @@ func download(u, dst string, f manifestFile, p *progress) error {
 	switch {
 	case have > 0 && resp.StatusCode == http.StatusPartialContent:
 		flags |= os.O_APPEND
-		p.done += have
+		p.add(have, f.Path)
 	case resp.StatusCode == http.StatusOK:
 		flags |= os.O_TRUNC
 		h.Reset()
@@ -849,9 +897,7 @@ func download(u, dst string, f manifestFile, p *progress) error {
 				return err
 			}
 			h.Write(buf[:n])
-			p.done += int64(n)
-			p.file = f.Path
-			p.draw(false)
+			p.add(int64(n), f.Path)
 		}
 		if rerr == io.EOF {
 			break
@@ -872,10 +918,196 @@ func download(u, dst string, f manifestFile, p *progress) error {
 	return os.Rename(part, dst)
 }
 
+const (
+	parallel = 4                // pieces at once: one connection often gets only part of a player's line
+	stalled  = 30 * time.Second // a piece that receives nothing for this long is fetched again
+)
+
+// downloadChunked fetches a big file piece by piece, several at once, into dst.part, in order (so the file grows
+// from the front). Every piece is checked against its SHA-256 from the signed file list, so together they are the
+// file. A download that stopped resumes: pieces already in dst.part, also from a launcher that fetched the whole
+// file in one go, are checked and kept.
+func downloadChunked(base, dst string, f manifestFile, p *progress) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	part := dst + ".part"
+	out, err := os.OpenFile(part, os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	info, err := out.Stat()
+	if err != nil {
+		return err
+	}
+	offsets := make([]int64, len(f.Chunks))
+	var todo []int
+	for i, c := range f.Chunks {
+		if i > 0 {
+			offsets[i] = offsets[i-1] + f.Chunks[i-1].Size
+		}
+		if offsets[i]+c.Size <= info.Size() {
+			if sum, err := hashRange(out, offsets[i], c.Size); err == nil && sum == c.SHA256 {
+				p.add(c.CSize, f.Path)
+				continue
+			}
+		}
+		todo = append(todo, i)
+	}
+
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var failed error
+	for w := 0; w < parallel; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range jobs {
+				if err := fetchChunk(base, f, f.Chunks[i], offsets[i], out, p); err != nil {
+					mu.Lock()
+					if failed == nil {
+						failed = err
+					}
+					mu.Unlock()
+				}
+			}
+		}()
+	}
+	for _, i := range todo {
+		mu.Lock()
+		stop := failed != nil
+		mu.Unlock()
+		if stop {
+			break
+		}
+		jobs <- i
+	}
+	close(jobs)
+	wg.Wait()
+	if failed != nil {
+		return failed // what arrived stays in dst.part for the next start
+	}
+	if err := out.Truncate(f.Size); err != nil {
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	_ = os.Remove(dst)
+	return os.Rename(part, dst)
+}
+
+func hashRange(f *os.File, off, n int64) (string, error) {
+	h := sha256.New()
+	if _, err := io.Copy(h, io.NewSectionReader(f, off, n)); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// fetchChunk writes piece c of f at off: the gzipped piece or, from a server that doesn't have it, that range of
+// the whole file. Three tries.
+func fetchChunk(base string, f manifestFile, c chunk, off int64, out *os.File, p *progress) error {
+	var err error
+	for try := 0; try < 3; try++ {
+		var got int64
+		if got, err = tryChunk(base, f, c, off, out, p); err == nil {
+			return nil
+		}
+		p.add(-got, f.Path)
+	}
+	return err
+}
+
+// tryChunk returns how much it counted in the progress bar.
+func tryChunk(base string, f manifestFile, c chunk, off int64, out *os.File, p *progress) (int64, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	watchdog := time.AfterFunc(stalled, cancel)
+	defer watchdog.Stop()
+	get := func(u, rng string) (*http.Response, error) {
+		req, _ := http.NewRequestWithContext(ctx, "GET", u, nil)
+		req.Header.Set("Accept-Encoding", "identity") // the piece is a gzip file: nothing may unpack it on the way
+		if rng != "" {
+			req.Header.Set("Range", rng)
+		}
+		return longClient.Do(req)
+	}
+	resp, err := get(base+"chunks/"+c.SHA256+".gz", "")
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	in := &countingReader{r: resp.Body, p: p, file: f.Path, watchdog: watchdog, num: 1, den: 1}
+	var body io.Reader = in
+	switch resp.StatusCode {
+	case http.StatusOK:
+		zr, err := gzip.NewReader(in)
+		if err != nil {
+			return in.n, err
+		}
+		body = zr
+	case http.StatusNotFound:
+		resp.Body.Close()
+		if resp, err = get(base+"files/"+escapePath(f.Path), fmt.Sprintf("bytes=%d-%d", off, off+c.Size-1)); err != nil {
+			return 0, err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusPartialContent {
+			return 0, fmt.Errorf("server answered %s", resp.Status)
+		}
+		// counted as its share of the gzipped size the progress bar expects
+		in = &countingReader{r: resp.Body, p: p, file: f.Path, watchdog: watchdog, num: c.CSize, den: c.Size}
+		body = in
+	default:
+		return 0, fmt.Errorf("server answered %s", resp.Status)
+	}
+	h := sha256.New()
+	n, err := io.CopyBuffer(io.NewOffsetWriter(out, off), io.TeeReader(io.LimitReader(body, c.Size+1), h), make([]byte, 1<<20))
+	if err == nil && (n != c.Size || hex.EncodeToString(h.Sum(nil)) != c.SHA256) {
+		err = errors.New("piece check failed")
+	}
+	return in.n, err
+}
+
+// countingReader counts what arrives (times num/den) in the progress bar and keeps the stall watchdog quiet while
+// data flows.
+type countingReader struct {
+	r        io.Reader
+	p        *progress
+	file     string
+	watchdog *time.Timer
+	num, den int64
+	n        int64 // counted so far
+}
+
+func (c *countingReader) Read(b []byte) (int, error) {
+	n, err := c.r.Read(b)
+	if n > 0 {
+		add := int64(n) * c.num / c.den
+		c.n += add
+		c.p.add(add, c.file)
+		c.watchdog.Reset(stalled)
+	}
+	return n, err
+}
+
 type progress struct {
+	mu          sync.Mutex // several pieces arrive at once
 	total, done int64
 	start, last time.Time
 	file        string
+}
+
+// add counts n more bytes (negative: a piece that failed and is fetched again) and redraws now and then.
+func (p *progress) add(n int64, file string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.done += n
+	p.file = file
+	p.draw(false)
 }
 
 func (p *progress) draw(force bool) {
