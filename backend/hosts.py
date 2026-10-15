@@ -192,6 +192,9 @@ class HostManager:
                 await asyncio.wait_for(self._ready_or_exit(host), self.ready_timeout)
             except asyncio.TimeoutError:
                 await self.stop(host, 'ready timeout')
+            except asyncio.CancelledError:   # the request gave up: its server becomes a standby, not a slot nobody claims
+                host.reserved = False
+                raise
             else:
                 if host.ready.is_set():
                     if standby:
@@ -258,12 +261,13 @@ class HostManager:
         return host
 
     async def _watch(self, host):
-        """Decides when a running server ends. Whatever goes wrong in here ends in stop() too: a server is never left
-        running unwatched."""
+        """Decides when a running server ends. If something goes wrong in here, the server isn't left unwatched for
+        good, nor is a live match ended for it: it is stopped (like any other ending) once its process exits."""
         try:
             await self._watch_until_stopped(host)
-        except Exception as e:  # noqa: BLE001 - logged; the server is stopped like any other
+        except Exception as e:  # noqa: BLE001 - logged; stop() still follows
             self.log({'host': host.id, 'event': 'watcher failed', 'error': repr(e)})
+            await host.proc.wait()
             await self.stop(host, 'watcher failed')
 
     async def _watch_until_stopped(self, host):

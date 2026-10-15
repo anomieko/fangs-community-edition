@@ -817,7 +817,7 @@ async def session_bulk(request):
     if not known(request):
         return err(401, 20001, 'unauthorized')
     ids = set(request.query.get('user_ids', '').split(','))
-    return web.json_response({'data': [session_view(s) for s in request.app['sessions'].values()
+    return web.json_response({'data': [session_view(s) for s in reversed(request.app['sessions'].values())   # newest first
                                        if ids & set(s['players'] + [s['user_id']])]})
 
 
@@ -831,7 +831,12 @@ async def session_one(request):
         return err(404, 9014, 'session not found')
     sub, m = request.match_info['sub'] or '', request.method
     if m != 'GET' and sub != '/join' and not may_change(request, sess):
-        return err(403, 20013, 'only the lobby owner can change this lobby')
+        # a player may still add or remove themselves (the SDK's register/unregister player; rejoining a started
+        # match needs the entry), nobody else
+        body = await request.json() if sub == '/player' and m == 'POST' else {}
+        target = sub.split('/')[-1] if sub.startswith('/player/') else body.get('user_id') if isinstance(body, dict) else None
+        if not (sub.startswith('/player') and target and target == caller(request).get('user_id')):
+            return err(403, 20013, 'only the lobby owner can change this lobby')
     if sub == '/join':
         if not sess['joinable']:
             return err(409, 9015, 'session not ready')
@@ -1189,10 +1194,11 @@ async def dispatch(request, handler):
         if m and method in ('*', request.method):
             try:
                 resp = await fn(_Req(request, m.groupdict()))
-            except json.JSONDecodeError as e:   # a body that isn't JSON: the caller's mistake
+            except BadBody as e:   # the caller's mistake
                 resp = err(400, 20002, f'invalid JSON body: {e}')
-            except Exception as e:  # noqa: BLE001 - a bug: answer 500, and keep where it happened in the log
+            except Exception as e:  # noqa: BLE001 - a bug: answer 500, and keep where it happened in the logs
                 entry['error'] = ''.join(traceback.format_exception(e)[-3:])[-1500:]
+                traceback.print_exception(e)
                 resp = err(500, 500, 'internal error')
             break
     else:
@@ -1205,6 +1211,10 @@ async def dispatch(request, handler):
     return resp
 
 
+class BadBody(ValueError):
+    """The request body isn't JSON (dispatch answers 400)."""
+
+
 class _Req:
     """Wraps aiohttp request so handlers can use request.match_info with our regex groups."""
 
@@ -1213,6 +1223,12 @@ class _Req:
 
     def __getattr__(self, name):
         return getattr(self._req, name)
+
+    async def json(self):
+        try:
+            return await self._req.json()
+        except ValueError as e:
+            raise BadBody(str(e)) from e
 
 
 def parse_args(argv=None):
