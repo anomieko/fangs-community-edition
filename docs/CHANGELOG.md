@@ -15,9 +15,26 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-**Before deploying:** the review-sprint changes below (from `a902150` on) pass 199 backend unit tests, but the headless
-game regression (`tools/run/test_lobby.sh`, `test_queue.sh`, `test_social.sh`, `test_chat.sh`, `test_ranked.sh`,
-`test_match.sh`) hasn't run on them yet. Run it first; above all the lobby login checks need the real client.
+Nothing yet.
+
+## deploy-2026-10-15-2104 (`8de8382`, Feb 2023 build)
+
+Deployed with the user's OK, **forced** (`FANGS_DEPLOY_FORCE=1`): 7 players were in lobbies and matches, and the user
+chose to end them instead of waiting. **The headless game regression was skipped** (the user's decision): these changes
+were checked by 210 backend unit tests, the launcher's Go tests (Linux, and the Windows ones under Wine) and
+`tools/run/test_download.sh`, not by real clients. Run the regression when the user isn't playing (ROADMAP item 7).
+
+Server + player update: players' launchers update themselves (new launcher, `FANGS.exe`) on their next start. Clients
+that were open across the restart must restart the game (their tokens are gone).
+
+Also on the server, outside `deploy.sh`: BBR (`/etc/sysctl.d/90-fangs-network.conf`,
+`/etc/modules-load.d/fangs-bbr.conf`, the `server/harden.sh` lines); `bbr` is active, `default_qdisc = fq` applies from the
+next reboot. Undo: remove both files, then `sysctl -w net.ipv4.tcp_congestion_control=cubic net.core.default_qdisc=fq_codel`.
+
+Live check after the deploy: smoke test passed (game server after 32 s). 517 download pieces (8.0 GiB, the pak in 378)
+are on the server; two fetched through the join-code route matched the signed file list. `FANGS.exe` is the launcher,
+the server's files match the signed local build, and all are served (200). Backend log, first minutes: no errors,
+tracebacks, watcher or Ranked alerts; the 401s came only from clients open across the restart.
 
 | Change | Commits | Off switch |
 |---|---|---|
