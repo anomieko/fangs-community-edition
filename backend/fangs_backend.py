@@ -1296,6 +1296,9 @@ def make_app(a, log):
             app['sessions'].pop(host.session_id)
         if (app['zeuz'].get(host.session_id) or {}).get('host') is host:
             app['zeuz'].pop(host.session_id)
+        # a Ranked game whose server ended without a result (crash, nobody came): its roster goes too. stop() has
+        # just handed over any result the server left, so a finished game was settled before this
+        app['matchmaker'].ranked_games.pop(host.session_id, None)
     app['hosts'].on_stopped.append(host_stopped)
     app['hosts'].on_result.append(lambda host, result: ingest_match(
         app['store'], result, log, ranked_parties=app['matchmaker'].ranked_result(host.session_id)))

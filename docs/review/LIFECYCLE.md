@@ -14,7 +14,7 @@ process, frees the port only after it exited, collects any result, then fires `o
 The matchmaker forgets a match the moment it hands out the server address, so a crashed or finished server can't leave
 players "in a match": they can queue again at once. The gaps found were around that core: who may stop a server (S2), when the
 matchmaker may start one (M1, M2), reclaim and boot edge cases (H3, H5), a server that hangs without exiting (H2), and
-state with a second lifetime (H6). All but H2 and H6 are fixed, each with a test.
+state with a second lifetime (H6). All but H2 are fixed, each with a test.
 
 Legend: `ok <where>` means it is handled there. `GAP → <id>` means it is not handled, or handled wrongly. `n/a` means
 that state doesn't exist in this case. `game:` is the game's own behavior (per `docs/recon/`). `unknown` needs a
@@ -41,8 +41,8 @@ headless client test.
 | Everyone leaves while the server boots | ok: the server is stopped, not kept for nobody (M2, fixed) | ok | n/a | ok | n/a | n/a |
 | Server boot fails | ok: 3 attempts, each dead process stopped; a standby whose boots all fail is retried after a minute (H3, fixed) | the match is cleared and its players are sent Idle (a broken server shouldn't keep them in repeated accept dialogs) | ok | unchanged | n/a | Idle; must press PLAY again |
 | No server slot | ok: `HostManager.capacity()` counts idle and booting standbys and reclaimable servers (M1, fixed); reclaim waits for the watcher's own graces (H5, fixed) | ok: no more matches form than servers; a match that still finds none goes back in line with its place (M2, fixed) | n/a | unchanged | n/a | stays queued until a server is free |
-| Server crash in lobby or hero select | ok: exit seen within 2 s → `stop()` (reproduced). A hang without exit: GAP → H2 (reproduced) | ok: nothing kept after assignment; players can queue again (reproduced) | roster kept until pruned: GAP → H6 | unchanged | none | unknown (needs a headless test) |
-| Crash mid-match | ok, as above (reproduced: "process exited (3)", port freed, player queues again) | ok | no rating change; roster kept: GAP → H6 | unchanged | a result written just before the crash is still collected in `stop()` | unknown |
+| Server crash in lobby or hero select | ok: exit seen within 2 s → `stop()` (reproduced). A hang without exit: GAP → H2 (reproduced) | ok: nothing kept after assignment; players can queue again (reproduced) | ok: released when its server stops (H6, fixed) | unchanged | none | unknown (needs a headless test) |
+| Crash mid-match | ok, as above (reproduced: "process exited (3)", port freed, player queues again) | ok | no rating change; roster released (H6, fixed) | unchanged | a result written just before the crash is still collected in `stop()` | unknown |
 | Normal match end | ok `_watch`: "match finished" after the end screen | n/a | ok: taken once, settled once | n/a | ok: exactly once (file deleted on collect; duplicates skipped) (reproduced) | end screen, then back to the menu |
 | A player disconnects mid-match | keeps running; if all leave, 180 s | ok | settled from the assigned teams | ok: party kept 60 s (grace) | ok | no way back into a matchmade game: GAP → T3 |
 | A player never connects | FangsHost starts with those present after 45 s; nobody at all → ok after 180 s (reproduced) | ok | void if uneven | n/a | none or partial | the client's own 45 s timeout races FangsHost's: GAP? → T3 (unknown) |
