@@ -6,7 +6,7 @@ returns an AccelByte-style 404 so we can see what the game needs next.
 
 Run:  backend/.venv/bin/python backend/fangs_backend.py --port 8080
 """
-import argparse, asyncio, base64, hashlib, hmac, json, os, re, time, uuid
+import argparse, asyncio, base64, hashlib, hmac, json, os, re, time, traceback, uuid
 from pathlib import Path
 
 from aiohttp import web, WSMsgType
@@ -34,6 +34,20 @@ def now_iso():
 def err(status, code, msg):
     return web.json_response({'errorCode': code, 'errorMessage': msg,
                               'numericErrorCode': code, 'error': str(code), 'error_description': msg}, status=status)
+
+
+def background(app, coro):
+    """Runs `coro` as a task the request doesn't wait for. asyncio keeps only a weak reference to a task, so the app
+    holds it until it is done; an exception in it is logged rather than lost."""
+    task = asyncio.create_task(coro)
+    app['tasks'].add(task)
+
+    def done(t):
+        app['tasks'].discard(t)
+        if not t.cancelled() and t.exception() is not None:
+            app['log']({'task': coro.__qualname__, 'error': repr(t.exception())})
+    task.add_done_callback(done)
+    return task
 
 
 class Store:
@@ -768,7 +782,7 @@ async def session_create(request):
             continue                     # its match is running (or over): it ends on its own, for its other players
         app['sessions'].pop(old['session_id'], None)          # one custom lobby per player
         if old['_host']:
-            asyncio.create_task(app['hosts'].stop(old['_host'], 'owner created a new lobby'))
+            background(app, app['hosts'].stop(old['_host'], 'owner created a new lobby'))
     body = await request.json()
     user = app['store'].user_by_id(who.get('user_id', '')) or {}
     sid = uuid.uuid4().hex
@@ -851,7 +865,7 @@ async def session_one(request):
     if m == 'DELETE':
         app['sessions'].pop(sess['session_id'], None)
         if sess['_host']:
-            asyncio.create_task(app['hosts'].stop(sess['_host'], 'session deleted'))
+            background(app, app['hosts'].stop(sess['_host'], 'session deleted'))
         return web.json_response(session_view(sess))
     return web.json_response(session_view(sess))
 
@@ -988,7 +1002,7 @@ async def zeuz_create(request):
             if reuse is None and hosts.is_live(old['host']) and not old['host'].had_players:
                 reuse = old['host']
             else:
-                asyncio.create_task(hosts.stop(old['host'], 'owner created a new lobby'))
+                background(app, hosts.stop(old['host'], 'owner created a new lobby'))
     if reuse:
         host = reuse
         host.session_id, host.started = sid, time.time()
@@ -1049,7 +1063,7 @@ async def lobby_ws(request):
             if t.endswith('Request'):
                 await ws.send_str(lobby_frame(type=t[:-len('Request')] + 'Response', id=mid, code=0))
             if t == 'createDSRequest':
-                asyncio.create_task(handle_create_ds(app, ws, fields, uid))
+                background(app, handle_create_ds(app, ws, fields, uid))
     finally:
         if uid:
             socks = app['lobby_users'].get(uid, set())
@@ -1153,9 +1167,11 @@ async def fangs_server_status(request):
 @web.middleware
 async def dispatch(request, handler):
     body = await request.read()
-    entry = {'t': round(time.time(), 3), 'method': request.method, 'path': request.path, 'query': request.query_string}
+    # the log is no place for secrets: login passwords, refresh tokens, and the join code in download paths
+    entry = {'t': round(time.time(), 3), 'method': request.method,
+             'path': re.sub(r'^/download/[^/]+', '/download/<code>', request.path), 'query': request.query_string}
     if body:
-        entry['body'] = re.sub(r'(password=)[^&]*', r'\1<redacted>', body[:2000].decode('utf-8', 'replace'))
+        entry['body'] = re.sub(r'((?:password|refresh_token)=)[^&]*', r'\1<redacted>', body[:2000].decode('utf-8', 'replace'))
     if 'Authorization' in request.headers:
         entry['auth'] = request.headers['Authorization'][:24]
     if request.path.rstrip('/') == '/lobby':
@@ -1171,7 +1187,13 @@ async def dispatch(request, handler):
     for method, rx, fn in ROUTES:
         m = rx.match(path)
         if m and method in ('*', request.method):
-            resp = await fn(_Req(request, m.groupdict()))
+            try:
+                resp = await fn(_Req(request, m.groupdict()))
+            except json.JSONDecodeError as e:   # a body that isn't JSON: the caller's mistake
+                resp = err(400, 20002, f'invalid JSON body: {e}')
+            except Exception as e:  # noqa: BLE001 - a bug: answer 500, and keep where it happened in the log
+                entry['error'] = ''.join(traceback.format_exception(e)[-3:])[-1500:]
+                resp = err(500, 500, 'internal error')
             break
     else:
         resp = err(404, 404, 'not implemented by fangs backend')
@@ -1231,6 +1253,7 @@ def make_app(a, log):
     app['sessions'] = {}
     app['lobby_users'], app['lobby_left'] = {}, {}   # user id -> open lobby websockets / when the last one closed
     app['ds_locks'] = {}   # lobby owner -> lock: one game server request at a time
+    app['tasks'] = set()   # background() tasks still running
     app['social'] = Social(app)
     lo, hi = map(int, a.host_ports.split('-'))
     app['hosts'] = HostManager(game_dir=a.game_dir, inst_root=a.instances, ports=range(lo, hi + 1),
