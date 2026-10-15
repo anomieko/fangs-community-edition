@@ -52,7 +52,11 @@ Current deploy: `deploy-2026-10-15-2144` (`4f83b89`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing.
+- Somnia's missing boons and artifacts (user's report, 16 Oct): FangsBoot didn't add the restored items to her pawn
+  (`BP_BookMage_Char2_C`; `docs/recon/items.md`). Fixed on branch `somnia-items` (worktree `../fangs-somnia`). Next:
+  `HERO=BookMage ITEMS="Generic_RespawnBeacon Generic_Kingslayer TetherLock" RUN=items-BookMage tools/run/test_items.sh`
+  when the user isn't playing (expect `restored items: 23 added to BP_BookMage_Char2_C`, all three in the pool),
+  then merge into `main`; ships with the next deploy (player update only).
 
 ## In progress
 

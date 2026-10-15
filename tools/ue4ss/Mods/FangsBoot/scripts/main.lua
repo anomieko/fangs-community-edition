@@ -762,7 +762,7 @@ do
         local name = pawn:GetFullName()
         if patched == name then return end
         local cls = pawn:GetClass():GetFName():ToString()
-        if not cls:find("_Char_C$") then return end   -- heroes only (BP_<Hero>_Char_C)
+        if not cls:find("_Char%d*_C$") then return end   -- heroes only (BP_<Hero>_Char_C; Somnia is BP_BookMage_Char2_C)
         patched = name
         patch(pawn, cls)
     end)

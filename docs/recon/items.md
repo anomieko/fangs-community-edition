@@ -35,6 +35,12 @@ strings, so "implemented" = some Blueprint other than the item/preview/loot/stri
 - **The server doesn't check**: `UpdateEquipmentOnServer` (validate 0x141324820, impl 0x141324600 in the Feb
   exe) accepts any item. So the client pool is the only gate, and adding items to the player's own pawn
   (FangsBoot, client side) is enough.
+- **Somnia's pawn class is `BP_BookMage_Char2_C`** (DT_Heroes `HeroClass`); every other hero's is
+  `BP_<Hero>_Char_C`. FangsBoot only adds restored items to pawns whose class matches its hero pattern, and
+  until 16 Oct that pattern was `_Char_C$`. So from the restore (14 Oct) on, Somnia's picker had none of the 21
+  restored generic items: 8 boons instead of 13 and 8 artifacts instead of 24 on the arena maps. Her 20 heirlooms
+  were all there. Players' FangsBoot logs never had a line `restored items: … added to BP_BookMage_Char2_C`
+  (Feb build; reported by the user, 16 Oct).
 - **Owner class leftovers**: `EItemOwnerClassType` has no value for CatSupp/BattleMonk/BigBoi (they use
   Alchemist/Siegil/Monster) nor for unreleased heroes (None). `WaterBlade_Skill3_Ult2` "Ebb & Flow" is marked
   Alchemist, so it was listed under CatSupp (Zoey). Hence `AvailableAugments` must only contain usable items.
