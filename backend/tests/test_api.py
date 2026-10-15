@@ -172,6 +172,9 @@ class Login(ApiCase):
         self.assertNotEqual(new['access_token'], alice['access_token'])
         status, body = await self.token(grant_type='refresh_token', refresh_token='not-a-token')
         self.assertEqual((status, body['errorCode']), (401, 10196))
+        logged = json.dumps(self.logs)                        # a refresh token is a login: never in the log (review O1)
+        self.assertNotIn(alice['refresh_token'], logged)
+        self.assertIn('refresh_token=<redacted>', logged)
         # pinned as is, see report (questions): access and refresh tokens share one table, so either works as either
         status, _ = await self.call('GET', '/iam/v3/public/users/me', {'access_token': alice['refresh_token']})
         self.assertEqual(status, 200)
@@ -732,9 +735,6 @@ class Routing(ApiCase):
             self.assertAlmostEqual(body['timestamp'], time.time(), delta=5)
         self.assertEqual(await self.call('GET', '/fangsapionline-players'), (200, '0'))
 
-    # bug: request bodies are parsed unguarded: malformed JSON or a missing field is a 500 (with a traceback, and no
-    # entry in the backend's log) instead of a 400, see report
-    @unittest.expectedFailure
     async def test_malformed_bodies_get_a_400(self):
         alice = await self.login('alice')
         with mock.patch.object(logging.getLogger('aiohttp.server'), 'disabled', True):   # keep the tracebacks quiet
@@ -743,6 +743,22 @@ class Routing(ApiCase):
                                      ('POST', f'{API}/update-player-record-key', {'json': {'Key': 'k'}})):
                 with self.subTest(method=method, path=path):
                     self.assertEqual((await self.call(method, path, alice, **kw))[0], 400)
+
+    async def test_a_handler_error_is_a_500_with_the_error_in_the_log(self):
+        # a lobby whose max_players isn't a number breaks the Aug 2022 lobby list (review O2: was a 500 and no log line)
+        self.ready_host(17777)
+        auth = {'Authorization': f"Bearer {(await self.login('alice'))['access_token']}"}
+        await self.call('POST', '/zeuz/sessions', headers=auth, json={'session_config': 'max_players,lots'})
+        status, body = await self.call('GET', '/zeuz/sessions.txt', headers=auth)
+        self.assertEqual((status, body['errorMessage']), (500, 'internal error'))
+        entry = next(e for e in self.logs if e.get('path') == '/zeuz/sessions.txt')
+        self.assertEqual(entry['status'], 500)
+        self.assertIn("ValueError: invalid literal for int() with base 10: 'lots'", entry['error'])
+
+    async def test_the_join_code_in_download_paths_is_not_logged(self):
+        await self.call('GET', f'/download/{CODE}/FangsCE.exe')
+        self.assertNotIn(CODE, json.dumps(self.logs))
+        self.assertIn('/download/<code>/FangsCE.exe', [e.get('path') for e in self.logs])
 
 
 # ---------------------------------------------------------------- match results
