@@ -17,7 +17,7 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 | Change | Commits | Off switch |
 |---|---|---|
-| Patch pak support (`docs/PATCHING.md`): the deploy builds `FangsCE_P.pak` from the enabled patches into the players' download folder, and game servers load the same file (`FANGS_PAKS`). The download folder is now uploaded before the server restarts. No patch is enabled yet (the CC revert is `"enabled": false`), so nothing changes in game. | (branch `worktree-cc-revert-patch-pak`) | nothing to switch off; revert the commit |
+| Patch pak support (`docs/PATCHING.md`): the deploy builds `FangsCE_P.pak` from the enabled patches into the players' download folder, and game servers load the same file (`FANGS_PAKS`). The download folder is now uploaded before the server restarts. No patch is enabled yet (the CC revert is `"enabled": false`), so nothing changes in game. | `81bf289` | nothing to switch off; revert the commit |
 
 ## deploy-2026-10-15-1637 (`48efa57`, Feb 2023 build)
 
