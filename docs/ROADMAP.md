@@ -17,7 +17,7 @@ Last updated: 2026-10-15.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-0309` (`cfb453c`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-0317` (`d06573a`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -35,6 +35,7 @@ Current deploy: `deploy-2026-10-15-0309` (`cfb453c`); what each deploy changed: 
   custom modes 6vs6 … Duel, Solo (Battle = 3vs3; Trio and AI gone), friends fix for mutual requests, a carrier who
   leaves loses the Shard after 2 s.
 - since 15 Oct 03:09 UTC: lobbies close when their match starts; a finished match's server stops.
+- since 15 Oct 03:17 UTC: team and all chat in custom lobbies, hero select and matches (`docs/recon/chat.md`).
 
 ## Done, not deployed
 
