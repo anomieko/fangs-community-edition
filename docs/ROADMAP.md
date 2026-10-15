@@ -49,6 +49,13 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
   never more matches than servers, game-server lifecycle and social fixes, match results per player. 199 backend unit
   tests pass. **Blocked on:** the headless game regression on these commits (not run yet: the user was playing on the
   dev machine). Deploy only after it passes, with the user's OK.
+- Ranked review fixes (`d764f5f`, branch `ranked-fixes`, worktree `~/repos/fangs-ranked`; `docs/recon/ranked.md`
+  "Review follow-ups"): quitters count, no-shows void, steady rank points, party mode check, limits. Tests:
+  `backend/tests/test_ranked*.py` (incl. a Monte Carlo check of the n vs n math); `tools/run/test_ranked.sh` (real
+  clients: rated game, end screen; `NOSHOW=1`: nothing rated) passed before the rebase onto the review sprint and
+  needs a rerun on top of it, with the headless regression. Seen on the way (pre-existing, Casual probably too): with
+  a no-show the others' lobby screen gives up after ~45 s ("Failed to Connect to Match.") just as FangsHost would
+  start without the missing player.
 
 ## In progress
 
