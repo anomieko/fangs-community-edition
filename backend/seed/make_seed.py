@@ -96,10 +96,12 @@ def restored(paths_file, restore_file):
 version_data = {
     'Servers': [server], 'AvailableHeroes': heroes + [h for h, _ in unreleased], 'UnlockAllHeroes': True, 'UnlockAllSkins': True, 'EnableAllMounts': True,
     'AvailableGameModes': ['Custom', 'Casual', 'Training', 'Tutorial', 'Bots'],
-    # WB_CreateLobby.SelectGameMode: Duel=2, 2vs2=4, Battle=6, 4vs4=8, 5vs5=10, 6vs6=12, Trio=3, Solo=1, AI=bots.
-    # AI is left out: its bots come from the developers' editor test list (EditorTestClients), which holds no bot in
-    # the shipped game, so an AI lobby was a match against nobody (docs/recon/server-performance.md).
-    'AvailableCustomModes': ['Battle', 'Duel', '2vs2', '4vs4', '5vs5', '6vs6', 'Trio', 'Solo'],
+    # Custom lobby modes only set how many players can join (WB_CreateLobby.SelectGameMode: Solo 1, Duel 2, Trio 3,
+    # 2vs2 4, Battle 6, 4vs4 8, 5vs5 10, 6vs6 12; any other name 6, so "3vs3" is Battle); the rules are the same and
+    # the host starts whenever; teams by seat (even/odd). The first entry is preselected: the biggest lobby, so nobody
+    # is locked out. Left out: Trio (2 against 1), AI (its bots come from the developers' editor test list,
+    # EditorTestClients, which holds no bot in the shipped game: a match against nobody).
+    'AvailableCustomModes': ['6vs6', '5vs5', '4vs4', '3vs3', '2vs2', 'Duel', 'Solo'],
     'AvailableMaps': [{'Name': n, 'Map': m, 'Custom': True} for n, m in maps],
     # matchmade games: the lobby server picks one at random (GS_Lobby_GameState.GetRandomMap)
     'CasualMaps': [{'Name': n, 'Map': m} for n, m in maps if m in PLAY_MAPS],
