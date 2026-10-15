@@ -315,6 +315,32 @@ control. The game server logs the effects on both heroes.
 Earthquake's centre, Ethryn, Fiorne, Astrada and Zoey haven't been seen in a match yet. They use the same edits,
 and their values are loaded. The test's Earthquake only hit with the first tremor (0.25 s stun, unchanged).
 
+**Augments that interact with the reverted CC** (code review of the Feb build, 15 Oct; no test):
+
+| Augment | How it works | With the patch |
+|---|---|---|
+| Petunia (Somnia, Shift) | Delirium checks each enemy it damages for `State.Charm`. If found, it charms everyone in the pool for Allure's `CharmDuration` (0.5 s if Somnia has no Allure); `Effect.BookMage.Skill2.AOECCApplied` stops it triggering itself | works: Allure's charm grants `State.Charm` |
+| Soul Mine (Somnia, passive) | The passive watches every effect Somnia applies to a target (`OnGameplayEffectAppliedToTargetDel`, `Detect Giving Fear and Charm`). Any effect granting `State.Charm` raises `OnCharmGranted`. Soul Mine then deals % max HP damage and marks the enemy for the charm's duration; dying in that window explodes and charms nearby enemies for `SoulMineDuration` (1.5 s) | works, and Allure triggers it again (Feb's root didn't) |
+| Glamorfume (Somnia, E) | Each Allure hit stacks `BP_GE_BookMage_CCStack_Stack` on Somnia. Each cast, `CharmDuration` = `BaseCharmDuration` + stacks × `CCStackDurationIncrease` (max 15) | works: 0.75 s + 0.05 s per stack |
+| Dreamglass Mirror, Piercing Butterfly (Somnia, E) | Based on hits (dash to the first enemy hit; the projectile pierces) | work; every enemy pierced is charmed |
+| Relic of Calamity, Paralyzing Specter (Somnia, ult) | The ult's own charm and lock | not affected |
+| Fiorne, Spear Throw "+2 Bunny Stacks if rooted" | Only in the tooltip: `BP_GE_Lancer_MoreBunnyStacks` is referenced by no code, and Spear Throw and the passive check no CC tags | not affected |
+
+Nothing else checks a target for `State.Charm`, `State.Stun` or `State.Rooted` (apart from a tutorial bot), and no code
+checks a target's movement or cast locks.
+- Some dashes end when their caster gets rooted (Ishir, Wylde, Tufts, Astrada's Space, Scythe). They are about the
+  caster, not about augments.
+- `GA_State_Listener` handles root, stun and grounded alike.
+
+Two client-side differences from Aug remain:
+- **No charm visual on Allure's target.** The generic `BP_GE_Charm` has no gameplay cue; Petunia's and Soul Mine's
+  charms look the same way in Feb. Aug's Allure used `BP_GE_BookMage_Skill4_Charm`, with cue
+  `GameplayCue.BookMage.Skill4.CharmVFX`. Feb deleted that effect, but the cue (`BP_GC_BookMage_Skill4CharmVFX`,
+  `NS_Somnia_Skill4_Charmed`) and its tag are still in the game. Adding the cue to `BP_GE_Charm`, which only Somnia's
+  charms use, would bring it back, with a new AssetPatch edit.
+- **Tooltips still say "roots"**: Zoey's Spirit Scratch, Rowan's Dourling Dive, Ethryn's Knightseeker wall hit,
+  Astrada's Flame Cage, and likely Fiorne's Earthbreaker Pommel. A string-table edit in the pak would fix them.
+
 **Findings while building it:**
 - **The calls are by name.** Every `Make…EffectSpec` call is an `EX_VirtualFunction` on the library's default object,
   not an import, so swapping root for stun only changes the called name.
