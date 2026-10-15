@@ -15,6 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-15-0003 (`ce9f713`, Feb 2023 build)
+
+Server only (no player update). Forced (`FANGS_DEPLOY_FORCE=1`): the user chose to kick the 3 players online.
+
 | Change | Commits | Off switch |
 |---|---|---|
 | Maps: custom lobbies offer Embersong, Stormheart, Crownwatch; PLAY picks from all three (Crownwatch new). Arena (`LE_Arena01_Map`, a prototype: players hang on "Waiting for players") and Payload II removed; AI custom mode hidden (it spawned no bots) | `fe80e01` | `maps` / `PLAY_MAPS` / `AvailableCustomModes` in `backend/seed/make_seed.py` |
