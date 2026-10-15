@@ -13,7 +13,7 @@ The single place that says what is being worked on, what is done but not shipped
   duplicates it and the results get merged back.
 - Nothing secret here (no join code, keys, server credentials): this repo is public.
 
-Last updated: 2026-10-14.
+Last updated: 2026-10-15.
 
 ## Live on the server
 
@@ -77,6 +77,12 @@ Current deploy: `deploy-2026-10-15-0003` (`ce9f713`); what each deploy changed: 
 5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
+6. **Revert the Feb 2023 CC changes** (players' request): research done, nothing implemented
+   (`docs/recon/cc-changes.md`). Nine stuns/charms became roots (Somnia's Allure, Brutus' Earthquake, Ethryn,
+   Fiorne, Astrada, Zoey, Rowan), Somnia's ult locks her abilities for the whole tether, and many CC durations changed.
+   Plan: FangsHost-only (default overrides at match start, GE-class swap via native pre-hooks, deferred
+   `UnlockAbilities` for the ult). Next: the user picks which groups to revert; a 1-hour test that a UE4SS native
+   pre-hook can swap a parameter.
 
 ## Known issues and small ideas
 
