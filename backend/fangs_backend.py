@@ -74,12 +74,23 @@ class Store:
         path.write_text(text)
 
     def user_for(self, username):
+        """The account of a login name, created on first use. Names are case-insensitive, like the user id derived
+        from them: "ALICE" is alice's account and needs alice's secret. (Before 16 Oct a name in another case got a
+        second entry with the same user id; where the store still has such entries, the first one is the account.)"""
         users = self.data['users']
-        if username not in users:
-            users[username] = {'user_id': uuid.uuid5(uuid.NAMESPACE_DNS, 'fangs:' + username.lower()).hex,
-                               'display_name': username, 'created_at': now_iso()}
+        name = next((n for n in users if n.lower() == username.lower()), username)
+        if name not in users:
+            users[name] = {'user_id': uuid.uuid5(uuid.NAMESPACE_DNS, 'fangs:' + name.lower()).hex,
+                           'display_name': name, 'created_at': now_iso()}
             self.save()
-        return users[username]
+        return users[name]
+
+    def case_duplicates(self):
+        """Stored names that differ only in case (made before 16 Oct): [[first, *later], ...]."""
+        by_lower = {}
+        for name in self.data['users']:
+            by_lower.setdefault(name.lower(), []).append(name)
+        return [names for names in by_lower.values() if len(names) > 1]
 
     def check_secret(self, user, secret):
         """Names are first-come: the first login binds the name to the launcher's per-install secret."""
@@ -1174,6 +1185,8 @@ def make_app(a, log):
     """The backend for the command line `a` (parse_args), logging each entry with `log(entry)`."""
     app = web.Application(middlewares=[dispatch], client_max_size=16 * 1024 * 1024)
     app['store'], app['log'], app['cfg'] = Store(a.data), log, a
+    if dupes := app['store'].case_duplicates():   # the first of each logs in; the operator may want to tell the others
+        log({'store': 'names that differ only in case (the first one is the account)', 'names': dupes})
     app['sessions'] = {}
     app['lobby_users'], app['lobby_left'] = {}, {}   # user id -> open lobby websockets / when the last one closed
     app['ds_locks'] = {}   # lobby owner -> lock: one game server request at a time

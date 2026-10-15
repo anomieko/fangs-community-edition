@@ -19,7 +19,8 @@ What each deploy put on the server, so a problem can be traced to a change and u
 |---|---|---|
 | Patch pak build: no `FangsCE_P.patches` note next to the pak (it went into the players' download folder; harmless) | `1bacb1c` | none |
 | `deploy.sh`: the "people are playing" check runs before anything is uploaded, and the server-code upload no longer deletes the server's `server/.env` and `server/downloads/` (a refused deploy used to leave no downloads) | (this commit) | none (deploy script only) |
-| Old `.bat` client retired: `server/build-client.sh` and the package scripts are gone (the user's decision; its updates were unsigned) | (this commit) | none |
+| Old `.bat` client retired: `server/build-client.sh` and the package scripts are gone (the user's decision; its updates were unsigned) | `3aed058` | none |
+| Login names are case-insensitive: "ALICE" is alice's account and needs her secret (it used to get a new entry with her user id: an account takeover). The backend logs names already stored twice at start; the first spelling keeps the account | (this commit) | none (security fix) |
 
 ## deploy-2026-10-15-1714 (`09c27b1`, Feb 2023 build)
 
