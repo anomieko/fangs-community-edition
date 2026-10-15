@@ -23,7 +23,7 @@ remote=/opt/fangs-ce
 build=$(tr -d '\r\n' < "$game/MOBA/Content/Data/version.txt")
 [[ $build =~ ^[A-Za-z0-9._-]+$ ]] || { echo "unexpected version.txt in $game: '$build'" >&2; exit 1; }
 code=${FANGS_JOIN_CODE:?set FANGS_JOIN_CODE (players need it; it is baked into the player package)}
-shipped=(backend server tools/ue4ss tools/run/config player launcher .dockerignore)
+shipped=(backend server tools/ue4ss tools/run/config tools/patch tools/pak player launcher .dockerignore)
 dirty=$(git -C "$REPO" status --porcelain -- "${shipped[@]}" | grep -v '^??' || true)
 if [[ -n $dirty && -z ${UPLOAD_ONLY:-} && -z ${FANGS_DEPLOY_DIRTY:-} ]]; then
   echo "!! uncommitted changes in what would be deployed (commit them first, or FANGS_DEPLOY_DIRTY=1):" >&2
@@ -73,16 +73,8 @@ if [[ -z ${FANGS_DEPLOY_FORCE:-} ]]; then
   fi
 fi
 
-echo "==> building and starting (public address: $public)"
-# settings for compose live in a root-only .env next to the compose file (also used on reboot/updates)
-printf 'GAME_DIR=%s\nPUBLIC_HOST=%s\nFANGS_JOIN_CODE=%s\nHOST_PORTS=%s\n' "$remote/builds/$build" "$public" "$code" "${HOST_PORTS:-7777-7778}" \
-  | ssh_ "sudo install -m 600 /dev/stdin $remote/repo/server/.env"
-ssh_ "set -e; cd $remote/repo/server
-      compose() { if sudo docker compose version >/dev/null 2>&1; then sudo docker compose \"\$@\"; else sudo docker-compose \"\$@\"; fi; }
-      compose up -d --build
-      for i in \$(seq 1 60); do compose logs fangs 2>&1 | grep -q 'fangs backend on' && break; sleep 3; done
-      compose logs --tail 3 fangs"
-
+# The download folder goes up before the restart: the standby game server that boots with the new container
+# copies its patch pak from there (FANGS_PAKS), and must get the same one as the players.
 echo "==> launcher and signed file list (built and signed here; the signing key never leaves this machine)"
 go=$REPO/work/toolchains/go/bin/go; [[ -x $go ]] || go=$(command -v go || true)
 [[ -n $go ]] || { echo "need a Go toolchain (work/toolchains/go or go on PATH) for the launcher" >&2; exit 1; }
@@ -101,6 +93,9 @@ mkdir -p "$dist"; rm -rf "$dist/overlay" "$dist/FangsCE.exe"
 "$REPO/player/install-player-files.sh" "$dist/overlay" >/dev/null
 mkdir -p "$dist/overlay/FangsCE"
 sed "s/@BACKEND@/$public:8080/g" "$REPO/tools/run/config/Engine.ini.template" > "$dist/overlay/FangsCE/Engine.ini"
+# patch pak (docs/PATCHING.md): the enabled patches for this build, built here from the game files. Players get it
+# with the other player files; game servers load the same file from the download folder (docker-compose.yml).
+OUT=$dist/overlay/MOBA/Content/Paks/FangsCE_P.pak "$REPO/tools/patch/build.sh" "$game" | sed 's/^/   /'
 python3 "$REPO/player/build-manifest.py" "$game" "$dist" "$(tr -d '\r\n' < "$game/MOBA/Content/Data/version.txt")"
 "$sign" sign "$key" "$dist/manifest.json"
 "$sign" verify "$pub" "$dist/manifest.json" | sed 's/^/   /'
@@ -108,6 +103,16 @@ rm -rf "$(dirname "$sign")"
 # only what the launcher needs; --delete drops older packages (zips for the old .bat launcher: unsigned)
 ssh_ "sudo mkdir -p $remote/repo/server/downloads"
 rsync_ -a --delete --exclude .hashcache.json "$dist/" "$target:$remote/repo/server/downloads/"
+
+echo "==> building and starting (public address: $public)"
+# settings for compose live in a root-only .env next to the compose file (also used on reboot/updates)
+printf 'GAME_DIR=%s\nPUBLIC_HOST=%s\nFANGS_JOIN_CODE=%s\nHOST_PORTS=%s\n' "$remote/builds/$build" "$public" "$code" "${HOST_PORTS:-7777-7778}" \
+  | ssh_ "sudo install -m 600 /dev/stdin $remote/repo/server/.env"
+ssh_ "set -e; cd $remote/repo/server
+      compose() { if sudo docker compose version >/dev/null 2>&1; then sudo docker compose \"\$@\"; else sudo docker-compose \"\$@\"; fi; }
+      compose up -d --build
+      for i in \$(seq 1 60); do compose logs fangs 2>&1 | grep -q 'fangs backend on' && break; sleep 3; done
+      compose logs --tail 3 fangs"
 
 echo "==> smoke test"
 py=python3; [[ -x $REPO/backend/.venv/bin/python ]] && py=$REPO/backend/.venv/bin/python

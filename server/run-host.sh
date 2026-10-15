@@ -20,6 +20,8 @@ if [[ ! -e $inst/MOBA/Binaries/Win64/$exe || "$(cat "$inst/.game-stamp" 2>/dev/n
   cp -al "$game" "$inst" 2>/dev/null || { rm -rf "$inst"; cp -as "$game" "$inst"; cp --remove-destination "$game/MOBA/Binaries/Win64/$exe" "$inst/MOBA/Binaries/Win64/$exe"; }
   echo "$stamp" > "$inst/.game-stamp"
 fi
+# FANGS_PAKS: folder with our patch paks (on the server, the players' download overlay: the same files)
+"$HERE/install-paks.sh" "$game" "$inst"
 bin=$inst/MOBA/Binaries/Win64
 # A game server has no use for the game's movies or its web browser: one it starts anyway decodes a movie all the
 # time on other threads (~10-20% of a core per server measured locally), and the browser's helper processes (CEF,

@@ -1,0 +1,95 @@
+{
+  "name": "ccrevert",
+  "summary": "Feb 2023 CC changes back to Aug 2022: the roots that were stuns or charms, Somnia's and Rowan's ability locks",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/cc-changes.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BookMage/Skill4/BP_GA_BookMage_Skill4",
+      "why": "Somnia, Allure (E): root 1.25 s back to charm 0.75 s (+0.5 empowered, unchanged). Glamorfume +0.05 s per stack.",
+      "edits": [
+        { "op": "rename-call", "function": "Make Effect Specs", "from": "MakeRootEffectSpec", "to": "MakeCharmEffectSpec", "count": 1 },
+        { "op": "set-default", "property": "BaseCharmDuration", "from": 1.25, "to": 0.75 },
+        { "op": "set-default", "property": "CharmDuration", "from": 1.25, "to": 0.75 },
+        { "op": "set-default", "property": "CCStackDurationIncrease", "from": 0.035, "to": 0.05 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BookMage/R/BP_GA_BookMage_RNEw",
+      "why": "Somnia, Tethers of Eternity (R): abilities locked for the 0.5 s cast only, not for the whole tether. LockAbilities(0) has no end; a timeout ends the lock.",
+      "edits": [
+        { "op": "set-call-arg", "function": "PreCastLock", "call": "LockAbilities", "arg": 0, "from": "0.0", "to": "0.5", "count": 1 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Berserker/Skill2/BP_GA_Berserker_Skill2",
+      "why": "Brutus, Earthquake (Shift): centre root 1.5 s back to stun 1.5 s, radius 350 back to 150.",
+      "edits": [
+        { "op": "rename-call", "function": "ActivateOnCenterStun", "from": "MakeRootEffectSpec", "to": "MakeStunEffectSpec", "count": 1 },
+        { "op": "set-default", "property": "CenterStunRadius", "from": 350, "to": 150 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/Skill1/BP_GA_ShieldGirl_Skill1",
+      "why": "Ethryn, Knightseeker (Space), enemy pushed into a wall: root 1.5 s back to stun 0.75 s.",
+      "edits": [
+        { "op": "rename-call", "function": "Apply Debuffs to Targets", "from": "MakeRootEffectSpec", "to": "MakeStunEffectSpec", "count": 1 },
+        { "op": "set-default", "property": "Stun Duration", "from": 1.5, "to": 0.75 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill2/BP_GA_Lancer_Skill2",
+      "why": "Fiorne, Hiari Smash (Shift) with Earthbreaker Pommel: root 1.5 s back to stun 1.0 s.",
+      "edits": [
+        { "op": "rename-call", "function": "Activate Dehabilitating Hop", "from": "MakeRootEffectSpec", "to": "MakeStunEffectSpec", "count": 1 },
+        { "op": "set-default", "property": "DHRootDuration", "from": 1.5, "to": 1.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/FireMage/E/BP_GA_Firemage_E",
+      "why": "Astrada, Flame Cage (Shift): root 1.25 s back to stun 1.0 s, cage 2 s back to 3 s. The cage's hit effects also use StunEffectClass, so that goes from BP_GE_Root to BP_GE_Stun.",
+      "edits": [
+        { "op": "rename-call", "from": "MakeRootEffectSpec", "to": "MakeStunEffectSpec", "count": 1 },
+        { "op": "rename-import", "from": "BP_GE_Root_C", "to": "BP_GE_Stun_C", "uses": 1 },
+        { "op": "rename-import", "from": "Default__BP_GE_Root_C", "to": "Default__BP_GE_Stun_C", "uses": 0 },
+        { "op": "rename-import", "from": "/Game/Gameplay/Effects/Shared/BP_GE_Root", "to": "/Game/Gameplay/Effects/Shared/BP_GE_Stun", "uses": 2 },
+        { "op": "set-default", "property": "StunDuration", "from": 1.25, "to": 1.0 },
+        { "op": "set-default", "property": "CageDuration", "from": 2.0, "to": 3.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/FireMage/RMB/BP_GA_FireMage_RMB",
+      "why": "Astrada, Blast Wave (RMB) with Repulsing Scepter, enemy knocked into a wall: root 1.5 s back to stun 0.5 s.",
+      "edits": [
+        { "op": "rename-call", "function": "Activate RMBKnockback", "from": "MakeRootEffectSpec", "to": "MakeStunEffectSpec", "count": 1 },
+        { "op": "set-default", "property": "RMBKnockbackItemStunDuration", "from": 1.5, "to": 0.5 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/CatSupp/Skill4/BP_GA_CatSupp_Skill4",
+      "why": "Zoey, Spirit Scratch (E): root 1.3 s back to stun 0.9 s, on all three hit paths. The heirloom hit-extension path rooted Zoey herself instead of the enemy hit (a Feb bug; Dec targets the enemy): it now targets the enemy, as in Dec.",
+      "edits": [
+        { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_CatSupp_Skill4", "call": "ApplyEffectSpecToTarget",
+          "match": { "2": "CallFunc_MakeRootEffectSpec_ReturnValue" }, "arg": 1, "from": "self.Player", "to": "CallFunc_Array_Get_Item", "count": 1 },
+        { "op": "rename-call", "from": "MakeRootEffectSpec", "to": "MakeStunEffectSpec", "count": 3 },
+        { "op": "set-default", "property": "Stun Duration", "from": 1.3, "to": 0.9 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Skill1/BP_GA_WoodenSword_Skill1",
+      "why": "Rowan, Dourling Dive (Space), dash hit: root 1.0 s back to stun 0.75 s.",
+      "edits": [
+        { "op": "rename-call", "function": "MakeAOEEffect", "from": "MakeRootEffectSpec", "to": "MakeStunEffectSpec", "count": 1 },
+        { "op": "set-default", "property": "StunDuration", "from": 1.0, "to": 0.75 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/LMB/BP_GA_WoodenSword_LMB",
+      "why": "Rowan, Glade Slash (LMB): no ability lock while LMB is held (Aug had none, Dec removed it). Each swing's LockAbilities(0) lasted until release; it now ends after 0.01 s.",
+      "edits": [
+        { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_WoodenSword_LMB", "call": "LockAbilities", "arg": 0, "from": "0.0", "to": "0.01", "count": 2 }
+      ]
+    }
+  ]
+}

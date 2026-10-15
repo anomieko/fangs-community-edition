@@ -1,0 +1,102 @@
+# Changing the game's data: the patch pak
+
+Permanent changes to the game itself go into one extra pak file, `FangsCE_P.pak`. Examples are an ability's numbers,
+which effect it applies, or a small edit to its Blueprint code. Servers and players load the same file. First use: the
+CC revert (`tools/patch/patches/ccrevert.json`, research in `docs/recon/cc-changes.md`).
+
+UE4SS hooks (FangsHost, FangsBoot) are still the tool for behaviour that needs new logic. Use the pak for anything
+that is a different value, a different effect class or a different call.
+
+## How it works
+
+- UE 4.26 loads every `.pak` in `MOBA/Content/Paks`. A pak whose name ends in `_P` loads after the game's own pak, and
+  its files replace the game's.
+- **Only the recipe is in git.**
+  - The repo holds the patch files (names and numbers, like the recon docs) and the tools.
+  - `tools/patch/build.sh` builds the pak from your own game files: it takes the assets out of the game's encrypted
+    pak, applies the patches and packs the results.
+  - The pak contains game data, so it is never committed, like everything else from the game.
+- **Players and servers get the same file.**
+  - `server/deploy.sh` builds the pak into the player download folder (`overlay/MOBA/Content/Paks/FangsCE_P.pak`).
+  - The launcher installs it, updates it and removes it with the other player files.
+  - The game servers copy it from that same folder: `FANGS_PAKS` in `server/docker-compose.yml`, used by
+    `server/run-host.sh`.
+  - Clients therefore show the patched numbers in tooltips and predict the patched behaviour.
+- **A patch fails instead of guessing.** Every edit states the value it expects to find (`from`, `uses`, `count`), so
+  a patch can't silently apply to another build or to a file that has changed.
+
+## Pieces
+
+| Piece | What it does |
+|---|---|
+| `tools/patch/patches/<name>.json` | One patch: the build it is for, `enabled`, and the edits per asset, each with a `why` |
+| `tools/patch/build.sh <game-dir> [patch...]` | Builds `work/patch/<build>/FangsCE_P.pak` (`OUT=` elsewhere). With no patches named, it uses the enabled ones for that build |
+| `tools/patch/AssetPatch` (C#, UAssetAPI) | Applies the edits. Its `info`, `calls` and `roundtrip` commands help you write a patch |
+| `tools/pak/pakwrite.py` | Writes the pak: v11, unencrypted, laid out like UnrealPak's |
+| `server/install-paks.sh` | Puts the paks of `FANGS_PAKS` into a copy of the game and removes the ones it put there before |
+| `FANGS_PAKS=<dir>` | Patch paks for game servers (`run-host.sh`), test clients (`tools/run/headless.sh`) and local play |
+| `tools/run/test_patch.sh` (+ `.lua`) | A two-player match that proves the pak loads and logs every CC/lock effect on both heroes |
+
+Requirements on the machine that builds the pak: .NET 10, `third_party/UAssetAPI` (see the README), the game install,
+and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
+
+## Making a change
+
+1. **Find it.**
+   - The Blueprint pseudocode is in `work/bp-2023-02-15/` (made with `tools/bpdump`).
+   - `work/cc-audit/ctx.sh <path> <regex>` shows the same code in the Aug 2022, Feb 2023 and Dec 2023 builds.
+   - Write what you find into `docs/recon/`.
+2. **Look at the asset.** Extracted assets are in `work/extract-2023-02-15/`; `tools/pak/pakextract.py` gets others.
+   ```
+   work/bin/assetpatch/AssetPatch info  <asset.uasset>            # imports and their uses, class defaults, functions
+   work/bin/assetpatch/AssetPatch calls <asset.uasset> '*' [call]  # every call, with arguments as the edits match them
+   ```
+   `tools/patch/build.sh` builds `work/bin/assetpatch` the first time it runs.
+3. **Write the edits.** Add them to a patch file in `tools/patch/patches/`, either a new file or an existing one. Give
+   each asset a `why` that a player could read. New patches start with `"enabled": false`.
+4. **Build:** `tools/patch/build.sh clients/fangs-2023-02-15-b10554626 <patch>`. It prints each edit with the old and
+   new value, and stops at the first edit that doesn't match.
+5. **Test.**
+   - `PATCHES=<patch> tools/run/test_patch.sh` runs automatically. Set the heroes and abilities with `HERO_A`,
+     `HERO_B`, `ULT_A`, `LMB_B`, `CAST_A` and `CAST_B`.
+   - The test puts the target where the caster aims: each hero's replicated `UpdatedPointerLocation` is the world
+     point under that player's mouse. For an ability that lands at the pointer, set `AIM_A=<its range>`.
+   - `PATCHES=none` is the control run without the pak.
+   - Then play it: `tools/play/local.sh stop`, then `PATCHES=<patch> CLIENT_DIR=clients/fangs-2023-02-15-b10554626
+     tools/play/local.sh <name>`. The local backend's game servers get the same pak.
+6. **Ship it.**
+   - Set `"enabled": true`, add a line under "Next deploy" in `docs/CHANGELOG.md` and update `docs/ROADMAP.md`, all
+     in one commit.
+   - The next deploy (with the user's OK) builds the pak, and players get it the next time they start the launcher.
+7. **Off switch / rollback:** set `"enabled": false` and deploy. With no patch enabled, no pak is built, and the
+   launcher removes the old one from players' installs.
+
+## Edits
+
+| `op` | Fields | What it changes |
+|---|---|---|
+| `set-default` | `property`, `from`, `to` | A float, int or bool in the class defaults (`Default__<Class>_C`). Only values stored in that class's own defaults (the tool says "found 0" otherwise). For an ability's `Base…`/`Modified…` pair, set both: `ResetAbilityAttributes` derives the modified value from the base one. |
+| `rename-call` | `from`, `to`, `count`, optional `function` | Calls to a Blueprint function of another class, e.g. `BP_FL_MOBA_AbilitySystemFunctionLibrary_C.MakeRootEffectSpec` → `MakeStunEffectSpec`. These calls are by name (`EX_VirtualFunction`) and resolved when they run. The new function must take the same arguments. |
+| `rename-import` | `from`, `to`, `uses` | A reference to another object, e.g. a `TSubclassOf` default from `BP_GE_Root_C` to `BP_GE_Stun_C`. Rename the class, its `Default__` object and its package together. Imports whose class is the renamed one are updated too: the game checks an import's class. |
+| `set-call-arg` | `function`, `call`, `arg`, `from`, `to`, `count`, optional `match` | One argument of the matching calls in one function: a number, `true`/`false`, or a variable that function already uses. `match` (`{"<arg index>": "<text>"}`) narrows the calls down. Arguments are written the way `AssetPatch calls` prints them. |
+
+What a patch can't do:
+- Add code or functions.
+- Change the size of a function's code. Its jumps are byte offsets, and the tool refuses such an edit.
+
+Bigger changes need a UE4SS hook, or a new kind of edit in `AssetPatch` that recomputes the jumps.
+
+## Things learned
+
+- UAssetAPI re-saves the Feb 2023 Blueprint assets byte for byte (`AssetPatch roundtrip`, checked on all 10 CC
+  assets).
+- Calls into Blueprint function libraries are not imports. They are calls by name on the library's default object,
+  so switching such a call only changes the name.
+- `LockAbilities(0)` locks until something calls `UnlockAbilities`: 0 means "no timeout". A timeout ends the lock
+  (the lockout effect gets that duration).
+- The pak format:
+  - v11 with the path hash index. The path hash is FNV-64 over the lowercase UTF-16 path, with the index's seed
+    added to the offset basis; verified against the game's own pak.
+  - The full directory index lists every parent directory.
+  - The game checks the SHA-1 of each index, which `pakwrite.py` writes.
+  - Encrypted paks: `tools/pak` uses pycryptodome, or the `cryptography` package if pycryptodome is missing.

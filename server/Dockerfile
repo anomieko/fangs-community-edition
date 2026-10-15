@@ -35,7 +35,7 @@ RUN echo "$UE4SS_SHA256  /tmp/ue4ss.zip" | sha256sum -c - \
 
 COPY backend/fangs_backend.py backend/hosts.py backend/matchmaker.py backend/social.py backend/skill.py backend/allocator.py backend/ranked.py backend/
 COPY backend/seed/make_seed.py backend/seed/augments-*.json backend/seed/cosmetics-*.json backend/seed/levels-*.json backend/seed/itempaths-*.json backend/seed/restore-*.json backend/seed/
-COPY server/run-host.sh server/entrypoint.sh server/
+COPY server/run-host.sh server/install-paks.sh server/entrypoint.sh server/
 COPY tools/ue4ss tools/ue4ss
 COPY tools/run/config tools/run/config
 COPY player player

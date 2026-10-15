@@ -15,8 +15,14 @@ def load_key(arg):
 def decrypt(key, data):
     if key is None:
         return data
-    from Crypto.Cipher import AES
-    return AES.new(key, AES.MODE_ECB).decrypt(data[:len(data) // 16 * 16])
+    data = data[:len(data) // 16 * 16]
+    try:
+        from Crypto.Cipher import AES
+        return AES.new(key, AES.MODE_ECB).decrypt(data)
+    except ImportError:  # pycryptodome missing: use the 'cryptography' package
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+        d = Cipher(algorithms.AES(key), modes.ECB()).decryptor()
+        return d.update(data) + d.finalize()
 
 FOOTER = 16 + 1 + 4 + 4 + 8 + 8 + 20 + 5 * 32
 
