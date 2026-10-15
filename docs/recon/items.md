@@ -37,7 +37,7 @@ strings, so "implemented" = some Blueprint other than the item/preview/loot/stri
   (FangsBoot, client side) is enough.
 - **Somnia's pawn class is `BP_BookMage_Char2_C`** (DT_Heroes `HeroClass`); every other hero's is
   `BP_<Hero>_Char_C`. FangsBoot only adds restored items to pawns whose class matches its hero pattern, and
-  until 16 Oct that pattern was `_Char_C$`. So from the restore (14 Oct) on, Somnia's picker had none of the 21
+  until `deploy-2026-10-15-2336` that pattern was `_Char_C$`. So from the restore (14 Oct) on, Somnia's picker had none of the 21
   restored generic items: 8 boons instead of 13 and 8 artifacts instead of 24 on the arena maps. Her 20 heirlooms
   were all there. Players' FangsBoot logs never had a line `restored items: … added to BP_BookMage_Char2_C`
   (Feb build; reported by the user, 16 Oct).

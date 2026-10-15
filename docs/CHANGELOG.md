@@ -15,7 +15,16 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Player update only (FangsBoot); the server doesn't change.
+Nothing yet.
+
+## deploy-2026-10-15-2336 (`662f8ea`, Feb 2023 build)
+
+Deployed with the user's OK, **forced** (`FANGS_DEPLOY_FORCE=1`) with 5 players in lobbies or matches (the user's
+decision); their games ended with the restart. **Not tested in a match** (the user's decision: "i trust it no need
+to test"). Smoke test passed.
+
+Player update (FangsBoot): players get it from the launcher on their next start. The server restarted too: FangsBoot is
+part of the server image (`COPY tools/ue4ss`), although game servers don't run it.
 
 | Change | Commits | Off switch |
 |---|---|---|
