@@ -22,6 +22,7 @@ class Host:
         self.empty_since = None
         self.perf_logged = 0.0
         self.perf = None         # FangsHost heartbeats since the last perf line (see HostManager._perf)
+        self.match_over = None   # when its match's result arrived: no longer listed or joinable, stopped soon after
 
     @property
     def log_path(self):
@@ -44,11 +45,12 @@ class HostManager:
     `unused_timeout`. When every slot is taken, the longest-empty server is stopped for a new one."""
 
     def __init__(self, *, game_dir, inst_root, ports, run_script, backend_addr, log, data_dir,
-                 ready_timeout=180, idle_grace=180, lobby_grace=20, unused_timeout=180, standby=1, attempts=3):
+                 ready_timeout=180, idle_grace=180, lobby_grace=20, unused_timeout=180, post_match=120, standby=1,
+                 attempts=3):
         self.game_dir, self.inst_root, self.ports = game_dir, Path(inst_root), list(ports)
         self.run_script, self.backend_addr, self.log, self.data_dir = run_script, backend_addr, log, data_dir
         self.ready_timeout, self.idle_grace, self.unused_timeout = ready_timeout, idle_grace, unused_timeout
-        self.lobby_grace = lobby_grace
+        self.lobby_grace, self.post_match = lobby_grace, post_match
         self.standby, self.attempts = standby, attempts
         self.hosts = {}          # id -> Host
         self.on_stopped = []     # callbacks(host)
@@ -170,6 +172,7 @@ class HostManager:
                 f.rename(f.with_suffix('.bad'))
                 continue
             f.unlink(missing_ok=True)
+            host.match_over = host.match_over or time.time()
             for cb in self.on_result:
                 try:
                     cb(host, result)
@@ -230,6 +233,10 @@ class HostManager:
             in_lobby = st.get('map', '').endswith('LE_Lobby_Map') and not st.get('launched')
             if host.had_players and idle > (self.lobby_grace if in_lobby else self.idle_grace):
                 await self.stop(host, 'everyone left the lobby' if in_lobby else 'match over / empty'); return
+            # a finished match: the end screen gets `post_match` seconds, then its server goes (players still on it
+            # return to the menu), sooner once everyone left; it is no longer listed or joinable (fangs_backend)
+            if host.match_over and (time.time() - host.match_over > self.post_match or (host.had_players and idle > 10)):
+                await self.stop(host, 'match finished'); return
             if host.session_id is not None and not host.had_players and time.time() - host.started > self.unused_timeout:
                 await self.stop(host, 'nobody joined'); return
         await self.stop(host, f'process exited ({host.proc.returncode})')
