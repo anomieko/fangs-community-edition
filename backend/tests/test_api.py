@@ -842,6 +842,12 @@ class MatchResults(ApiCase):
         fb.ingest_match(fb.Store(self.tmp / 'store.json'), result, log.append)
         self.assertEqual(log[-1]['skipped'], 'duplicate')
 
+    async def test_a_ranked_roster_is_released_when_its_server_stops_without_a_result(self):
+        # review H6: a crashed Ranked game's roster stayed in memory until 50 newer games pushed it out
+        self.app['matchmaker'].ranked_games['custom-lobby'] = [[self.a], [self.b]]
+        await self.app['hosts'].stop(self.host, 'process exited (3)')
+        self.assertNotIn('custom-lobby', self.app['matchmaker'].ranked_games)
+
     async def test_one_unreadable_record_costs_only_its_player(self):
         # e.g. a mastery record written by a player before records were protected (review R2: it stopped the loop
         # halfway, and the match counted as seen)
