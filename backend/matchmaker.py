@@ -1,8 +1,13 @@
-"""Best-effort matchmaker for the client's matchmaking websocket (Play -> Casual / Ranked / beginner queue).
+"""Matchmaker for the client's matchmaking websocket (Play -> Casual / Ranked).
 
-No ratings: everyone who queues is pooled. A match is made once `size` players are queued (a full game:
-the queue never starts a match with empty seats). With `wait` > 0 it also starts when the longest-waiting
-player has waited that long, with whoever is queued (at least 2 players).
+Casual (queue ids "casual" / "beginner"): no ratings, everyone who queues is pooled. A match is made once
+`size` players are queued (a full game: the queue never starts a match with empty seats). With `wait` > 0 it
+also starts when the longest-waiting player has waited that long, with whoever is queued (at least 2 players).
+
+Ranked (queue id "ranked", MapGameMode 3): `ranked_size` players (n vs n) chosen and split into teams by
+allocator.py from their skill ratings (skill.py, ranked.py): fair games first, quality limits widening with the
+wait, mirrored party shapes first. Only these games change ratings (settled when the result arrives,
+`ranked_result`). A ranked ticket can wait a long time when nobody of similar skill is queued.
 
 Protocol (UMOBAMatchMakerSubsystem in the Feb 2023 client; JSON text frames, subprotocol "json",
 Authorization "Bearer secret-token:accelbyte/<access token>"):
@@ -27,9 +32,13 @@ import asyncio, base64, json, random, time, uuid
 
 from aiohttp import web, WSMsgType
 
+import allocator, ranked
+
 AUTH_PREFIX = 'Bearer secret-token:accelbyte/'
 STARTING_EXPIRY_MS = 240_000   # keeps the accept dialog open while the game server boots
 PARTY_WAIT = 20                # seconds a party ticket waits for members who haven't queued
+RANKED_QUEUE = 'ranked'        # QueueJoinRequest id for Ranked (FANGSConfig MatchMakerABRanked)
+RANKED_MAX_PARTY = 2           # the game's own limit (WB_ChoseGameMode "ranked_party_limit")
 
 
 def _b64(obj):
@@ -44,10 +53,11 @@ def assignment_token(ticket, team):
 class Ticket:
     """One player, or a party that queues together."""
 
-    def __init__(self, leader, expected=()):
+    def __init__(self, leader, expected=(), ranked=False):
         self.token = uuid.uuid4().hex
         self.leader, self.expected, self.joined = leader, list(expected) or [leader], [leader]
         self.queued_at = time.time()
+        self.ranked = ranked
 
     @property
     def party(self):
@@ -71,12 +81,13 @@ def split(tickets, per_side):
 
 
 class Match:
-    def __init__(self, tickets, accept_secs, size):
+    def __init__(self, tickets, accept_secs, size, sides=None, ranked=None):
         self.id = uuid.uuid4().hex
         self.tickets = list(tickets)            # to put them back in line if the match falls through
         self.players = [p for t in tickets for p in t.joined]
         self.team = {}                          # user id -> 0/1; a party is never split
-        sides = split(tickets, (size + 1) // 2) or split(tickets, len(self.players))
+        self.ranked = ranked                    # ranked: what the queue decided (for the log)
+        sides = sides or split(tickets, (size + 1) // 2) or split(tickets, len(self.players))
         for t, side in zip(tickets, sides):
             for p in t.joined:
                 self.team[p] = side
@@ -86,13 +97,15 @@ class Match:
 
 
 class Matchmaker:
-    def __init__(self, app, *, size=8, wait=0.0, accept_secs=15):
+    def __init__(self, app, *, size=8, wait=0.0, accept_secs=15, ranked_size=8, ranked_widen_speed=1.0):
         self.app, self.size, self.wait, self.accept_secs = app, size, wait, accept_secs
+        self.ranked_policy = allocator.Policy(team_size=max(1, ranked_size // 2), widen_speed=ranked_widen_speed)
         self.clients = {}    # user id -> websocket
         self.tickets = {}    # token -> Ticket waiting in line
         self.ticket_of = {}  # user id -> token (while in line)
         self.matches = {}    # match id -> Match (until the players got their server)
         self.match_of = {}   # user id -> match id
+        self.ranked_games = {}   # match id (= its server's session id) -> parties [[user id]], until its result
 
     def log(self, event, **kw):
         self.app['log']({'mm': event, **kw})
@@ -168,10 +181,14 @@ class Matchmaker:
                     party = social.party_members(uid) if social is not None else [uid]
                     if party[0] != uid:          # only the leader queues a party
                         party = [uid]
-                    ticket = Ticket(uid, party)
+                    is_ranked = msg.get('id') == RANKED_QUEUE
+                    if is_ranked and len(party) > min(RANKED_MAX_PARTY, self.ranked_policy.team_size):
+                        self.log('ranked party too big', user=uid, party=party)
+                        return await self.status(uid, 'Idle', id=uid)
+                    ticket = Ticket(uid, party, ranked=is_ranked)
                     self.tickets[ticket.token], self.ticket_of[uid] = ticket, ticket.token
                     if ticket.party:
-                        self.log('party queued', user=uid, party=party, token=ticket.token)
+                        self.log('party queued', user=uid, party=party, token=ticket.token, ranked=is_ranked)
             await self.report(uid)
         elif t in ('ClientResetRequest', 'RejectMatchRequest'):
             await self.leave(uid, 'left' if t == 'ClientResetRequest' else 'rejected')
@@ -243,13 +260,17 @@ class Matchmaker:
             m.starting = True
             asyncio.create_task(self.start(m))
 
-    def pick_map(self):
-        """Random map from FANGSConfig CasualMaps (the lobby server doesn't pick one by itself here)."""
+    def pick_map(self, key='CasualMaps'):
+        """Random map from FANGSConfig CasualMaps / RankedMaps (the lobby server doesn't pick one by itself here)."""
         pool = []
         for version in (self.app['store'].data['game_records'].get('FANGSConfig') or {}).values():
             if isinstance(version, dict):
-                pool += [m for m in version.get('CasualMaps', []) if isinstance(m, dict) and m.get('Map')]
-        return random.choice(pool) if pool else None
+                pool += [m for m in version.get(key, []) if isinstance(m, dict) and m.get('Map')]
+        return random.choice(pool) if pool else (self.pick_map() if key != 'CasualMaps' else None)
+
+    def ranked_result(self, session_id):
+        """The parties of a ranked game whose server is `session_id` (once; None for any other game)."""
+        return self.ranked_games.pop(session_id, None)
 
     async def start(self, m):
         for p in m.players:
@@ -258,7 +279,7 @@ class Matchmaker:
         self.log('starting', match=m.id, players=m.players)
         try:
             match = {'size': len(m.players)}
-            if (game_map := self.pick_map()):
+            if (game_map := self.pick_map('RankedMaps' if m.ranked else 'CasualMaps')):
                 match.update(map=game_map['Map'], map_name=game_map.get('Name', game_map['Map']))
             host = await self.app['hosts'].allocate(m.id, match=match)
         except Exception as e:  # noqa: BLE001 - tell the players instead of leaving them waiting
@@ -269,6 +290,10 @@ class Matchmaker:
                 await self.status(p, 'Idle', id=p)
             return
         address = f"{self.app['cfg'].public_ip}:{host.port}"
+        if m.ranked:
+            self.ranked_games[m.id] = [list(t.joined) for t in m.tickets]
+            for old in list(self.ranked_games)[:-50]:      # results that never came (crashed servers)
+                del self.ranked_games[old]
         self.matches.pop(m.id, None)
         for p in list(m.players):
             self.match_of.pop(p, None)
@@ -288,24 +313,55 @@ class Matchmaker:
         now = time.time()
         for m in [m for m in self.matches.values() if not m.starting and now > m.deadline]:
             await self.cancel(m, drop=set(m.players) - m.accepted, reason='not accepted in time')
-        picked, count = [], 0
-        for ticket in sorted(self.tickets.values(), key=lambda t: t.queued_at):
-            if ticket.ready(now) and count + len(ticket.joined) <= self.size \
-                    and split(picked + [ticket], (self.size + 1) // 2) is not None:   # even teams stay possible
-                picked.append(ticket)
-                count += len(ticket.joined)
-        early = self.wait > 0 and count >= 2 and now - picked[0].queued_at >= self.wait
-        if not picked or (count < self.size and not early):
-            return
         if not self.app['hosts'].free_ports():
             return   # all game server slots busy: keep everyone queued
-        m = Match(picked, self.accept_secs, self.size)
+        m = self.casual_match(now) or self.ranked_match(now)
+        if m is None:
+            return
         self.matches[m.id] = m
-        for ticket in picked:
+        for ticket in m.tickets:
             self.tickets.pop(ticket.token, None)
             for p in ticket.joined:
                 self.ticket_of.pop(p, None)
         for p in m.players:
             self.match_of[p] = m.id
             await self.status(p, 'Matched', match={'id': m.id, 'expiresInMillis': self.accept_secs * 1000})
-        self.log('matched', match=m.id, players=m.players, teams=m.team)
+        self.log('matched', match=m.id, players=m.players, teams=m.team, **({'ranked': m.ranked} if m.ranked else {}))
+
+    def casual_match(self, now):
+        """First come, first served: the oldest tickets that fill a game (or fewer after `wait`)."""
+        picked, count = [], 0
+        for ticket in sorted((t for t in self.tickets.values() if not t.ranked), key=lambda t: t.queued_at):
+            if ticket.ready(now) and count + len(ticket.joined) <= self.size \
+                    and split(picked + [ticket], (self.size + 1) // 2) is not None:   # even teams stay possible
+                picked.append(ticket)
+                count += len(ticket.joined)
+        early = self.wait > 0 and count >= 2 and now - picked[0].queued_at >= self.wait
+        if not picked or (count < self.size and not early):
+            return None
+        return Match(picked, self.accept_secs, self.size)
+
+    def ranked_match(self, now):
+        """The allocator's first proposal among the ranked tickets, if any. Costs nothing until a full game's
+        worth of ranked players is queued, then about a millisecond per second (tools/test/test_ranked.py)."""
+        n = self.ranked_policy.team_size
+        ready = [t for t in self.tickets.values() if t.ranked and t.ready(now)]
+        if sum(len(t.joined) for t in ready) < 2 * n:
+            return None
+        store = self.app['store']
+        queued = [allocator.Ticket(t.token, tuple(ranked.rating_of(store, p) for p in t.joined), min(t.queued_at, now))
+                  for t in ready]
+        proposals = allocator.allocate(queued, now, self.ranked_policy,
+                                       ranked.previous_opponents(store, [p for t in ready for p in t.joined]))
+        if not proposals:
+            return None
+        best, by_token = proposals[0], {t.token: t for t in ready}
+        logical = (best.team_a, best.team_b)
+        bit = random.getrandbits(1)   # which logical team gets which side: independent of ids and waits
+        picked = [by_token[t.ticket_id] for team in logical for t in team]
+        sides = [i ^ bit for i, team in enumerate(logical) for _ in team]
+        info = {'win_chance': round(best.probability, 3), 'predicted': round(best.frozen.predicted_win_a, 3),
+                'level': best.composition_level, 'score': round(best.score, 3),
+                'waits': [round(now - max(t.queued_at for t in picked)), round(now - min(t.queued_at for t in picked))],
+                'ratings': [[round(p.rating) for t in team for p in t.players] for team in logical]}
+        return Match(picked, self.accept_secs, 2 * n, sides=sides, ranked=info)

@@ -25,4 +25,5 @@ python3 backend/seed/make_seed.py "$PUBLIC_HOST:$BACKEND_PORT" /data/backend/see
 [[ -n ${FANGS_JOIN_CODE:-} ]] || echo "WARNING: FANGS_JOIN_CODE not set - anyone can log in" >&2
 exec python3 -u backend/fangs_backend.py --host 0.0.0.0 --port "$BACKEND_PORT" --public-ip "$PUBLIC_HOST" \
   --qos-port "$QOS_PORT" --host-ports "$HOST_PORTS" --game-dir /game --instances /data/hosts \
-  --downloads /downloads --run-host /opt/fangs/server/run-host.sh --seed /data/backend/seed.json --data /data/backend/store.json --log /data/backend/requests.jsonl "$@"
+  --downloads /downloads --run-host /opt/fangs/server/run-host.sh --seed /data/backend/seed.json --data /data/backend/store.json --log /data/backend/requests.jsonl \
+  --ranked-widen-speed 2 "$@"

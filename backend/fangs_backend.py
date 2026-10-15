@@ -6,7 +6,7 @@ returns an AccelByte-style 404 so we can see what the game needs next.
 
 Run:  backend/.venv/bin/python backend/fangs_backend.py --port 8080
 """
-import argparse, asyncio, base64, hashlib, hmac, json, math, os, re, time, uuid
+import argparse, asyncio, base64, hashlib, hmac, json, os, re, time, uuid
 from pathlib import Path
 
 from aiohttp import web, WSMsgType
@@ -14,6 +14,7 @@ from aiohttp import web, WSMsgType
 from hosts import HostManager
 from matchmaker import Matchmaker
 from social import Social
+import ranked, skill
 
 NAMESPACE = 'fangs'
 ROUTES = []  # (method-or-*, compiled regex, handler)
@@ -60,7 +61,9 @@ class Store:
             self._write(root / 'game' / f'{key}.json', value)
         for uid, recs in self.data['player_records'].items():
             for key, value in recs.items():
-                self._write(root / 'players' / uid / f'{key}.json', value)
+                if key != 'PROFILE_RATINGS_KEY':   # a stored one is the old casual rating; hosts get the served one
+                    self._write(root / 'players' / uid / f'{key}.json', value)
+            self._write(root / 'players' / uid / 'PROFILE_RATINGS_KEY.json', stats_record(self, uid, 'PROFILE_RATINGS_KEY'))
 
     @staticmethod
     def _write(path, value):
@@ -235,6 +238,8 @@ def default_player_record(store, uid, key):
 
 # Match statistics, written only by the backend from finished matches (see ingest_match): players can't set them.
 # Defaults are served, not stored. MatchesPlayed is left out until the first match ("0% of 0" on the profile).
+# PROFILE_RATINGS_KEY is always served from the ranked rating (ranked.py); a stored one (OpenSkill, from casual
+# and custom games before Ranked) is no longer read or written.
 DEFAULT_RATING = {'mu': 25.0, 'sigma': 8.33333}   # the game's own defaults (BP_AC_MatchReport)
 STATS_DEFAULTS = {'PROFILE_HISTORY_KEY': {'Matches': []},
                   'PROFILE_MASTERY_KEY': {'Level': 1, 'XPToNext': 0},
@@ -257,6 +262,9 @@ def history_for_viewer(history, owner, viewer):
 
 
 def stats_record(store, uid, key):
+    if key == 'PROFILE_RATINGS_KEY':   # Ranked is the only rating; casual games have none
+        r = skill.display(ranked.rating_of(store, uid))
+        return {'casual_rating': r, 'ranked_rating': dict(r)}
     value = store.data['player_records'].get(uid, {}).get(key)
     return value if value is not None else json.loads(json.dumps(STATS_DEFAULTS[key]))
 
@@ -590,12 +598,8 @@ def rank_points(rating):
 
 
 def leaderboard(store):
-    """[(user id, points)], best first: everyone who has finished a match."""
-    rows = []
-    for uid, recs in store.data['player_records'].items():
-        if (recs.get('PROFILE_MASTERY_KEY') or {}).get('MatchesPlayed'):
-            rows.append((uid, rank_points((recs.get('PROFILE_RATINGS_KEY') or {}).get('ranked_rating') or {})))
-    return sorted(rows, key=lambda r: -r[1])
+    """[(user id, points)], best first: everyone who has played a ranked match."""
+    return ranked.leaderboard(store)
 
 
 # The leaderboard code is the season id, which our (empty) season record leaves blank; every code is one board.
@@ -633,11 +637,10 @@ async def lobby_messages(request):
 
 # ---------------------------------------------------------------- Match results (history, mastery, ratings)
 
-# From the game's BP_AC_MatchReport: XP per match, the match-history length, and its rating model's parameters.
+# From the game's BP_AC_MatchReport: XP per match and the match-history length.
 XP_MATCH_CAP, XP_WIN, XP_LOSE = 5400.0, (0.11, 6.6), (0.09, 5.4)    # seconds counted; (per second, base)
 HISTORY_LENGTH = 20
-RATED_MODES = {2, 3, 4}                    # ENUM_MapGameMode Casual, Ranked, Custom (not training/tutorial)
-PL_BETA, PL_EPSILON = 5.0, 0.001           # OpenSkill Plackett-Luce, as the game sent it to its ratings service
+XP_MODES = {2, 3, 4}                       # ENUM_MapGameMode Casual, Ranked, Custom (not training/tutorial)
 TEAMS = {1: 'TeamA', 2: 'TeamB'}
 
 
@@ -650,35 +653,10 @@ def level_up(level, xp, table, strict):
     return level, xp
 
 
-def plackett_luce(teams):
-    """OpenSkill Plackett-Luce update. teams: [(rank, [rating dict, ...])], lower rank = better; new ratings."""
-    c = math.sqrt(sum(sum(r['sigma'] ** 2 for r in rs) + PL_BETA ** 2 for _, rs in teams))
-    mus = [sum(r['mu'] for r in rs) for _, rs in teams]
-    s2 = [sum(r['sigma'] ** 2 for r in rs) for _, rs in teams]
-    ranks = [rank for rank, _ in teams]
-    tied = [ranks.count(rk) for rk in ranks]
-    sum_q = [sum(math.exp(mus[i] / c) for i in range(len(teams)) if ranks[i] >= ranks[q]) for q in range(len(teams))]
-    out = []
-    for i, (_, rs) in enumerate(teams):
-        omega = delta = 0.0
-        for q in range(len(teams)):
-            if ranks[q] > ranks[i]:
-                continue
-            quotient = math.exp(mus[i] / c) / sum_q[q]
-            omega += ((1 - quotient) if q == i else -quotient) / tied[q]
-            delta += quotient * (1 - quotient) / tied[q]
-        omega *= s2[i] / c
-        delta *= (s2[i] / c ** 2) * (math.sqrt(s2[i]) / c)
-        out.append([{'mu': r['mu'] + r['sigma'] ** 2 / s2[i] * omega,
-                     'sigma': r['sigma'] * math.sqrt(max(1 - r['sigma'] ** 2 / s2[i] * delta, PL_EPSILON))}
-                    for r in rs])
-    return out
-
-
-def ingest_match(store, result, log):
+def ingest_match(store, result, log, ranked_parties=None):
     """A match FangsHost saved at its end (fangshost_result-*.json): the game's own match-history entry plus the
-    winner. Every player with an account gets it in PROFILE_HISTORY_KEY, XP/levels/wins in PROFILE_MASTERY_KEY,
-    and (when both teams had players) a new rating in PROFILE_RATINGS_KEY, the same for casual and ranked."""
+    winner. Every player with an account gets it in PROFILE_HISTORY_KEY and XP/levels/wins in PROFILE_MASTERY_KEY.
+    A Ranked game (ranked_parties: the matchmaker's tickets) also settles the players' ratings (ranked.py)."""
     entry, winner = result.get('results') or {}, TEAMS.get(result.get('winning_team'))
     rounds = entry.get('MatchResults') or []
     match_id = hashlib.sha1(json.dumps([entry.get('TimePlayed'), entry.get('MapLevel'),
@@ -702,7 +680,7 @@ def ingest_match(store, result, log):
         history = stats_record(store, uid, 'PROFILE_HISTORY_KEY')
         history['Matches'] = (history.get('Matches') or [])[-(HISTORY_LENGTH - 1):] + [entry]
         recs['PROFILE_HISTORY_KEY'] = history
-        if mode not in RATED_MODES:
+        if mode not in XP_MODES:
             continue
         per_sec, base = XP_WIN if won else XP_LOSE
         xp = int(secs * per_sec + base)
@@ -718,18 +696,14 @@ def ingest_match(store, result, log):
             h['MatchesWon'] = h.get('MatchesWon', 0) + won
             m[p['hero']] = h
         recs['PROFILE_MASTERY_KEY'] = m
-    sides = [[uid for uid, p in players.items() if p['team'] == t] for t in (winner, *(set(TEAMS.values()) - {winner}))]
-    rated = mode in RATED_MODES and all(sides)
-    if rated:
-        old = [[stats_record(store, uid, 'PROFILE_RATINGS_KEY').get('ranked_rating') or DEFAULT_RATING for uid in side]
-               for side in sides]
-        for side, new in zip(sides, plackett_luce([(0, old[0]), (1, old[1])])):
-            for uid, r in zip(side, new):
-                r = {'mu': round(r['mu'], 4), 'sigma': round(r['sigma'], 4)}
-                store.data['player_records'][uid]['PROFILE_RATINGS_KEY'] = {'casual_rating': r, 'ranked_rating': dict(r)}
+    rating = None
+    if ranked_parties is not None:
+        teams = {t: [uid for uid, p in players.items() if p['team'] == t] for t in TEAMS.values()}
+        rating = ranked.settle_match(store, teams, ranked_parties, winner)
     store.save()
-    log({'match': match_id, 'mode': mode, 'map': entry.get('MapLevel'), 'winner': winner, 'rated': rated,
-         'players': {p['user']['display_name']: p['team'] for p in players.values()}})
+    log({'match': match_id, 'mode': mode, 'map': entry.get('MapLevel'), 'winner': winner,
+         'players': {p['user']['display_name']: p['team'] for p in players.values()},
+         **({'ranked': rating} if rating else {})})
 
 
 # ---------------------------------------------------------------- Session browser (custom lobbies)
@@ -1185,6 +1159,10 @@ def main():
     ap.add_argument('--host-standby', type=int, default=1,
                     help='game servers kept booted and idle so lobbies/matches start at once (each ~3 GB RAM)')
     ap.add_argument('--match-size', type=int, default=8, help='players per matchmade game (Play -> Casual)')
+    ap.add_argument('--ranked-size', type=int, default=8, help='players per Ranked game (even: n vs n)')
+    ap.add_argument('--ranked-widen-speed', type=float, default=1.0,
+                    help='how fast a Ranked wait widens the skill limits (1: the research schedule, widest at 8 min; '
+                         '2: at 4 min)')
     ap.add_argument('--match-wait', type=float, default=0,
                     help='if > 0: seconds the first queued player waits before a match starts with whoever is queued '
                          '(at least 2); by default matches only start full')
@@ -1209,7 +1187,8 @@ def main():
                                run_script=a.run_host, backend_addr=f'127.0.0.1:{a.port}', log=log,
                                data_dir=str(Path(a.data).resolve().parent), standby=a.host_standby)
 
-    app['matchmaker'] = Matchmaker(app, size=a.match_size, wait=a.match_wait)
+    app['matchmaker'] = Matchmaker(app, size=a.match_size, wait=a.match_wait, ranked_size=a.ranked_size,
+                                   ranked_widen_speed=a.ranked_widen_speed)
 
     app['zeuz'] = {}
 
@@ -1217,7 +1196,8 @@ def main():
         app['sessions'].pop(host.session_id, None)
         app['zeuz'].pop(host.session_id, None)
     app['hosts'].on_stopped.append(host_stopped)
-    app['hosts'].on_result.append(lambda host, result: ingest_match(app['store'], result, log))
+    app['hosts'].on_result.append(lambda host, result: ingest_match(
+        app['store'], result, log, ranked_parties=app['matchmaker'].ranked_result(host.session_id)))
     if Path(a.seed).exists():  # seed (re)defines the global game records on every start
         app['store'].data['game_records'].update(json.loads(Path(a.seed).read_text()))
     app['store'].export_records()
