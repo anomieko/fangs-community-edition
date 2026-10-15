@@ -12,12 +12,14 @@ Party members tell each other their hero, skin, matchmaking token, ... with sign
 are relayed (only between friends and party mates) with destinationId set to the sender. Team and all chat in custom
 lobbies and matches are signaling messages too ("/t <text>", "/a <text>"); those are relayed between any two players.
 """
-import asyncio, time, uuid
+import asyncio, re, time, uuid
 
 GRACE = 60
 LOBBY_CHAT = True      # team/all chat between any two players (False: only friends and party mates, as before 15 Oct)
 MAX_PARTY = 4          # a matchmade game is 4 vs 4 and a party always plays on one team
 AVAILABILITY = ('offline', 'online', 'busy', 'invisible')   # EAvailability, by name
+ZWSP = '\u200b'         # zero-width space: keeps a value from parsing as a list/object, or a word from matching
+CHAT_MAX = 500
 ERR_BAD_REQUEST, ERR_IN_PARTY, ERR_NOT_IN_PARTY, ERR_CANT_INVITE, ERR_BAD_INVITE, ERR_NOT_LEADER, ERR_FRIEND, \
     ERR_OFFLINE = 11201, 11221, 11231, 11253, 11271, 11301, 11401, 11501
 
@@ -32,7 +34,7 @@ def _value(v):
     if isinstance(v, dict):
         return '{}' if not v else '{' + ','.join(f'"{k}":"{_clean(x)}"' for k, x in v.items()) + '}'
     s = _clean(v)
-    return '​' + s if s[:1] in ('[', '{') else s
+    return ZWSP + s if s[:1] in ('[', '{') else s
 
 
 def frame(type_, **fields):
@@ -42,12 +44,12 @@ def frame(type_, **fields):
 def chat_text(s):
     """A chat line as a frame value: backslashes kept (the client reads JSON escapes), quotes at either end
     kept (the parser drops a leading and a trailing one), no list/object parsing."""
-    s = _clean(s).replace('\\', '\\\\')
+    s = _clean(s)[:CHAT_MAX].replace('\\', '\\\\')   # cut first: a cut afterwards could undo the escaping
     if s[:1] in ('[', '{', '"'):
-        s = '​' + s
+        s = ZWSP + s
     if s.endswith('"'):
-        s += '​'
-    return s[:500]
+        s += ZWSP
+    return s
 
 
 def lobby_chat(msg):
@@ -131,14 +133,17 @@ class Social:
 
     async def connect(self, uid, ws):
         old = self.conns.get(uid)
-        if old and old.ws is not None and old.ws is not ws and not old.ws.closed:
-            self.log(event='replaced connection', user=uid)
-            await old.ws.close()          # the same player logged in again (one lobby connection each)
+        old_ws = old.ws if old else None
         if old and old.grace:
             old.grace.cancel()
         reconnect = old is not None
         c = self.conns[uid] = old or Conn(ws)
         c.ws, c.grace, c.last_seen = ws, None, time.time()
+        if old_ws is not None and old_ws is not ws and not old_ws.closed:
+            # the same player logged in again (one lobby connection each). The new one is theirs before the old one
+            # closes, so the old one's disconnect() is ignored and party mates don't hear "disconnected" last.
+            self.log(event='replaced connection', user=uid)
+            await old_ws.close()
         p = self.parties.get(self.party_of.get(uid))
         if reconnect and p:
             for m in p.members:
@@ -172,7 +177,8 @@ class Social:
                 await self.party_update(p)
         await self.leave_party(uid)
         await self.tell_friends_status(uid)
-        self.conns.pop(uid, None)
+        if self.conns.get(uid) is c and c.ws is None:   # not if they came back while we told the others
+            self.conns.pop(uid)
 
     # ------------------------------------------------------------ messages
 
@@ -345,6 +351,8 @@ class Social:
             return await self.reply(ws, t, mid, ERR_BAD_INVITE)
         if self.party(me) and self.party(me) is not p:
             await self.leave_party(me)
+            if self.parties.get(p.id) is not p or me not in p.invitees or len(p.members) >= MAX_PARTY:
+                return await self.reply(ws, t, mid, ERR_BAD_INVITE)   # changed while we left the old party
         p.invitees.remove(me)
         if me not in p.members:
             p.members.append(me)
@@ -395,6 +403,8 @@ class Social:
         await self.reply(ws, t, mid, userId=other)
         for m in list(p.members):
             await self.send(m, 'partyKickNotif', leaderID=me, leader=me, userID=other, partyId=p.id)
+        if other not in p.members:   # they left while we told everyone: leave_party did the rest
+            return
         p.members.remove(other)
         self.party_of.pop(other, None)
         mm = self.app.get('matchmaker')
@@ -438,8 +448,8 @@ class Social:
         if to == me or not (to in self.friends_of(me) or (p and to in p.members + p.invitees)
                             or (LOBBY_CHAT and chat and self.online(to))):
             return self.log(event='signaling dropped', user=me, to=to)
-        if chat:   # the receiver looks for party commands ("ReportLeaveQueueCommand", ...) anywhere in a message
-            msg = chat_text(msg.replace('Report', 'Re\u200bport'))
+        if chat:   # the receiver looks for party commands ("ReportLeaveQueueCommand", ...) anywhere, in any case
+            msg = chat_text(re.sub(r'(?i)(re)(port)', '\\1' + ZWSP + '\\2', msg))
         await self.send(to, 'signalingP2PNotif', destinationId=me, message=msg)
 
     # ------------------------------------------------------------ REST helpers
