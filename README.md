@@ -5,6 +5,10 @@ shut down. FANGS was a hero arena game built in Unreal Engine 4.26. Its backend 
 game-server hosting (Zeuz/Improbable) are gone. This project replaces those services so people who
 built and played the game can run private custom matches again.
 
+**Want to play?** You only need **[FangsCE.exe](https://github.com/anomieko/fangs-community-edition/releases/latest/download/FangsCE.exe)**
+and an invite code: see [Playing](#playing-windows). (The green "Code" button downloads this project's source code,
+not the game.)
+
 > ## ⚠️ Disclaimer
 >
 > - **This is an unofficial fan project.** It is not affiliated with, endorsed by, or sponsored by
@@ -33,13 +37,15 @@ See **[docs/STATUS.md](docs/STATUS.md)** and **[docs/SERVER.md](docs/SERVER.md)*
 
 You need an **invite code** from whoever runs your community server (it starts with `FCE-`).
 
-1. Download **[FangsCE.exe](https://github.com/anomieko/fangs-community-edition/releases/latest/download/FangsCE.exe)**
-   (a small launcher; it downloads the game from your server, not from here). If the browser says the file
-   isn't commonly downloaded, choose **Keep**.
+1. Download **[FangsCE.exe](https://github.com/anomieko/fangs-community-edition/releases/latest/download/FangsCE.exe)**.
+   It's the only file you need: a small launcher that downloads the game (about 13 GB) from your server. If the
+   browser says the file isn't commonly downloaded, choose **Keep**.
 2. Start it. Windows may say "Windows protected your PC" because the launcher isn't code-signed: click
    **More info → Run anyway**.
-3. Pick an install folder and a player name, then paste your invite code. The launcher installs the game,
-   keeps it updated and starts it; next time just start `FangsCE.exe` again.
+3. Paste your invite code when it asks for it. When it asks where the game should go, **press Enter** for the
+   suggested folder (or type another folder, like `D:\Games`). Then pick a player name.
+4. The launcher downloads the game and starts it. To play next time, use the **Fangs Community Edition** shortcut
+   on your desktop or in the Start menu: it updates the game and logs you in. (The game's own .exe can't log in.)
 
 If Windows Security removes a file (often `dwmapi.dll`, the mod loader), add the install folder under
 Windows Security → Virus & threat protection → Exclusions, then start the launcher again: it puts back
