@@ -17,7 +17,7 @@ Last updated: 2026-10-15.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-2104` (`8de8382`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-2144` (`4f83b89`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -46,6 +46,9 @@ Current deploy: `deploy-2026-10-15-2104` (`8de8382`); what each deploy changed: 
   running lobby or game, game-server lifecycle, social and match-result fixes), Ranked review fixes, a party of one is
   no party, launcher install help (invite first, checked folder, shortcuts, `FANGS.exe` starts the launcher), faster
   downloads (gzipped 32 MiB pieces, 4 at a time) and BBR on the VPS.
+- since 15 Oct 21:44 UTC: the launcher puts back mod loader files an antivirus removed and tells the player how to add
+  the exclusion (no more silent "Steam authorization"); the public launcher on GitHub is `launcher-4f83b89` (invite
+  first, the install checks and this one).
 
 ## Done, not deployed
 
@@ -117,15 +120,12 @@ Nothing.
    on the next start; a folder with other things in it is never moved on a build switch; the launcher copies itself
    to `%LOCALAPPDATA%\Programs\Fangs Community Edition` and makes desktop and Start menu shortcuts once; the game
    folder's `FANGS.exe` is a copy of the launcher that hands over to that copy (`server/deploy.sh`).
-   Next: a new GitHub release (`launcher/release.sh`, after the deploy: before it, the
-   release's launcher would update itself to the old server launcher, which asks the old questions) so newcomers get
-   the invite-first order; until then the old release asks for the folder first, and the server's launcher fixes the
-   answer. Open: a player who starts `MOBA-Win64-Shipping.exe` (e.g. pinned to the taskbar while the game ran) still
+   The GitHub release is `launcher-4f83b89` (15 Oct, after `deploy-2026-10-15-2144`), so newcomers get the invite-first
+   order from the start. Open: a player who starts `MOBA-Win64-Shipping.exe` (e.g. pinned to the taskbar while the game ran) still
    gets no login; FangsBoot could start the launcher instead.
-   Done, not deployed (branch `defender-check`, user's OK to deploy, 15 Oct): the launcher checks the mod loader files
-   before and 5 s after starting the game, puts back what an antivirus removed and tells the player how to add the
-   exclusion, instead of leaving them at "Steam authorization" (a new player's report, 15 Oct; it resolved on the
-   player's side). Then the GitHub release.
+   Live since `deploy-2026-10-15-2144`: the launcher checks the mod loader files before and 5 s after starting the
+   game, puts back what an antivirus removed and tells the player how to add the exclusion, instead of leaving them at
+   "Steam authorization" (a new player's report, 15 Oct; it resolved on the player's side, cause not confirmed).
 
 ## Known issues and small ideas
 
