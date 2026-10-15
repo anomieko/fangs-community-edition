@@ -93,8 +93,8 @@ Nothing.
    `docs/review/`, `backend/tests/` and the review's fixes). Plan and rules: `docs/review/SPRINT.md`. Ledger (every
    finding, its state and the test that pins it): `docs/review/FINDINGS.md`. Lifecycle matrix:
    `docs/review/LIFECYCLE.md`. Architecture: `docs/ARCHITECTURE.md`.
-   Done on the branch (not merged, not deployed): 8 independent reviews, then 23 fixes, each with a test that failed
-   first, and a second review of the fixes themselves (5 corrections). 199 backend unit tests run on production's
+   Done on the branch (not merged, not deployed): 8 independent reviews; 20 findings fixed (ledger rows), code ones
+   each with a test that failed first; a second review of the fixes themselves (5 corrections). 199 backend unit tests run on production's
    Python and aiohttp; CI runs them with ruff. The `deploy.sh` fix is already on `main` (`90ebe4e`, user's OK).
    Next: the headless game regression on the branch (not while the user plays on this machine); rebase onto `main`
    after `ranked-fixes` lands (conflicts known: `hosts.py`, `matchmaker.py` docstring, CHANGELOG, `ranked.md`); merge
