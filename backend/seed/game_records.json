@@ -60,13 +60,12 @@
     "Bots"
    ],
    "AvailableCustomModes": [
-    "Battle",
-    "Duel",
-    "2vs2",
-    "4vs4",
-    "5vs5",
     "6vs6",
-    "Trio",
+    "5vs5",
+    "4vs4",
+    "3vs3",
+    "2vs2",
+    "Duel",
     "Solo"
    ],
    "AvailableMaps": [
@@ -2550,13 +2549,12 @@
     "Bots"
    ],
    "AvailableCustomModes": [
-    "Battle",
-    "Duel",
-    "2vs2",
-    "4vs4",
-    "5vs5",
     "6vs6",
-    "Trio",
+    "5vs5",
+    "4vs4",
+    "3vs3",
+    "2vs2",
+    "Duel",
     "Solo"
    ],
    "AvailableMaps": [
@@ -5035,13 +5033,12 @@
     "Bots"
    ],
    "AvailableCustomModes": [
-    "Battle",
-    "Duel",
-    "2vs2",
-    "4vs4",
-    "5vs5",
     "6vs6",
-    "Trio",
+    "5vs5",
+    "4vs4",
+    "3vs3",
+    "2vs2",
+    "Duel",
     "Solo"
    ],
    "AvailableMaps": [
