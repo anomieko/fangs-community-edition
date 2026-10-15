@@ -374,9 +374,15 @@ async def player_record(request):
         return web.Response(status=204)
     value = await request.json()
     if request.method == 'POST' and isinstance(recs.get(key), dict) and isinstance(value, dict):
-        recs[key] = {**recs[key], **value}   # POST = merge top-level fields
-    else:
-        recs[key] = value                   # PUT = replace
+        value = {**recs[key], **value}      # POST = merge top-level fields; PUT = replace
+    if key == 'PROFILE_INFO_KEY' and not is_server(request):
+        # the identity fields stay the server's: others see Username (lobbies, matches), as in update-player-info
+        if not isinstance(value, dict):
+            return err(400, 20002, 'PROFILE_INFO_KEY must be an object')
+        old = recs.get(key) or default_player_record(store, uid, key)
+        value = {**value, **{k: old[k] for k in PROFILE_IDENTITY if k in old}}
+        fix_profile(value)
+    recs[key] = value
     store.save()
     return web.json_response(record_body(key, recs[key], uid))
 
@@ -436,8 +442,16 @@ async def fangs_update_record_key(request):
     if not uid:
         return err(401, 20001, 'unauthorized')
     body = await request.json()
-    rec = store.data['player_records'].setdefault(uid, {}).setdefault(body['RecordId'], {})
-    rec[body['Key']] = body.get('Value')
+    record, key = body.get('RecordId'), body.get('Key')
+    if not isinstance(record, str) or not isinstance(key, str) or not record or not key:
+        return err(400, 20002, 'RecordId and Key are required')
+    # the client writes "Justice" (leaver penalties) here; match statistics and identity are the server's
+    if record in STATS_DEFAULTS or (record == 'PROFILE_INFO_KEY' and key in PROFILE_IDENTITY):
+        return err(403, 20013, f'{record}.{key} is kept by the server')
+    rec = store.data['player_records'].setdefault(uid, {}).setdefault(record, {})
+    if not isinstance(rec, dict):
+        return err(400, 20002, f'{record} is not an object')
+    rec[key] = body.get('Value')
     store.save()
     return web.json_response({'success': True, 'RecordId': body['RecordId'], 'Key': body['Key']})
 
