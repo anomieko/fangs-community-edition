@@ -44,7 +44,11 @@ Current deploy: `deploy-2026-10-15-1714` (`09c27b1`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing.
+- Review sprint fixes (item 7; `docs/CHANGELOG.md` "Next deploy" lists each with its commit): login names
+  case-insensitive, lobby login and ownership checks, protected records, PLAY usable next to a running lobby or game and
+  never more matches than servers, game-server lifecycle and social fixes, match results per player. 199 backend unit
+  tests pass. **Blocked on:** the headless game regression on these commits (not run yet: the user was playing on the
+  dev machine). Deploy only after it passes, with the user's OK.
 
 ## In progress
 
@@ -96,9 +100,11 @@ Nothing.
    Done on the branch (not merged, not deployed): 8 independent reviews; 20 findings fixed (ledger rows), code ones
    each with a test that failed first; a second review of the fixes themselves (5 corrections). 199 backend unit tests run on production's
    Python and aiohttp; CI runs them with ruff. The `deploy.sh` fix is already on `main` (`90ebe4e`, user's OK).
-   Next: the headless game regression on the branch (not while the user plays on this machine); rebase onto `main`
-   after `ranked-fixes` lands (conflicts known: `hosts.py`, `matchmaker.py` docstring, CHANGELOG, `ranked.md`); merge
-   and deploy only with the user's OK, after the review, when nobody plays.
+   Merged into `main` and pushed on 15 Oct (user's request; not deployed). Next: the headless game regression on
+   `main` (not while the user plays on this machine), then a deploy with the user's OK, after the review, when nobody
+   plays. `ranked-fixes` rebases onto it: conflicts in `hosts.py` (keep both new `Host` fields and both `allocate()`
+   lines), the `matchmaker.py` docstring (theirs, path `backend/tests/`), CHANGELOG and `ranked.md`; its test edits move
+   with the files to `backend/tests/`.
 
 ## Known issues and small ideas
 
