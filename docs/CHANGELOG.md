@@ -23,6 +23,7 @@ What each deploy put on the server, so a problem can be traced to a change and u
 | Login names are case-insensitive: "ALICE" is alice's account and needs her secret (it used to get a new entry with her user id: an account takeover). The backend logs names already stored twice at start; the first spelling keeps the account | `380e64a` | none (security fix) |
 | Custom lobbies need a login: listing and looking up lobbies needs a token (the game always sends one); only a lobby's owner or our game servers may change or delete it (deleting one used to stop its server, for anyone, without a login); only the owner can request its game server; the lobby connection refuses unknown tokens | (this commit) | none (security fix) |
 | A new custom lobby no longer ends the owner's running match (the old server keeps playing); a second server request for a lobby gets its server again, and a server that isn't the lobby's can't remove it | (this commit) | none |
+| Players can't write the server-kept records (wins, levels, match history) or their profile's identity (`Username`, `AccountType`) any more: `update-player-record-key` refuses them (the client only writes `Justice` there), and a CloudSave write of the profile keeps the stored identity | (this commit) | none (security fix) |
 
 ## deploy-2026-10-15-1714 (`09c27b1`, Feb 2023 build)
 

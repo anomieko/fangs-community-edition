@@ -315,27 +315,37 @@ class Auth(ApiCase):
         status, resp = await self.call('GET', rec(GHOST, 'PROFILE_MASTERY_KEY'), self.alice)
         self.assertEqual((status, resp['errorCode']), (404, 18022))
 
-    # bug: update-player-record-key writes any field of any of the caller's records, match statistics and profile
-    # identity included, see report
-    @unittest.expectedFailure
     async def test_record_key_lambda_cannot_set_match_statistics_or_identity(self):
+        # wins unlock Ranked and others see Username in lobbies and matches (review R1)
         await self.call('GET', rec(self.a, 'PROFILE_INFO_KEY'), self.alice)   # the profile exists
-        for record, key, value in (('PROFILE_MASTERY_KEY', 'MatchesWon', 999), ('PROFILE_INFO_KEY', 'Username', 'bob#0001')):
-            await self.call('POST', f'{API}/update-player-record-key', self.alice,
-                            json={'RecordId': record, 'Key': key, 'Value': value})
+        for record, key, value in (('PROFILE_MASTERY_KEY', 'MatchesWon', 999), ('PROFILE_HISTORY_KEY', 'Matches', []),
+                                   ('PROFILE_INFO_KEY', 'Username', 'bob#0001')):
+            status, resp = await self.call('POST', f'{API}/update-player-record-key', self.alice,
+                                           json={'RecordId': record, 'Key': key, 'Value': value})
+            self.assertEqual((status, resp['errorCode']), (403, 20013))
         _, mastery = await self.call('GET', rec(self.a, 'PROFILE_MASTERY_KEY'), self.bob)
         _, info = await self.call('GET', rec(self.a, 'PROFILE_INFO_KEY'), self.bob)
         self.assertEqual((mastery['value'].get('MatchesWon'), info['value']['Username']),
                          (None, self.alice['display_name']))
 
-    # bug: a CloudSave write to your own PROFILE_INFO_KEY sets Username, which update-player-info keeps read-only, see
-    # report
-    @unittest.expectedFailure
+    async def test_record_key_lambda_writes_the_justice_record(self):
+        # the one record the client writes this way (leaver penalties: 1,728 writes in local test logs, all Justice)
+        value = {'active': False, 'schema': '1.1', 'tier': '0'}
+        status, resp = await self.call('POST', f'{API}/update-player-record-key', self.alice,
+                                       json={'RecordId': 'Justice', 'Key': 'dodge', 'Value': value})
+        self.assertEqual((status, resp), (200, {'success': True, 'RecordId': 'Justice', 'Key': 'dodge'}))
+        self.assertEqual(self.app['store'].data['player_records'][self.a]['Justice'], {'dodge': value})
+        status, _ = await self.call('POST', f'{API}/update-player-record-key', self.alice, json={'Key': 'dodge'})
+        self.assertEqual(status, 400)
+
     async def test_cloudsave_write_cannot_change_profile_identity(self):
         _, info = await self.call('GET', rec(self.a, 'PROFILE_INFO_KEY'), self.alice)
-        await self.call('PUT', rec(self.a, 'PROFILE_INFO_KEY'), self.alice, json={**info['value'], 'Username': 'bob#0001'})
+        status, _ = await self.call('PUT', rec(self.a, 'PROFILE_INFO_KEY'), self.alice,
+                                    json={**info['value'], 'Username': 'bob#0001', 'AccountType': 'Developer', 'Hero': 'Lancer'})
+        self.assertEqual(status, 200)
         _, info = await self.call('GET', rec(self.a, 'PROFILE_INFO_KEY'), self.bob)
-        self.assertEqual(info['value']['Username'], self.alice['display_name'])
+        self.assertEqual((info['value']['Username'], info['value']['AccountType'], info['value']['Hero']),
+                         (self.alice['display_name'], 'Player', 'Lancer'))   # the rest is the player's to change
 
 
 # ---------------------------------------------------------------- player records
