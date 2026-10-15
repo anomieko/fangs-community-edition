@@ -7,6 +7,8 @@ booted server without a process.
     python -I -m unittest discover -s backend/tests -p 'test_api.py' -v
 """
 import asyncio
+import contextlib
+import io
 import json
 import logging
 import time
@@ -559,7 +561,8 @@ class Lobbies(ApiCase):
         self.assertEqual((status, resp['errorCode'], resp['errorMessage']), (409, 9015, 'session not ready'))
         await self.server_for(self.alice, sid)
         self.assertEqual((await join(self.bob))[0], 200)
-        await self.call('POST', f'{SESSIONS}/{sid}/player', local=True, json={'user_id': self.bob['user_id']})
+        status, _ = await self.call('POST', f'{SESSIONS}/{sid}/player', self.bob, json={'user_id': self.bob['user_id']})
+        self.assertEqual(status, 200)                        # a player registers themselves (second review, R2-1)
         carol = await self.login('carol')
         self.set_status(host, launched=True)
         status, resp = await join(carol)
@@ -582,8 +585,8 @@ class Lobbies(ApiCase):
         sid = (await self.new_lobby(self.alice, game_session_setting={'settings': {'lobby_name': 'fun'}}))['session_id']
         await self.server_for(self.alice, sid)
         for method, sub, body in (('DELETE', '', None), ('PUT', '/settings', {'lobby_name': 'mine'}),
-                                  ('PUT', '', {'game_max_player': 99}), ('POST', '/player', {'user_id': self.bob['user_id']}),
-                                  ('DELETE', f"/player/{self.alice['user_id']}", None)):
+                                  ('PUT', '', {'game_max_player': 99}), ('POST', '/player', {'user_id': self.alice['user_id']}),
+                                  ('DELETE', f"/player/{self.alice['user_id']}", None)):   # bob may only add or remove himself
             for token, expected in ((None, 401), (self.bob, 403)):
                 with self.subTest(method=method, sub=sub, token=bool(token)):
                     status, _ = await self.call(method, f'{SESSIONS}/{sid}{sub}', token, json=body)
@@ -592,6 +595,16 @@ class Lobbies(ApiCase):
         self.assertEqual((sess['_host'], self.hm.is_live(host), sess['players'], sess['game_session_setting']['settings']['lobby_name']),
                          (host, True, [], 'fun'))
         self.assertEqual((await self.call('PUT', f'{SESSIONS}/{sid}/settings', self.alice, json={'lobby_name': 'new'}))[0], 200)
+
+    async def test_bulk_lookup_lists_the_newest_session_first(self):
+        # an owner's running match is kept next to their new lobby (L1): their friends' clients find the lobby first
+        host = self.ready_host(17777)
+        first = (await self.new_lobby(self.alice))['session_id']
+        await self.server_for(self.alice, first)
+        self.set_status(host, players=3, launched=True)
+        second = (await self.new_lobby(self.alice))['session_id']
+        _, resp = await self.call('GET', f"{SESSIONS}/bulk?user_ids={self.alice['user_id']}", self.bob)
+        self.assertEqual([s['session_id'] for s in resp['data']], [second, first])
 
     async def test_zeuz_lobby_owner_comes_from_the_login_and_an_unjoined_server_is_reused(self):
         # The Aug 2022 client's custom lobbies (FangsBoot makes these calls with "secret-token:accelbyte/<token>").
@@ -749,8 +762,11 @@ class Routing(ApiCase):
         self.ready_host(17777)
         auth = {'Authorization': f"Bearer {(await self.login('alice'))['access_token']}"}
         await self.call('POST', '/zeuz/sessions', headers=auth, json={'session_config': 'max_players,lots'})
-        status, body = await self.call('GET', '/zeuz/sessions.txt', headers=auth)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):              # the whole traceback goes to stderr (docker logs)
+            status, body = await self.call('GET', '/zeuz/sessions.txt', headers=auth)
         self.assertEqual((status, body['errorMessage']), (500, 'internal error'))
+        self.assertIn('Traceback', stderr.getvalue())
         entry = next(e for e in self.logs if e.get('path') == '/zeuz/sessions.txt')
         self.assertEqual(entry['status'], 500)
         self.assertIn("ValueError: invalid literal for int() with base 10: 'lots'", entry['error'])

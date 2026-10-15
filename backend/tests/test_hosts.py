@@ -437,17 +437,30 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         await self.until(lambda: hm._idle() and hm._idle()[0] is not standby and not hm._booting, 'new standby')
         self.assertEqual(self.reasons(), ['process exited (3)'])
 
-    # a bug until the review sprint fixed it: a watcher that raises leaves its server running, port taken (H1)
-    async def test_server_whose_watcher_failed_is_still_stopped(self):
+    # a bug until the review sprint fixed it: a watcher that raises leaves its server running, port taken (H1). The
+    # fix must not end a live match either: the server is stopped when it exits (second review, R2-3)
+    async def test_server_whose_watcher_failed_is_stopped_when_it_exits(self):
         hm = self.manager()
         host = await hm.allocate('lobby')
-        watcher = next(t for t in asyncio.all_tasks() - {asyncio.current_task()}   # the task watching `host`
-                       if t.get_coro().cr_frame and t.get_coro().cr_frame.f_locals.get('host') is host)
         self.status(host, 1, hitch_ms='?')   # a heartbeat _perf can't compare: TypeError in the watcher
-        await self.until(watcher.done, 'the watcher to fail')
-        watcher.exception()   # retrieved: no "never retrieved" noise
+        await self.until(lambda: self.events('watcher failed'), 'the watcher to fail')
+        await asyncio.sleep(0.05)
+        self.assertTrue(hm.is_live(host))    # its player plays on
         await self.crash(host, 3)
         await self.until(lambda: not hm.is_live(host), 'the server to be stopped', timeout=1)
+
+    async def test_allocate_that_gives_up_leaves_its_server_claimable(self):
+        # a server booted for a request that was cancelled must not stay reserved for nobody (second review, R2-4)
+        self.mode('hang')
+        hm = self.manager()
+        allocating = asyncio.create_task(hm.allocate('lobby'))
+        await self.until(lambda: hm.hosts, 'the server to start')
+        host = next(iter(hm.hosts.values()))
+        allocating.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await allocating
+        self.assertFalse(host.reserved)
+        self.assertEqual(hm.capacity(), 1)
 
     async def test_stop_kills_a_server_that_ignores_sigterm(self):
         hm = self.manager()
