@@ -37,7 +37,7 @@ Current deploy: `deploy-2026-10-15-0003` (`ce9f713`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing.
+- Lobbies close when their match starts; a finished match's server stops (players had joined finished games).
 
 ## In progress
 

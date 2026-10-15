@@ -15,7 +15,11 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Server only.
+
+| Change | Commits | Off switch |
+|---|---|---|
+| Lobbies: a custom lobby leaves the lobby list once its match starts (it stayed listed during and after the match, so players joined finished games); only its own players can rejoin a running match; a finished match's server stops 10 s after everyone left or 2 min after the end screen | `0af69d8` | `post_match` in `HostManager` (`backend/hosts.py`); revert the commit |
 
 ## deploy-2026-10-15-0003 (`ce9f713`, Feb 2023 build)
 
