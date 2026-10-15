@@ -13,7 +13,7 @@ Equations (n players per side, a_i = +1/n on A, -1/n on B, b_A/b_B the party con
     d = sum a_i mu_i + b_A - b_B          c^2 = 2 beta^2 / n + sum a_i^2 q_i         p_A = Phi(d / c)
     t = y d / c,  v = phi(t) / Phi(t),  w = v (v + t)    (y = +1 if A won, -1 if B won)
     mu_i' = mu_i + y a_i q_i v / c        q_i' = q_i (1 - a_i^2 q_i w / c^2)
-For n = 4 this is exactly the research's 4v4 arithmetic (its fixtures pass: tools/test/test_ranked.py).
+For n = 4 this is exactly the research's 4v4 arithmetic (its fixtures pass: backend/tests/test_ranked.py).
 """
 from dataclasses import dataclass, replace
 from math import erfc, exp, isfinite, pi, sqrt

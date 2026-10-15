@@ -343,7 +343,7 @@ class Matchmaker:
 
     def ranked_match(self, now):
         """The allocator's first proposal among the ranked tickets, if any. Costs nothing until a full game's
-        worth of ranked players is queued, then about a millisecond per second (tools/test/test_ranked.py)."""
+        worth of ranked players is queued, then about a millisecond per second (backend/tests/test_ranked.py)."""
         n = self.ranked_policy.team_size
         ready = [t for t in self.tickets.values() if t.ranked and t.ready(now)]
         if sum(len(t.joined) for t in ready) < 2 * n:
