@@ -90,10 +90,15 @@ Nothing.
    Quakebreak Talisman augment), Ethryn, Fiorne, Astrada, Zoey. Next: players' feedback. Off switch:
    `"enabled": false` in `tools/patch/patches/ccrevert.json` and a deploy.
 7. **Review sprint** (external backend review on 16 Oct): branch `review`, worktree `../fangs-review` (owns
-   `docs/review/`, the backend tests and fixes from the review). Plan, rubric and safety rules in
-   `docs/review/SPRINT.md` on that branch; verified findings in `docs/review/FINDINGS.md`. Phase 1 (read-only
-   review per component, plus lifecycle / removal / hygiene audits) started 15 Oct. Next: verify each finding, then
-   triage with the user. No fixes before triage, and nothing merged into `main` or deployed without the user's OK.
+   `docs/review/`, `backend/tests/` and the review's fixes). Plan and rules: `docs/review/SPRINT.md`. Ledger (every
+   finding, its state and the test that pins it): `docs/review/FINDINGS.md`. Lifecycle matrix:
+   `docs/review/LIFECYCLE.md`. Architecture: `docs/ARCHITECTURE.md`.
+   Done on the branch (not merged, not deployed): 8 independent reviews, then 23 fixes, each with a test that failed
+   first, and a second review of the fixes themselves (5 corrections). 199 backend unit tests run on production's
+   Python and aiohttp; CI runs them with ruff. The `deploy.sh` fix is already on `main` (`90ebe4e`, user's OK).
+   Next: the headless game regression on the branch (not while the user plays on this machine); rebase onto `main`
+   after `ranked-fixes` lands (conflicts known: `hosts.py`, `matchmaker.py` docstring, CHANGELOG, `ranked.md`); merge
+   and deploy only with the user's OK, after the review, when nobody plays.
 
 ## Known issues and small ideas
 
