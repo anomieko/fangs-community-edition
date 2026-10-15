@@ -15,6 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-15-0309 (`cfb453c`, Feb 2023 build)
+
+Nobody online.
+
 Server only.
 
 | Change | Commits | Off switch |

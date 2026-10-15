@@ -17,7 +17,7 @@ Last updated: 2026-10-15.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-0003` (`ce9f713`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-15-0309` (`cfb453c`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -34,10 +34,11 @@ Current deploy: `deploy-2026-10-15-0003` (`ce9f713`); what each deploy changed: 
 - since 15 Oct 00:03 UTC: maps Embersong, Stormheart, Crownwatch (all three in PLAY; Arena and Payload II gone),
   custom modes 6vs6 … Duel, Solo (Battle = 3vs3; Trio and AI gone), friends fix for mutual requests, a carrier who
   leaves loses the Shard after 2 s.
+- since 15 Oct 03:09 UTC: lobbies close when their match starts; a finished match's server stops.
 
 ## Done, not deployed
 
-- Lobbies close when their match starts; a finished match's server stops (players had joined finished games).
+Nothing.
 
 ## In progress
 
@@ -77,7 +78,7 @@ Current deploy: `deploy-2026-10-15-0003` (`ce9f713`); what each deploy changed: 
 5. **Wylde's remembered heirlooms** (PAllyHeal, FourLessShots, Soulblast Powder): no code reacts to them in
    any build we have (Aug 2022, Feb 2023, Dec 2023). Blocked on an older build: a pre-Aug-2022 playtest
    manifest (Steam console `download_depot 1831080 1831081 <manifest>`) to check whether their code existed.
-6. **Revert the Feb 2023 CC changes** (players' request): research done, nothing implemented
+6. **Revert the Feb 2023 CC changes** (players' request; the user picks the scope on 15 Oct): research done, nothing implemented
    (`docs/recon/cc-changes.md`). Nine stuns/charms became roots (Somnia's Allure, Brutus' Earthquake, Ethryn,
    Fiorne, Astrada, Zoey, Rowan), Somnia's ult locks her abilities for the whole tether, and many CC durations changed.
    Plan: FangsHost-only (default overrides at match start, GE-class swap via native pre-hooks, deferred
