@@ -14,6 +14,8 @@ The review is on 16 Oct and centers on the backend (`backend/`). Players are on 
   user agrees.
 - Tests come before fixes. Existing behavior is pinned by tests first, then each fix comes with its own test.
 - No refactors of shipped code beyond what a verified finding needs (no file splits or renames the night before).
+  The one exception: `fangs_backend.make_app()` / `parse_args()`, split out of `main()` unchanged, so tests run the
+  real app wiring.
 - No deploy, restart or load test on the VPS. Local headless tests run only in their own namespace, as always.
 - Before merging: unit tests, plus the headless regression (`tools/run/test_lobby.sh`, `test_queue.sh`,
   `test_social.sh`, `test_chat.sh`, `test_ranked.sh`, `test_match.sh`) on the `review` branch.
