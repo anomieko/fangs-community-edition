@@ -1,0 +1,5 @@
+# Lint rules CI holds the backend to (.github/workflows/backend.yml). Research tools under tools/ aren't checked.
+line-length = 130
+
+[lint]
+select = ["F", "E9"]
