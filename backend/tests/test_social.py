@@ -305,9 +305,8 @@ class Presence(LobbyCase):
         self.assertEqual(ids((await b2.request('partyInfoRequest'))['members']), [a.uid, b.uid])
         self.assertNotIn('userStatusNotif', [f['type'] for f in a.take()])
 
-    @unittest.expectedFailure
     async def test_party_mates_last_hear_that_a_replaced_player_is_connected(self):
-        # bug: closing the old connection queues a partyDisconnectNotif that lands after the partyConnectNotif, see report
+        # the new connection takes over before the old one closes, so no partyDisconnectNotif lands after it (review P2)
         a, b = await self.connect('ann'), await self.connect('ben')
         await self.befriend(a, b)
         await self.make_party(a, b)
@@ -536,16 +535,14 @@ class Chat(LobbyCase):
         await self.settle(a, b)
         self.assertEqual([f['payload'] for f in b.take()], [ZWSP + '[list] \\\\ "' + ZWSP])
 
-    @unittest.expectedFailure
     def test_a_line_cut_at_500_characters_keeps_its_escaping(self):
-        # bug: chat_text cuts after escaping, so a doubled backslash or the quote guard can be cut in half, see report
+        # chat_text cuts before escaping, so a doubled backslash or the quote guard is never cut in half (review P3)
         cut = social.chat_text('a' * 499 + '\\')
         self.assertEqual((len(cut) - len(cut.rstrip('\\'))) % 2, 0, 'ends in half an escaped backslash')
         self.assertFalse(social.chat_text('a' * 499 + '"b').endswith('"'), 'the parser drops a trailing quote')
 
-    @unittest.expectedFailure
     async def test_a_lobby_chat_line_carries_no_party_command_in_any_case(self):
-        # bug: the "Report" guard is case-sensitive, the receiving game's search for party commands is not, see report
+        # the receiving game's search for party commands ignores case, so the "Report" guard does too (review P3)
         a, c = await self.connect('ann'), await self.connect('cat')
         await a.send('signalingP2PNotif', destinationId=c.uid, message='/a reportLeaveQueueCommand')
         await self.settle(a, c)
@@ -623,9 +620,8 @@ class Races(unittest.IsolatedAsyncioTestCase):
         for _ in range(10):
             await asyncio.sleep(0)
 
-    @unittest.expectedFailure
     async def test_reconnecting_while_the_drop_runs_keeps_the_player_online(self):
-        # bug: _drop_later checks the connection before its awaits and removes it after them, see report
+        # _drop_later re-checks the connection after its awaits before it removes it (review P2)
         with mock.patch.object(social, 'GRACE', 0):
             self.social.disconnect('b', self.ws['b'])
             await self.settle()               # the drop is telling a that b left
@@ -634,9 +630,8 @@ class Races(unittest.IsolatedAsyncioTestCase):
         await self.settle()
         self.assertTrue(self.social.online('b'))
 
-    @unittest.expectedFailure
     async def test_a_kick_racing_a_leave_completes(self):
-        # bug: the kick removes the member after its awaits and raises if they left meanwhile, see report
+        # the kick re-checks membership after its awaits (it used to raise and close the leader's socket) (review P2)
         kick = asyncio.create_task(self.frame('a', 'partyKickRequest', memberID='b'))
         leave = asyncio.create_task(self.frame('b', 'partyLeaveRequest'))
         await self.settle()
