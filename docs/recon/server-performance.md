@@ -59,6 +59,9 @@ at 60 fps), whatever `NetServerMaxTickRate` (30/32/62), `NetClientTicksPerSecond
 `NetUpdateFrequency` (100 by default, tried 60). No replication graph. At a 90 fps cap the gaps are more regular (median
 42 ms, max 48) for +45% server CPU. `net.UseAdaptiveNetUpdateFrequency` is 0; `net.IsPushModelEnabled` reads 0 on the
 server although DefaultEngine.ini's `[SystemSettings]` sets it to 1.
+Not the bandwidth cap: in the 14 Oct `test_perf.sh` reports (`work/logs/perf-*-report.txt`) every client gets
+22-27 packets/s whether it receives 3.1 or 12.1 kB/s; a saturated connection would sit at its byte limit instead.
+Next: read the send gate in the exe (`tools/re/decomp.sh`; `docs/recon/battlerite-kit.md`).
 
 **7. UE4SS (this build):** cancelling a `LoopInGameThreadWithDelay` loop (`CancelDelayedAction`) now and then stopped
 another loop of the same mod for good. A 10 ms loop died on most servers that booted while another was running.
