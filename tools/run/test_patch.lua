@@ -14,11 +14,10 @@
 --   regrant(name)    server: Fiorne's stack system removed and granted again mid-round, as the passive's safety net does.
 --   chain(p, n, ms)  client: fire(p) n times, ms apart (game thread), results to chain.log.
 --   health(name)     server: the hero's health, also to patchwatch.log.
---   hurt(n, f, by)   server: the hero hit by hero by, down to about f of its maximum health.
 --   place(n, cls, d) server: the hero onto the newest actor of class path cls (e.g. a Sourblossom), d units ahead of it.
 --   hptrack(n, s, l) server: the hero's health and heal effects every 0.25 s for s seconds, labelled l, to hp.log.
 --   caltrops(name)   server: the Dourling Caltrops boxes: where they lie from the hero (ahead/behind), drawn or not.
---   stun(name, s, by) server: a stun of s seconds on the hero from hero by, as an enemy's ability applies it.
+--   knockup(n, s, by) server: a knock-up of s seconds on the hero from hero by (the game's DoTargetKnockUp).
 --   equip(path...)   client: once the augment phase is on, the own hero equips these items by tier, then locks in.
 --   key(n)           client: presses and releases ability key n (BP_AC_InputManager.QueueInput: 3 = Space).
 FCE_PATCH = FCE_PATCH or {}
@@ -242,29 +241,6 @@ function T.health(name)
     return "health: " .. s
 end
 
--- The ability library's default object (its functions are called on it).
-local function abilityLib()
-    loadClass("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
-    return StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.Default__BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
-end
-
--- The hero's health down to about f of its maximum by a real damage hit from hero `by` (a written health value isn't
--- seen by the game's heal code). Armour can make the result a little different: see the logged health.
-function T.hurt(name, f, by)
-    local p, src = hero(name), hero(by or "")
-    if not valid(p) then return "hurt: no hero " .. name end
-    if not valid(src) then src = p end
-    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
-    local dmg = set.Health.CurrentValue - set.MaxHealth.CurrentValue * f
-    local lib = abilityLib()
-    local ok, err = pcall(function()
-        local spec = lib:MakeDamageEffectSpec(src, dmg, false, 0, true, src)
-        lib:ApplyEffectSpecToTarget(src, p, spec, src)
-    end)
-    log(string.format("        %s hit for %.0f by %s: health %.0f%s", name, dmg, by or name, set.Health.CurrentValue, ok and "" or (" (" .. tostring(err) .. ")")))
-    return string.format("hurt: %s health %.0f", name, set.Health.CurrentValue)
-end
-
 function T.place(name, path, ahead)   -- the hero onto the newest actor of a class (ahead: units along its facing)
     local p = hero(name)
     if not valid(p) then return "place: no hero " .. name end
@@ -321,18 +297,18 @@ function T.caltrops(name)   -- the Dourling Caltrops boxes, measured from the he
     return "caltrops: " .. s
 end
 
-function T.stun(name, seconds, by)   -- a stun on the hero from hero `by`, made and applied the way abilities do it
+-- A knock-up on the hero from hero `by`, through the game's own DoTargetKnockUp (it makes and applies the effect; a
+-- spec handle made from Lua and applied from Lua arrives empty). Like a stun, it locks movement and casting.
+function T.knockup(name, seconds, by)
     local p, src = hero(name), hero(by or "")
-    if not valid(p) then return "stun: no hero " .. name end
+    if not valid(p) then return "knockup: no hero " .. name end
     if not valid(src) then src = p end
-    local lib = abilityLib()
-    if not valid(lib) then return "stun: no ability library" end
-    local ok, err = pcall(function()
-        local spec = lib:MakeStunEffectSpec(src, seconds, src)
-        lib:ApplyEffectSpecToTarget(src, p, spec, src)
-    end)
-    log(string.format("        %s stunned for %.2f s%s", name, seconds, ok and "" or (": " .. tostring(err))))
-    return ok and string.format("stun: %s %.2f s", name, seconds) or ("stun failed: " .. tostring(err))
+    loadClass("/Game/BluePrints/Library/BP_FL_MOBA_FunctionLibrary.BP_FL_MOBA_FunctionLibrary_C")
+    local lib = StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_FunctionLibrary.Default__BP_FL_MOBA_FunctionLibrary_C")
+    if not valid(lib) then return "knockup: no function library" end
+    local ok, err = pcall(function() lib:DoTargetKnockUp(p, src, seconds, src) end)
+    log(string.format("        %s knocked up for %.2f s by %s%s", name, seconds, by or name, ok and "" or (": " .. tostring(err))))
+    return ok and string.format("knockup: %s %.2f s", name, seconds) or ("knockup failed: " .. tostring(err))
 end
 
 -- ---------------------------------------------------------------------------------------------- client

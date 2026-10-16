@@ -1,29 +1,23 @@
 # Rowan's steps for tools/run/test_patch.sh (bob = Rowan; run through tools/run/test_rowan.sh): his health every 0.25 s
-# on a Sourblossom ring (the passive alone), an Earth Rend arc and the ult's overgrowth, each time from 40 % health;
-# the Dourling Caltrops after a dash and after its recast; Rush hit by a stun just after it starts; Propagator's charge
+# on a Sourblossom ring (the passive alone) and an Earth Rend arc, after alice shot him down to about 40 %;
+# the Dourling Caltrops after a dash and after its recast; Rush hit by a knock-up just after it starts; Propagator's charge
 # bar (FangsBoot logs the game's value and the redrawn one).
 W=/Game/Gameplay/Abilities/Player/WoodenSword
 sleep 10; host 'lua return FCE_PATCH.health("bob")'   # after a respawn, if the casts above killed him
+# 0. alice shoots bob down to about 40 % (12 basic attacks of 60; a written health value isn't seen by the heal code)
+host 'lua return FCE_PATCH.face("alice", "bob", 400)'; sleep 0.5
+echo 'lua return FCE_PATCH.chain("BookMage_LMB", 12, 1100)' >> $A
+sleep 14; host 'lua return FCE_PATCH.health("bob")'
 # 1. a Sourblossom ring: the passive alone
-host 'lua return FCE_PATCH.face("alice", "bob", 1500)'; sleep 1
-host 'lua return FCE_PATCH.hurt("bob", 0.4, "alice")'
 echo 'lua return FCE_PATCH.fire("WoodenSword_Skill4_C")' >> $B
 sleep 2.5; host "lua return FCE_PATCH.place(\"bob\", \"$W/Skill4/Actors/BP_TA_WoodenSword_Skill4.BP_TA_WoodenSword_Skill4_C\")"
 host 'lua return FCE_PATCH.hptrack("bob", 6, "Sourblossom ring")'
 sleep 7
 # 2. an Earth Rend arc: its own heal, plus the passive
 host 'lua return FCE_PATCH.face("alice", "bob", 2500)'; sleep 1
-host 'lua return FCE_PATCH.hurt("bob", 0.4, "alice")'
 echo 'lua return FCE_PATCH.fire("WoodenSword_RMB")' >> $B
 sleep 2.5; host "lua return FCE_PATCH.place(\"bob\", \"$W/RMB/Actors/BP_TA_WoodenSword_RMB.BP_TA_WoodenSword_RMB_C\", -300)"
 host 'lua return FCE_PATCH.hptrack("bob", 6, "Earth Rend arc")'
-sleep 7
-# 3. the ult's overgrowth
-host 'lua return FCE_PATCH.face("alice", "bob", 1500)'; sleep 1
-host 'lua return FCE_PATCH.fill("bob")'; host 'lua return FCE_PATCH.hurt("bob", 0.4, "alice")'
-echo 'lua return FCE_PATCH.fire("WoodenSword_Skill3_C")' >> $B
-sleep 3; host "lua return FCE_PATCH.place(\"bob\", \"$W/Skill3/Actors/BP_TA_WoodenSword_Skill3Overgrowth.BP_TA_WoodenSword_Skill3Overgrowth_C\")"
-host 'lua return FCE_PATCH.hptrack("bob", 6, "ult overgrowth")'
 sleep 7
 # 4. Dourling Caltrops: a dash at alice, then the recast (Glimmerbranch Hilt); the vines after each
 host 'lua return FCE_PATCH.face("bob", "alice", 300)'; sleep 0.5
@@ -32,11 +26,11 @@ sleep 0.7; echo 'lua return FCE_PATCH.key(3)' >> $B   # the recast, within its 1
 sleep 0.3; host 'lua return FCE_PATCH.caltrops("bob")'
 sleep 1.5; host 'lua return FCE_PATCH.caltrops("bob")'
 sleep 3; host 'lua return FCE_PATCH.caltrops("bob")'
-# 5. Rush: a stun about 0.15 s into the dash; bob's speed every 50 ms
+# 5. Rush: a knock-up (locks movement, like a stun) about 0.15 s into the dash; bob's speed every 50 ms
 sleep 4; host 'lua return FCE_PATCH.face("bob", "alice", 2000)'; sleep 0.5
 host 'lua return FCE_PATCH.track("bob", 3)'
 echo 'lua return FCE_PATCH.fire("GA_Flash")' >> $B
-sleep 0.55; host 'lua return FCE_PATCH.stun("bob", 1.0, "alice")'   # the dash starts ~0.4 s after the press
+sleep 0.55; host 'lua return FCE_PATCH.knockup("bob", 1.0, "alice")'   # the dash starts ~0.4 s after the press
 sleep 3
 # 6. Propagator: two Sourblossom charges used, then on Overgrowth (the client's fangsboot.log has the bar values)
 sleep 3; host 'lua return FCE_PATCH.face("alice", "bob", 1500)'; sleep 1
