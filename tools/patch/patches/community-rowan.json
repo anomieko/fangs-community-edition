@@ -1,0 +1,75 @@
+{
+  "name": "community-rowan",
+  "summary": "Community patch (Sheepa's list, OK'd 16 Oct): Rowan's passive heal and Dourling Caltrops; CC immunity on Rowan's and Belroth's dashes and on the Rush boon, as in Aug 2022",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/community-patchnotes.md, docs/recon/community-build-rowan.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Skill1/BP_GA_WoodenSword_Skill1",
+      "why": "Rowan, Dourling Dive (Space): immune to stun, root, charm and fear while dashing, as in Aug 2022 (Feb still has ApplyUnstoppable but never calls it). Dourling Caltrops: the vines lie on the path Rowan just dashed, behind him (Feb put them ahead of him), and their look appears there.",
+      "edits": [
+        { "op": "insert-call", "function": "Lock Pre Dash", "call": "ApplyUnstoppable", "at": "start" },
+        { "op": "set-call-arg", "function": "SetForwardLocation", "call": "Divide_FloatFloat", "arg": 1, "from": "2.0", "to": "-2.0", "count": 1 },
+        { "op": "set-call-arg", "function": "Dourling Caltrops VFX", "call": "MakeGameplayCueParameters", "arg": 7, "from": "EX_VectorConst", "to": "self.ForwardImpactLocation", "count": 1 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Skill1/Items/BP_TA_Woodensword_DourlingCaltrops",
+      "why": "Rowan, Dourling Caltrops: the vines' collision box is no longer drawn in the game (the \"cube\").",
+      "edits": [
+        { "op": "set-export-prop", "export": "Box_GEN_VARIABLE", "path": "bHiddenInGame", "from": false, "to": true }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Skill1/Cues/BP_GC_WoodenSword_Skill1_DourlingCaltrops_AoEVFX",
+      "why": "Rowan, Dourling Caltrops: the vines look thorny like Iron Thorns instead of replaying the Dourling Dive burst, and appear where the vines are (the cue's location) instead of on Rowan.",
+      "edits": [
+        { "op": "set-name-const", "function": "OnExecute", "from": "VFXPack.Skill1.AOEVFX", "to": "VFXPack.Skill2.AugmentVFX", "count": 1 },
+        { "op": "insert-copy", "function": "OnExecute", "copy": "BreakGameplayCueParameters", "before": "GetGroundLocation" },
+        { "op": "set-call-arg", "function": "OnExecute", "call": "GetGroundLocation", "arg": 0, "from": "CallFunc_K2_GetActorLocation_ReturnValue", "to": "CallFunc_BreakGameplayCueParameters_Location", "count": 1 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Passive/BP_GA_WoodenSword_P",
+      "why": "Rowan, passive: the share of missing health healed per second is the full 2 % again, applied to his health at each tick (Feb multiplied it once by the missing share when he stepped on Overgrowth).",
+      "edits": [
+        { "op": "set-call-arg", "function": "GetMissingHpValue", "call": "Multiply_FloatFloat", "arg": 0, "from": "CallFunc_Subtract_FloatFloat_ReturnValue", "to": "1.0", "count": 1 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Passive/BP_GA_WoodenSword_CreepTimer",
+      "why": "Rowan, passive: on Overgrowth he heals 2 % of his missing health plus 3 health per second, recomputed every quarter second, as in Aug 2022 (Feb passed the percentage as a flat amount, about 0 HP).",
+      "edits": [
+        { "op": "set-name-const", "function": "Activate Regenerate Item", "from": "Data.Heal", "to": "Data.Heal.MissingMultiple", "count": 1 },
+        { "op": "insert-copy", "function": "Activate Regenerate Item", "copy": "Divide_FloatFloat",
+          "args": { "0": "self.ModifiedHealPerSecond" },
+          "after": "AssignTagSetByCallerMagnitude", "anchor-match": { "1": "Data.Heal.MissingMultiple" } },
+        { "op": "insert-copy", "function": "Activate Regenerate Item", "copy": "AssignTagSetByCallerMagnitude", "match": { "1": "Data.Heal.MissingMultiple" },
+          "args": { "0": "CallFunc_AssignTagSetByCallerMagnitude_ReturnValue_1", "1": "Data.Heal" },
+          "after": "Divide_FloatFloat", "anchor-match": { "0": "self.ModifiedHealPerSecond" } }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_ABILITIES_WOODENSWORD",
+      "why": "Rowan, passive tooltip: mentions the 3 health per second.",
+      "edits": [
+        { "op": "replace-text", "key": "WoodenSword_P_desc", "from": "</> of his <RichText.TooltipHeal>missing HP</> per second.", "to": "</> of his <RichText.TooltipHeal>missing HP</> plus <RichText.TooltipHeal>3 HP</> per second." }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Characters/Bigboi/Gameplay_Abilities/Skill1/BP_GA_BigBoi_Skill1",
+      "why": "Belroth, Vicious Lunge (Space): immune to roots, stuns, charms, fears and knockbacks while lunging, as in Aug 2022 (Feb still has ApplyUnstoppable but never calls it).",
+      "edits": [
+        { "op": "insert-call", "function": "MakeCastUIData", "call": "ApplyUnstoppable", "at": "start" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Items/Characters/Generic/Actives/Flash/BP_GA_Flash",
+      "why": "Rush (boon): a stun or root no longer stops the dash; it lands when the dash ends, as in Aug 2022 (Feb flagged the dash as one crowd control cancels).",
+      "edits": [
+        { "op": "set-branch", "function": "ExecuteUbergraph_BP_GA_Flash", "call": "AddGameplayTag", "match": { "1": "Event.Identifiers.CanBeCrowdControlled" }, "from": true, "to": false }
+      ]
+    }
+  ]
+}
