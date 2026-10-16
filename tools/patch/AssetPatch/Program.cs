@@ -2,10 +2,11 @@
 //
 //   assetpatch info <asset.uasset>                       imports with their uses, class defaults, functions
 //   assetpatch calls <asset.uasset> <function> [call]    calls in one function, with their arguments
+//   assetpatch props <asset.uasset> [export]             exports; or every value stored in one, by path
 //   assetpatch roundtrip <asset.uasset> <out-dir>         read and write back unchanged; fails if a byte differs
 //   assetpatch apply <patch.json> <in-root> <out-root>    apply a patch; writes the edited assets under out-root
 //
-// Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default
+// Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default, set-export-prop
 // (docs/PATCHING.md has the fields).
 // Every edit states what it expects to find ("from", "uses", "count") and fails if the asset differs, so a patch
 // can't silently apply to another build. Bytecode edits must keep the function's in-memory size: jump offsets
@@ -329,6 +330,187 @@ static class Program
         return $"{cdo.ObjectName}.{prop} copied from {Path.GetFileName(from)}" + string.Concat(rename.Select(r => $"; {r.Key} -> {r.Value}"));
     }
 
+    // --- values anywhere in an asset (set-export-prop, props) ------------------------------------------------------
+    // An export is named by its ObjectName, or "<outer>.<name>" when several exports share the name. A path is
+    // property names joined by dots; "[i]" picks an element of an array (or of a fixed-size array). Vector, Rotator,
+    // Vector2D and LinearColor values end in a component: BoxExtent.Y, ColorOptions.Color.R.
+
+    static string ExportName(UAsset a, Export e) =>
+        (e.OuterIndex == null || e.OuterIndex.IsNull() ? "" : Name(a, e.OuterIndex) + ".") + e.ObjectName;
+
+    static NormalExport FindExport(UAsset a, string name)
+    {
+        var hits = a.Exports.Where(e => e.ObjectName.ToString() == name || ExportName(a, e) == name).ToList();
+        if (hits.Count != 1)
+            throw new PatchError($"export '{name}': found {hits.Count}" + (hits.Count > 1
+                ? $" ({string.Join(", ", hits.Select(e => ExportName(a, e)))}; name one as <outer>.<name>)" : ""));
+        return hits[0] as NormalExport ?? throw new PatchError($"export '{name}' holds no property values");
+    }
+
+    static readonly Dictionary<Type, string[]> Components = new()
+    {
+        [typeof(VectorPropertyData)] = ["X", "Y", "Z"],
+        [typeof(Vector2DPropertyData)] = ["X", "Y"],
+        [typeof(RotatorPropertyData)] = ["Pitch", "Yaw", "Roll"],
+        [typeof(LinearColorPropertyData)] = ["R", "G", "B", "A"],
+    };
+
+    // UAssetAPI reads a Vector/LinearColor/... struct as a struct holding one value of the same name: look through it.
+    static PropertyData Unwrap(PropertyData p) =>
+        p is StructPropertyData { Value.Count: 1 } s && Components.ContainsKey(s.Value[0].GetType())
+            && s.Value[0].Name.ToString() == s.Name.ToString() ? s.Value[0] : p;
+
+    // The value a path points at: a property, and the component when the property is a vector, rotator or colour.
+    static (PropertyData prop, string comp) Resolve(NormalExport ex, string path)
+    {
+        var props = ex.Data;
+        PropertyData cur = null;
+        string done = "";
+        var parts = path.Split('.');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(parts[i], @"^(.+?)(?:\[(\d+)\])?$");
+            string name = m.Groups[1].Value;
+            int? index = m.Groups[2].Success ? int.Parse(m.Groups[2].Value, Inv) : null;
+            if (cur != null)
+            {
+                cur = Unwrap(cur);
+                if (Components.TryGetValue(cur.GetType(), out var comps))
+                {
+                    if (!comps.Contains(name) || index != null || i != parts.Length - 1)
+                        throw new PatchError($"'{done}' is a {cur.PropertyType}: the path must end in one of {string.Join(", ", comps)}");
+                    return (cur, name);
+                }
+                props = cur is StructPropertyData s ? s.Value
+                    : throw new PatchError($"'{done}' is a {cur.PropertyType}, not a struct");
+            }
+            var found = props.Where(p => p.Name.ToString() == name).ToList();
+            if (found.Count == 0)
+                throw new PatchError($"'{done}{(done == "" ? "" : ".")}{name}' is not stored in {ex.ObjectName} (a value equal to its default isn't saved; see 'props')");
+            if (index is int n)
+            {
+                if (found.Count == 1 && found[0] is ArrayPropertyData arr)
+                    cur = n < arr.Value.Length ? arr.Value[n] : throw new PatchError($"'{done}{name}' has {arr.Value.Length} elements, no [{n}]");
+                else
+                    cur = found.SingleOrDefault(p => p.ArrayIndex == n) ?? throw new PatchError($"'{done}{name}' has no element [{n}]");
+            }
+            else if (found.Count > 1) throw new PatchError($"'{done}{name}' is a fixed-size array: say which element, [i]");
+            else cur = found[0];
+            done += (done == "" ? "" : ".") + parts[i];
+        }
+        cur = Unwrap(cur);
+        if (Components.ContainsKey(cur.GetType()))
+            throw new PatchError($"'{path}' is a {cur.PropertyType}: name a component ({string.Join(", ", Components[cur.GetType()])})");
+        return (cur, null);
+    }
+
+    // The value as a number (double), a bool or a name (string); null if the type can't be read or set.
+    static object GetValue(PropertyData p, string comp) => (p, comp) switch
+    {
+        (FloatPropertyData f, null) => (double)f.Value,
+        (DoublePropertyData d, null) => d.Value,
+        (IntPropertyData n, null) => (double)n.Value,
+        (Int8PropertyData n, null) => (double)n.Value,
+        (Int16PropertyData n, null) => (double)n.Value,
+        (Int64PropertyData n, null) => (double)n.Value,
+        (UInt16PropertyData n, null) => (double)n.Value,
+        (UInt32PropertyData n, null) => (double)n.Value,
+        (BoolPropertyData b, null) => b.Value,
+        (BytePropertyData b, null) => b.ByteType == BytePropertyType.Byte ? (double)b.Value : b.EnumValue?.ToString(),
+        (EnumPropertyData e, null) => e.Value?.ToString(),
+        (VectorPropertyData v, _) => comp switch { "X" => v.Value.X, "Y" => v.Value.Y, _ => v.Value.Z },
+        (Vector2DPropertyData v, _) => comp == "X" ? v.Value.X : v.Value.Y,
+        (RotatorPropertyData r, _) => comp switch { "Pitch" => r.Value.Pitch, "Yaw" => r.Value.Yaw, _ => r.Value.Roll },
+        (LinearColorPropertyData c, _) => (double)(comp switch { "R" => c.Value.R, "G" => c.Value.G, "B" => c.Value.B, _ => c.Value.A }),
+        _ => null,
+    };
+
+    static string Show(object v) => v switch
+    {
+        double d => Num((float)d),
+        bool b => b ? "true" : "false",
+        null => "?",
+        _ => v.ToString(),
+    };
+
+    static void SetValue(UAsset a, PropertyData p, string comp, JToken to)
+    {
+        double Number() => to.Type is JTokenType.Float or JTokenType.Integer ? (double)to
+            : throw new PatchError($"'to' must be a number, not {to}");
+        long Whole() => to.Type == JTokenType.Integer ? (long)to : throw new PatchError($"'to' must be a whole number, not {to}");
+        FName Named()
+        {
+            if (to.Type != JTokenType.String) throw new PatchError($"'to' must be a name, not {to}");
+            a.AddNameReference(new FString((string)to));
+            return new FName(a, (string)to);
+        }
+        checked
+        {
+            switch (p)
+            {
+                case FloatPropertyData f: f.Value = (float)Number(); break;
+                case DoublePropertyData d: d.Value = Number(); break;
+                case IntPropertyData n: n.Value = (int)Whole(); break;
+                case Int8PropertyData n: n.Value = (sbyte)Whole(); break;
+                case Int16PropertyData n: n.Value = (short)Whole(); break;
+                case Int64PropertyData n: n.Value = Whole(); break;
+                case UInt16PropertyData n: n.Value = (ushort)Whole(); break;
+                case UInt32PropertyData n: n.Value = (uint)Whole(); break;
+                case BoolPropertyData b:
+                    b.Value = to.Type == JTokenType.Boolean ? (bool)to : throw new PatchError($"'to' must be true or false, not {to}");
+                    break;
+                case BytePropertyData { ByteType: BytePropertyType.Byte } b: b.Value = (byte)Whole(); break;
+                case BytePropertyData b: b.EnumValue = Named(); break;
+                case EnumPropertyData e: e.Value = Named(); break;
+                case VectorPropertyData v:   // FVector & co. are structs: change a copy, put it back
+                    var vec = v.Value;
+                    if (comp == "X") vec.X = Number(); else if (comp == "Y") vec.Y = Number(); else vec.Z = Number();
+                    v.Value = vec;
+                    break;
+                case Vector2DPropertyData v:
+                    var v2 = v.Value;
+                    if (comp == "X") v2.X = Number(); else v2.Y = Number();
+                    v.Value = v2;
+                    break;
+                case RotatorPropertyData r:
+                    var rot = r.Value;
+                    if (comp == "Pitch") rot.Pitch = Number(); else if (comp == "Yaw") rot.Yaw = Number(); else rot.Roll = Number();
+                    r.Value = rot;
+                    break;
+                case LinearColorPropertyData c:
+                    var col = c.Value;
+                    float x = (float)Number();
+                    if (comp == "R") col.R = x; else if (comp == "G") col.G = x; else if (comp == "B") col.B = x; else col.A = x;
+                    c.Value = col;
+                    break;
+                default: throw new PatchError($"type {p.PropertyType} not supported");
+            }
+        }
+    }
+
+    static bool Same(object have, JToken want) => (have, want.Type) switch
+    {
+        (double d, JTokenType.Float or JTokenType.Integer) => Math.Abs(d - (double)want) <= 1e-4 * Math.Max(1, Math.Abs(d)),
+        (bool b, JTokenType.Boolean) => b == (bool)want,
+        (string s, JTokenType.String) => s == (string)want,
+        _ => false,
+    };
+
+    // Change one value anywhere in the asset: a component template (wer_GEN_VARIABLE), a value nested in the class
+    // defaults (a gameplay effect's modifiers), a data asset's field. Only values stored in the asset can be changed.
+    static string SetExportProp(UAsset a, JObject ed)
+    {
+        string exName = Req(ed, "export"), path = Req(ed, "path");
+        var from = ed["from"] ?? throw new PatchError("edit is missing 'from'");
+        var to = ed["to"] ?? throw new PatchError("edit is missing 'to'");
+        var (p, comp) = Resolve(FindExport(a, exName), path);
+        var have = GetValue(p, comp) ?? throw new PatchError($"{exName}.{path}: type {p.PropertyType} not supported");
+        if (!Same(have, from)) throw new PatchError($"{exName}.{path} is {Show(have)}, patch expects {from}");
+        try { SetValue(a, p, comp, to); }
+        catch (OverflowException) { throw new PatchError($"{exName}.{path}: {to} doesn't fit a {p.PropertyType}"); }
+        return $"{exName}.{path}: {Show(have)} -> {Show(GetValue(p, comp))}";
+    }
+
     static string Apply(UAsset a, JObject ed, string inRoot) => (string)ed["op"] switch
     {
         "rename-import" => RenameImport(a, ed),
@@ -337,6 +519,7 @@ static class Program
         "set-call-arg" => SetCallArg(a, ed),
         "replace-text" => ReplaceText(a, ed),
         "copy-default" => CopyDefault(a, ed, inRoot),
+        "set-export-prop" => SetExportProp(a, ed),
         var op => throw new PatchError($"unknown op '{op}'"),
     };
 
@@ -397,6 +580,57 @@ static class Program
         return 0;
     }
 
+    // No export: every export (name, class, number of stored values). An export: every value stored in it, by the
+    // path set-export-prop takes.
+    static int CmdProps(string path, string export)
+    {
+        var a = Load(path);
+        if (export == null)
+        {
+            foreach (var e in a.Exports)
+                Console.WriteLine($"  {ExportName(a, e)}  ({Name(a, e.ClassIndex)}{(e is NormalExport n ? $", {n.Data.Count} values" : "")})");
+            return 0;
+        }
+        foreach (var line in Flatten(a, FindExport(a, export).Data, "")) Console.WriteLine("  " + line);
+        return 0;
+    }
+
+    static IEnumerable<string> Flatten(UAsset a, List<PropertyData> props, string prefix)
+    {
+        foreach (var p in props)
+        {
+            string name = p.Name.ToString();
+            if (p.ArrayIndex > 0 || props.Count(q => q.Name.ToString() == name) > 1) name += $"[{p.ArrayIndex}]";
+            foreach (var line in Leaf(a, p, prefix + name)) yield return line;
+        }
+    }
+
+    static IEnumerable<string> Leaf(UAsset a, PropertyData p, string path)
+    {
+        p = Unwrap(p);
+        if (Components.TryGetValue(p.GetType(), out var comps))
+            foreach (var c in comps) yield return $"{path}.{c} = {Show(GetValue(p, c))}";
+        else if (p is StructPropertyData s)
+            foreach (var line in Flatten(a, s.Value, path + ".")) yield return line;
+        else if (p is ArrayPropertyData arr)
+        {
+            if (arr.Value.Length == 0) yield return $"{path} = []";
+            for (int i = 0; i < arr.Value.Length; i++)
+                foreach (var line in Leaf(a, arr.Value[i], $"{path}[{i}]")) yield return line;
+        }
+        else
+        {
+            var v = GetValue(p, null);
+            yield return $"{path} = " + (v != null ? Show(v) : p switch   // names, strings and objects: shown, not settable
+            {
+                ObjectPropertyData o => Name(a, o.Value),
+                NamePropertyData n => $"'{n.Value}'",
+                StrPropertyData str => $"\"{str.Value}\"",
+                _ => $"<{p.PropertyType}>",
+            });
+        }
+    }
+
     // function "*": every function, each line prefixed with the function's name
     static int CmdCalls(string path, string function, string call)
     {
@@ -438,6 +672,8 @@ static class Program
                 ["info", var p] => CmdInfo(p),
                 ["calls", var p, var fn] => CmdCalls(p, fn, null),
                 ["calls", var p, var fn, var c] => CmdCalls(p, fn, c),
+                ["props", var p] => CmdProps(p, null),
+                ["props", var p, var e] => CmdProps(p, e),
                 ["roundtrip", var p, var o] => CmdRoundtrip(p, o),
                 ["apply", var patch, var i, var o] => CmdApply(patch, i, o),
                 _ => Usage(),
@@ -448,7 +684,8 @@ static class Program
 
     static int Usage()
     {
-        Console.Error.WriteLine("usage: assetpatch info <asset> | calls <asset> <function> [call] | roundtrip <asset> <out-dir>"
+        Console.Error.WriteLine("usage: assetpatch info <asset> | calls <asset> <function> [call] | props <asset> [export]"
+                                + " | roundtrip <asset> <out-dir>"
                                 + " | apply <patch.json> <in-root> <out-root>");
         return 2;
     }
