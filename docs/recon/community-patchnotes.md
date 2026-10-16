@@ -277,6 +277,42 @@ fly-up, Somnia before or after the 15 Oct fix, how to start a training round, Wy
 ramp starts), Fiorne for information, and a "later" list (bigger features) to rank. Nothing for the community list is
 built before his OK.
 
+### a community member's OK (16 Oct, second PDF)
+
+Everything OK'd as proposed, except:
+- **Captain vote (card 2):** wanted now: "put the captain voting option in custom game now".
+- **Ishir (card 15):** a specific shotgun sound from a sound website instead of Wylde's Lamblaster. Open: the sound's
+  licence (we redistribute what we ship) and how to add a new sound to an FMOD game. The user decides.
+- **Rowan (card 16):** don't change Dourling Caltrops' tooltip key ("I might just have different keybinds").
+  The tooltip also names Wall of Roots; it stays as it is.
+
+Follow-ups answered:
+- knock-ups become stuns even without the fly-up;
+- his Somnia game was before the 15 Oct fix;
+- F6 starts a training round;
+- Wylde's RMB keeps the old short range (562.5);
+- Stormlense rises from 0 % at the start to +50 % at max range;
+- Fiorne "sounds good".
+
+Order for the bigger features:
+1. lobby buttons;
+2. reconnect;
+3. the captain vote (wanted in this update);
+4. Burning Harvest;
+5. Ishir's health preview;
+6. Training on the player's PC and less laggy dummies.
+
+Later: the Loadouts tab, DPS numbers, spectating.
+
+Build started 16 Oct in five streams, branches from `fiorne-restore`:
+- `cp-values`: values and texts, `community.json`;
+- `cp-rowan`: Rowan and the CC-immune dashes;
+- `cp-heroes`: Ethryn's shield, Lamblaster, Stormlense, Zoey's ult VFX, Astrada;
+- `cp-modes`: Training, base blockers, presets, artifacts, Wylde's dummy ammo, the Training server grace;
+- `cp-lobby`: lobby UI, the captain vote, reconnect research.
+
+Each writes `docs/recon/community-build-<area>.md`.
+
 ### New requests from the answers
 
 - Loadouts in Inventory → Heroes (a tab per hero), the same loadouts as the in-match presets (Q1).
