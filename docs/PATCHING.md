@@ -31,7 +31,7 @@ that is a different value, a different effect class or a different call.
 |---|---|
 | `tools/patch/patches/<name>.json` | One patch: the build it is for, `enabled`, and the edits per asset, each with a `why` |
 | `tools/patch/build.sh <game-dir> [patch...]` | Builds `work/patch/<build>/FangsCE_P.pak` (`OUT=` elsewhere). With no patches named, it uses the enabled ones for that build |
-| `tools/patch/AssetPatch` (C#, UAssetAPI) | Applies the edits. Its `info`, `calls` and `roundtrip` commands help you write a patch |
+| `tools/patch/AssetPatch` (C#, UAssetAPI) | Applies the edits. Its `info`, `calls`, `props` and `roundtrip` commands help you write a patch |
 | `tools/pak/pakwrite.py` | Writes the pak: v11, unencrypted, laid out like UnrealPak's |
 | `server/install-paks.sh` | Puts the paks of `FANGS_PAKS` into a copy of the game and removes the ones it put there before |
 | `FANGS_PAKS=<dir>` | Patch paks for game servers (`run-host.sh`), test clients (`tools/run/headless.sh`) and local play |
@@ -50,6 +50,7 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
    ```
    work/bin/assetpatch/AssetPatch info  <asset.uasset>            # imports and their uses, class defaults, functions
    work/bin/assetpatch/AssetPatch calls <asset.uasset> '*' [call]  # every call, with arguments as the edits match them
+   work/bin/assetpatch/AssetPatch props <asset.uasset> [export]    # the exports; or every value stored in one, by path
    ```
    `tools/patch/build.sh` builds `work/bin/assetpatch` the first time it runs.
 3. **Write the edits.** Add them to a patch file in `tools/patch/patches/`, either a new file or an existing one. Give
@@ -80,10 +81,13 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `rename-import` | `from`, `to`, `uses` | A reference to another object, e.g. a `TSubclassOf` default from `BP_GE_Root_C` to `BP_GE_Stun_C`. Rename the class, its `Default__` object and its package together. Imports whose class is the renamed one are updated too: the game checks an import's class. |
 | `set-call-arg` | `function`, `call`, `arg`, `from`, `to`, `count`, optional `match` | One argument of the matching calls in one function: a number, `true`/`false`, or a variable that function already uses. `match` (`{"<arg index>": "<text>"}`) narrows the calls down. Arguments are written the way `AssetPatch calls` prints them. |
 | `replace-text` | `key`, `from`, `to`, optional `count` (1) | Text in a string table entry, e.g. a tooltip in `UI/Localization/LOC_EN_*`. Match the raw text, including its `<RichText…>` markup. The game ships English only. |
+| `set-export-prop` | `export`, `path`, `from`, `to` | One value anywhere in the asset: a component template (`wer_GEN_VARIABLE`), a value nested in the class defaults (a gameplay effect's `Modifiers[0].ModifierMagnitude.ScalableFloatMagnitude.Value`), a data asset's field. `export` is the export's name, or `<outer>.<name>` if several share it. `path` joins property names with dots; `[i]` picks an array element; a Vector, Rotator, Vector2D or LinearColor ends in a component (`BoxExtent.Y`, `ColorOptions.Color.B`). Values: numbers, `true`/`false`, enum names as `AssetPatch props` prints them (`"EGameplayModOp::Override"`). `AssetPatch props` lists the paths. |
 | `copy-default` | `from` (an asset path), `property`, optional `rename` | Adds a class default copied from the same property of another asset's class defaults, renaming names in it. Example: the ult charm's `GameplayCues` onto the generic charm, with the cue tag renamed. The property must not be set in the target yet, and the copied value must not reference other objects. `build.sh` extracts the `from` asset too. |
 
 What a patch can't do:
 - Add code or functions.
+- Add a value the asset doesn't store. A value equal to its default isn't saved, so `set-default` and `set-export-prop`
+  only change values that are there (`AssetPatch props` shows them).
 - Change the size of a function's code. Its jumps are byte offsets, and the tool refuses such an edit.
 
 Bigger changes need a UE4SS hook, or a new kind of edit in `AssetPatch` that recomputes the jumps.
