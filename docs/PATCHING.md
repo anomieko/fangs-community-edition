@@ -125,7 +125,8 @@ How it is checked:
 - In a match (16 Oct): a test patch (not in the repo) put `insert-call` `ApplyUnstoppable` at the start of Rowan's
   `Lock Pre Dash`, as Aug 2022 had it. In `tools/run/test_patch.sh`, which now also logs `BP_GE_AntiDisplacement_Duration`
   as ANTI-CC, the game server showed Rowan with ANTI-CC from the start of his Dourling Dive (109.69 s) until it ended
-  (110.23 s). The Feb build never applies it, and the game loaded and ran the rewritten function without errors.
+  (110.23 s). In the control run without the pak, the same dash gave only the ability lock (109.75-110.38 s). The game
+  loaded and ran the rewritten function without errors.
 
 Not done yet:
 - `insert-call` into an ubergraph. The rewrite handles it, but it needs a match test first.
