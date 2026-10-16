@@ -553,6 +553,23 @@ class Lobbies(ApiCase):
         _, resp = await self.call('GET', f"{SESSIONS}/bulk?user_ids={self.alice['user_id']}", self.bob)
         self.assertEqual([s['session_id'] for s in resp['data']], [sid])   # its players still find it
 
+    async def test_lobby_list_follows_the_map_and_size_the_owner_changes_in_the_lobby(self):
+        host = self.ready_host(17777)
+        sess = await self.new_lobby(self.alice, game_session_setting={'mode': 'Custom', 'max_player': 4, 'settings': {
+            'lobby_name': 'fun', 'map_level': 'LE_Arena02_Map', 'map_name': 'Embersong'}})
+        sid = sess['session_id']
+        await self.server_for(self.alice, sid)
+        self.set_status(host, players=2, lobby={'map_level': 'LE_Payload03_Map', 'map_name': 'Crownwatch', 'size': 8,
+                                                'rounds': 3, 'vote': True})
+        _, resp = await self.call('GET', SESSIONS, self.bob)
+        gs = resp['sessions'][0]['game_session_setting']
+        self.assertEqual((gs['max_player'], gs['settings']['map_level'], gs['settings']['map_name'], gs['settings']['lobby_name']),
+                         (8, 'LE_Payload03_Map', 'Crownwatch', 'fun'))
+        self.set_status(host, players=2, lobby={'map_level': '../x', 'map_name': 1, 'size': 99})   # nonsense is ignored
+        _, resp = await self.call('GET', SESSIONS, self.bob)
+        gs = resp['sessions'][0]['game_session_setting']
+        self.assertEqual((gs['max_player'], gs['settings']['map_level']), (8, 'LE_Payload03_Map'))
+
     async def test_join_needs_a_ready_lobby_and_a_started_match_takes_only_its_players(self):
         host = self.ready_host(17777)
         sid = (await self.new_lobby(self.alice))['session_id']
