@@ -1,0 +1,121 @@
+{
+  "name": "fiorne",
+  "summary": "Fiorne restore: the 0 Bunny Stacks fix, her Aug 2022 damage and speed with 800 HP (Feb buffs kept), dashes that stop dead",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/fiorne.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Effects/Player/Lancer/BP_GE_Lancer_Stats",
+      "why": "Fiorne: 800 base health (Aug 2022 had 650, Feb 900). With her Aug damage back, 900 would make her too strong.",
+      "edits": [
+        { "op": "set-export-prop", "export": "Default__BP_GE_Lancer_Stats_C", "path": "Modifiers[0].ModifierMagnitude.ScalableFloatMagnitude.Value", "from": 900.0, "to": 800.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill1/BP_GA_Lancer_Ammo",
+      "why": "Fiorne, Bunny Stacks: they are set up whenever the stack system starts, not only when a round starts, so a restart mid-round no longer leaves her at 0 stacks with nothing refilling them. A second setup in the same round first clears the first one.",
+      "edits": [
+        { "op": "insert-call", "function": "On Round Start", "call": "Clear Stacks and Listeners", "inherited": true, "at": "start" },
+        { "op": "insert-call", "function": "K2_ActivateAbility", "call": "On Round Start", "at": "end" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/LMB/BP_GA_Lancer_LMB",
+      "why": "Fiorne, Swift Strike (LMB): 45 damage and 550 reach, with 0.3 s between strikes, as in Aug 2022 (Feb: 30, 425, 0.17 s). Relaxing Tankard heals 7 per Bunny Stack (Feb 5); Stabbers ramps by 2 (Feb 1.5).",
+      "edits": [
+        { "op": "set-default", "property": "AbilityDamage", "from": 30.0, "to": 45.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 30.0, "to": 45.0 },
+        { "op": "set-default", "property": "Range", "from": 425.0, "to": 550.0 },
+        { "op": "set-default", "property": "ModifiedRange", "from": 425.0, "to": 550.0 },
+        { "op": "set-default", "property": "AbilityCooldown", "from": 0.17, "to": 0.3 },
+        { "op": "set-default", "property": "ModifiedAbilityCooldown", "from": 0.17, "to": 0.3 },
+        { "op": "set-default", "property": "Item 17 Heal Per Bunny Stack", "from": 5.0, "to": 7.0 },
+        { "op": "set-default", "property": "Damage Per Ramp Stack", "from": 1.5, "to": 2.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/P/GA_Lancer_P",
+      "why": "Fiorne, passive: +100 % attack speed for 1.25 s after an LMB hit, as in Aug 2022 (Feb: +50 % for 0.7 s; Feb's 5 s cooldown stays). Warrior's Bounty gives 3 stacks per kill or assist (Feb 2); Fifi's Little Helper 3 % damage and 1 % lifesteal per stack (Feb 1 % and 0.75 %).",
+      "edits": [
+        { "op": "set-default", "property": "PassiveASMagnitude", "from": 0.5, "to": 1.0 },
+        { "op": "set-default", "property": "PassiveASDuration", "from": 0.7, "to": 1.25 },
+        { "op": "set-default", "property": "Item23 Kill Stacks to Add", "from": 2.0, "to": 3.0 },
+        { "op": "set-default", "property": "Item23 Assist Stacks to Add", "from": 2.0, "to": 3.0 },
+        { "op": "set-default", "property": "Snowball Damage Percent", "from": 0.01, "to": 0.03 },
+        { "op": "set-default", "property": "Snowball LS Percent", "from": 0.0075, "to": 0.01 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill1/BP_GA_Lancer_Skill1",
+      "why": "Fiorne, Nimble Thrust (Space): 0.3 s between dashes and dash speed 2750, as in Aug 2022 (Feb: 1.0 s, 2325). The dash stops dead at its end again instead of sliding on (less rubber-banding). Champion's Helm cuts healing by 50 % (Feb 40 %).",
+      "edits": [
+        { "op": "set-default", "property": "AbilityCooldown", "from": 1.0, "to": 0.3 },
+        { "op": "set-default", "property": "DashSpeed", "from": 2325.0, "to": 2750.0 },
+        { "op": "set-default", "property": "Debuffing Dash Heal Reduction", "from": 0.4, "to": 0.5 },
+        { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_Lancer_Skill1", "call": "ApplyRootMotionJumpForce", "arg": 8, "from": "0", "to": "1", "count": 1 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/RMB/BP_GA_Lancer_RMB",
+      "why": "Fiorne, Retaliate (RMB): 40 damage per parry and 20 per area tick, up to 5 parries in a 0.85 s stance, and the larger catch area (2.6x her body), as in Aug 2022 (Feb: 20, 10, 4 parries, 1.5 s, 1x). Feb's movement in the stance stays. Warmother's Glaive adds 20 (Feb 10).",
+      "edits": [
+        { "op": "set-default", "property": "AbilityDamage", "from": 20.0, "to": 40.0 },
+        { "op": "set-default", "property": "Dmg Per AOE Tick", "from": 10.0, "to": 20.0 },
+        { "op": "set-default", "property": "CounterCap", "from": 4, "to": 5 },
+        { "op": "set-default", "property": "CounterDuration", "from": 1.5, "to": 0.85 },
+        { "op": "set-default", "property": "IncreasedCapsuleSize", "from": 1.0, "to": 2.6 },
+        { "op": "set-default", "property": "CA Damage Bonus", "from": 10.0, "to": 20.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill2/BP_GA_Lancer_Skill2",
+      "why": "Fiorne, Hiari Smash (Shift): Feb's 80 damage stays. Both jumps stop dead at their end again (less rubber-banding). Earthbreaker Pommel adds 125 damage (Feb 40); Dreadborn Artifact executes below 20 % missing health (Feb 10 %).",
+      "edits": [
+        { "op": "set-default", "property": "DHDamageIncrease", "from": 40.0, "to": 125.0 },
+        { "op": "set-default", "property": "ItemKillResetExecuteRatio", "from": 0.1, "to": 0.2 },
+        { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_Lancer_Skill2", "call": "ApplyRootMotionJumpForce", "arg": 8, "from": "0", "to": "1", "count": 2 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill4/BP_GA_Lancer_Skill4",
+      "why": "Fiorne, Spear Throw (E): 85 damage, 6 s cooldown, a faster spear (3750) with 1200 range, as in Aug 2022 (Feb: 70, 6.5 s, 3375, 1120). The cooldown still adds the player's ping, which keeps it in step with the server.",
+      "edits": [
+        { "op": "set-default", "property": "AbilityDamage", "from": 70.0, "to": 85.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 70.0, "to": 85.0 },
+        { "op": "set-default", "property": "AbilityCooldown", "from": 6.5, "to": 6.0 },
+        { "op": "set-default", "property": "ModifiedAbilityCooldown", "from": 6.5, "to": 6.0 },
+        { "op": "set-default", "property": "Projectile Speed", "from": 3375.0, "to": 3750.0 },
+        { "op": "set-default", "property": "Range", "from": 1120.0, "to": 1200.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill3/BP_GA_Lancer_Skill3",
+      "why": "Fiorne, Grand Finale (R): 65 on the grab, 3 x 60 in the air and 120 on the knockdown, about 365 in all, as in Aug 2022 (Feb: 30, 3 x 30, 60). The tooltip's total was computed from a stale 30 and is right again. The dash stops dead at its end again. Woemaker adds 40 per Bunny Stack (Feb 35); Deathly Carnival 60 per stack (Feb 40). Hooking Ribbons keeps Feb's 50 %.",
+      "edits": [
+        { "op": "set-default", "property": "AbilityDamage", "from": 30.0, "to": 65.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 30.0, "to": 65.0 },
+        { "op": "set-default", "property": "AerialDamage", "from": 30.0, "to": 60.0 },
+        { "op": "set-default", "property": "KnockDownDamage", "from": 60.0, "to": 120.0 },
+        { "op": "set-default", "property": "ModifiedKnockDownDamage", "from": 30.0, "to": 120.0 },
+        { "op": "set-default", "property": "Woemaker Bunny Stack Additional Damage", "from": 35.0, "to": 40.0 },
+        { "op": "set-default", "property": "ItemStackingAdditionalDamage", "from": 40.0, "to": 60.0 },
+        { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_Lancer_Skill3", "call": "ApplyRootMotionJumpForce", "arg": 8, "from": "0", "to": "1", "count": 1 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_ABILITIES_LANCER",
+      "why": "Fiorne, Spear Throw's tooltip: an enemy skewered into a wall is stunned (it has been a stun in every build; the text said rooted).",
+      "edits": [
+        { "op": "replace-text", "key": "Lancer_E_desc", "from": "they are <RichText.TooltipEffects>rooted</> instead", "to": "they are <RichText.TooltipEffects>stunned</> instead" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_AUGMENTS_LANCER",
+      "why": "Fiorne, Lance Frills' tooltip: the \"2 stacks if rooted\" part has no code in any build; the text no longer promises it.",
+      "edits": [
+        { "op": "replace-text", "key": "Lancer_Skill4_SpearResetBunnyStacks_desc", "from": " If they are <RichText.TooltipEffects>rooted</>, gain <RichText.TooltipKeyWords>2 stacks</>.", "to": "" }
+      ]
+    }
+  ]
+}

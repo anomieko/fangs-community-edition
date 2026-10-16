@@ -186,9 +186,15 @@ static partial class Program
     {
         var f = Function(a, Req(ed, "function"));
         string call = Req(ed, "call");
-        var target = a.Exports.OfType<FunctionExport>().SingleOrDefault(x => x.ObjectName.ToString() == call)
-            ?? throw new PatchError($"insert-call: '{call}' is not a function of this Blueprint");
-        var parms = (target.LoadedProperties ?? []).Where(p => p.PropertyFlags.HasFlag(EPropertyFlags.CPF_Parm)
+        var target = a.Exports.OfType<FunctionExport>().SingleOrDefault(x => x.ObjectName.ToString() == call);
+        // A function of a parent Blueprint isn't in this asset: the call works by name, but its parameters can't be
+        // checked here, so the patch says "inherited" and the call takes no arguments.
+        bool inherited = (bool?)ed["inherited"] ?? false;
+        if (target == null && !inherited)
+            throw new PatchError($"insert-call: '{call}' is not a function of this Blueprint (one of a parent Blueprint: \"inherited\": true)");
+        if (target != null && inherited) throw new PatchError($"insert-call: '{call}' is a function of this Blueprint, not inherited");
+        if (inherited && ed["args"] is JArray { Count: > 0 }) throw new PatchError("insert-call: an inherited function is called without arguments");
+        var parms = target == null ? [] : (target.LoadedProperties ?? []).Where(p => p.PropertyFlags.HasFlag(EPropertyFlags.CPF_Parm)
                                                             && !p.PropertyFlags.HasFlag(EPropertyFlags.CPF_ReturnParm)).ToList();
         if (parms.Any(p => p.PropertyFlags.HasFlag(EPropertyFlags.CPF_OutParm)))
             throw new PatchError($"insert-call: {call} has output parameters; not supported");
@@ -204,8 +210,7 @@ static partial class Program
             index = at switch
             {
                 "start" => 0,
-                "end" => f.ScriptBytecode.Length > 0 && f.ScriptBytecode[^1] is EX_Return ? f.ScriptBytecode.Length - 1
-                         : throw new PatchError($"{f.ObjectName} doesn't end with a return"),
+                "end" => EndIndex(f),
                 _ => throw new PatchError($"insert-call: \"at\" is start or end, not '{at}'"),
             };
             where = $"at the {at}";
@@ -225,6 +230,17 @@ static partial class Program
         var expr = new EX_LocalVirtualFunction { VirtualFunctionName = new FName(a, call), Parameters = args };
         Splice(a, f, index, 0, [expr]);
         return $"{f.ObjectName}: call {call}({string.Join(", ", texts)}) inserted {where} (statement {index})";
+    }
+
+    // Where "at end" inserts: before the function's final return (a cooked function ends with EX_Return, then
+    // EX_EndOfScript). Every path that returns jumps there, so the inserted code runs on every way out.
+    static int EndIndex(FunctionExport f)
+    {
+        var code = f.ScriptBytecode;
+        int i = code.Length - 1;
+        while (i >= 0 && code[i] is EX_EndOfScript) i--;
+        if (i < 0 || code[i] is not EX_Return) throw new PatchError($"{f.ObjectName} doesn't end with a return");
+        return i;
     }
 
     // Remove the statements that are a call to `call` (not those that use its result); "count" must match.
