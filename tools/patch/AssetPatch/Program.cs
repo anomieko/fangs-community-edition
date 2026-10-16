@@ -245,6 +245,16 @@ static partial class Program
         return copy;
     }
 
+    // The new argument as the same kind of literal as the one it replaces (a byte stays a byte, an int an int, so the
+    // function keeps its size), or else as MakeArg makes it.
+    static KismetExpression MakeArgLike(UAsset a, FunctionExport f, string text, KismetExpression old) => old switch
+    {
+        EX_ByteConst when byte.TryParse(text, NumberStyles.Integer, Inv, out var b) => new EX_ByteConst { Value = b },
+        EX_IntConstByte when byte.TryParse(text, NumberStyles.Integer, Inv, out var b) => new EX_IntConstByte { Value = b },
+        EX_IntConst when int.TryParse(text, NumberStyles.Integer, Inv, out var i) => new EX_IntConst { Value = i },
+        _ => MakeArg(a, f, text),
+    };
+
     // Change one argument of matching calls inside one function.
     static string SetCallArg(UAsset a, JObject ed)
     {
@@ -262,7 +272,7 @@ static partial class Program
             var seen = string.Join("; ", calls.Select(e => $"{call}({string.Join(", ", Args(e).Select(x => Render(a, x)))})"));
             throw new PatchError($"{f.ObjectName}: {hits.Count} matching calls, patch expects {count}. Calls: {seen}");
         }
-        foreach (var e in hits) Args(e)[arg] = MakeArg(a, f, to);
+        foreach (var e in hits) Args(e)[arg] = MakeArgLike(a, f, to, Args(e)[arg]);
         if (Size(a, f) != size)
             throw new PatchError($"{f.ObjectName}: the edit changes the function's size ({size} -> {Size(a, f)}), which would break its jumps");
         return $"{f.ObjectName}: {hits.Count}x {call} argument {arg}: {from} -> {to}";
