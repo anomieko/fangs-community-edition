@@ -6,21 +6,21 @@ W=/Game/Gameplay/Abilities/Player/WoodenSword
 sleep 10; host 'lua return FCE_PATCH.health("bob")'   # after a respawn, if the casts above killed him
 # 1. a Sourblossom ring: the passive alone
 host 'lua return FCE_PATCH.face("alice", "bob", 1500)'; sleep 1
-host 'lua return FCE_PATCH.hurt("bob", 0.4)'
+host 'lua return FCE_PATCH.hurt("bob", 0.4, "alice")'
 echo 'lua return FCE_PATCH.fire("WoodenSword_Skill4_C")' >> $B
 sleep 2.5; host "lua return FCE_PATCH.place(\"bob\", \"$W/Skill4/Actors/BP_TA_WoodenSword_Skill4.BP_TA_WoodenSword_Skill4_C\")"
 host 'lua return FCE_PATCH.hptrack("bob", 6, "Sourblossom ring")'
 sleep 7
 # 2. an Earth Rend arc: its own heal, plus the passive
 host 'lua return FCE_PATCH.face("alice", "bob", 2500)'; sleep 1
-host 'lua return FCE_PATCH.hurt("bob", 0.4)'
+host 'lua return FCE_PATCH.hurt("bob", 0.4, "alice")'
 echo 'lua return FCE_PATCH.fire("WoodenSword_RMB")' >> $B
-sleep 2.5; host "lua return FCE_PATCH.place(\"bob\", \"$W/RMB/Actors/BP_TA_WoodenSword_RMB.BP_TA_WoodenSword_RMB_C\", 250)"
+sleep 2.5; host "lua return FCE_PATCH.place(\"bob\", \"$W/RMB/Actors/BP_TA_WoodenSword_RMB.BP_TA_WoodenSword_RMB_C\", -300)"
 host 'lua return FCE_PATCH.hptrack("bob", 6, "Earth Rend arc")'
 sleep 7
 # 3. the ult's overgrowth
 host 'lua return FCE_PATCH.face("alice", "bob", 1500)'; sleep 1
-host 'lua return FCE_PATCH.fill("bob")'; host 'lua return FCE_PATCH.hurt("bob", 0.4)'
+host 'lua return FCE_PATCH.fill("bob")'; host 'lua return FCE_PATCH.hurt("bob", 0.4, "alice")'
 echo 'lua return FCE_PATCH.fire("WoodenSword_Skill3_C")' >> $B
 sleep 3; host "lua return FCE_PATCH.place(\"bob\", \"$W/Skill3/Actors/BP_TA_WoodenSword_Skill3Overgrowth.BP_TA_WoodenSword_Skill3Overgrowth_C\")"
 host 'lua return FCE_PATCH.hptrack("bob", 6, "ult overgrowth")'

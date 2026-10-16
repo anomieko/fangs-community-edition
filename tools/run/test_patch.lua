@@ -14,7 +14,7 @@
 --   regrant(name)    server: Fiorne's stack system removed and granted again mid-round, as the passive's safety net does.
 --   chain(p, n, ms)  client: fire(p) n times, ms apart (game thread), results to chain.log.
 --   health(name)     server: the hero's health, also to patchwatch.log.
---   hurt(name, f)    server: the hero's health set to f of its maximum.
+--   hurt(n, f, by)   server: the hero hit by hero by, down to about f of its maximum health.
 --   place(n, cls, d) server: the hero onto the newest actor of class path cls (e.g. a Sourblossom), d units ahead of it.
 --   hptrack(n, s, l) server: the hero's health and heal effects every 0.25 s for s seconds, labelled l, to hp.log.
 --   caltrops(name)   server: the Dourling Caltrops boxes: where they lie from the hero (ahead/behind), drawn or not.
@@ -242,14 +242,27 @@ function T.health(name)
     return "health: " .. s
 end
 
-function T.hurt(name, f)   -- the hero's health to f of its maximum (base and current value, as fill() does for mana)
-    local p = hero(name)
+-- The ability library's default object (its functions are called on it).
+local function abilityLib()
+    loadClass("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
+    return StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.Default__BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
+end
+
+-- The hero's health down to about f of its maximum by a real damage hit from hero `by` (a written health value isn't
+-- seen by the game's heal code). Armour can make the result a little different: see the logged health.
+function T.hurt(name, f, by)
+    local p, src = hero(name), hero(by or "")
     if not valid(p) then return "hurt: no hero " .. name end
+    if not valid(src) then src = p end
     local set = p.AbilitySystemComponent.SpawnedAttributes[1]
-    local v = set.MaxHealth.CurrentValue * f
-    set.Health.BaseValue = v; set.Health.CurrentValue = v
-    log(string.format("        %s's health set to %.0f", name, v))
-    return string.format("hurt: %s health %.0f", name, v)
+    local dmg = set.Health.CurrentValue - set.MaxHealth.CurrentValue * f
+    local lib = abilityLib()
+    local ok, err = pcall(function()
+        local spec = lib:MakeDamageEffectSpec(src, dmg, false, 0, true, src)
+        lib:ApplyEffectSpecToTarget(src, p, spec, src)
+    end)
+    log(string.format("        %s hit for %.0f by %s: health %.0f%s", name, dmg, by or name, set.Health.CurrentValue, ok and "" or (" (" .. tostring(err) .. ")")))
+    return string.format("hurt: %s health %.0f", name, set.Health.CurrentValue)
 end
 
 function T.place(name, path, ahead)   -- the hero onto the newest actor of a class (ahead: units along its facing)
@@ -258,7 +271,9 @@ function T.place(name, path, ahead)   -- the hero onto the newest actor of a cla
     local list = actorsOf(p, path)
     local a = list[#list]
     if not valid(a) then return "place: no " .. path:match("([^.]+)$") end
-    local l, yaw, d = a:K2_GetActorLocation(), math.rad(a:K2_GetActorRotation().Yaw), ahead or 0
+    -- ahead > 0: along the actor's facing; < 0: along the hero's own facing (an Earth Rend arc lies ahead of Rowan)
+    local face = (ahead or 0) < 0 and p or a
+    local l, yaw, d = a:K2_GetActorLocation(), math.rad(face:K2_GetActorRotation().Yaw), math.abs(ahead or 0)
     p:K2_SetActorLocation({ X = l.X + math.cos(yaw) * d, Y = l.Y + math.sin(yaw) * d, Z = p:K2_GetActorLocation().Z }, false, {}, true)
     log(string.format("        %s placed on %s (%d of them)", name, a:GetClass():GetFName():ToString(), #list))
     return string.format("place: %s on %s", name, a:GetFName():ToString())
@@ -310,8 +325,7 @@ function T.stun(name, seconds, by)   -- a stun on the hero from hero `by`, made 
     local p, src = hero(name), hero(by or "")
     if not valid(p) then return "stun: no hero " .. name end
     if not valid(src) then src = p end
-    loadClass("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
-    local lib = StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.Default__BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
+    local lib = abilityLib()
     if not valid(lib) then return "stun: no ability library" end
     local ok, err = pcall(function()
         local spec = lib:MakeStunEffectSpec(src, seconds, src)
