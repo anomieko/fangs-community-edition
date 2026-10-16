@@ -261,6 +261,22 @@ a community member filled in the PDF the same day. His ticks and notes, decoded 
 - **Q36:** Zoey's real LMB heal goes to 50, and the tooltip shows the true number.
 - **Q41:** Stormlense rises smoothly to +50 % at max range (code).
 
+### Checked after the answers
+
+- **Q16, Training on Embersong:** most likely our bug. FangsBoot's `onCreate` (`tools/ue4ss/Mods/FangsBoot/scripts/main.lua`,
+  the `/zeuz/sessions` request) sends `map_level` = `pm.FindMapLevel`, the map of the create-lobby menu. TRAINING sets
+  the game instance's `MapGameLevel` = `LE_BeautifulCorner`. To confirm in a test, then send the Training map.
+- **Q5, knock-ups → stuns:** `DoTargetKnockUp` (`BP_FL_MOBA_FunctionLibrary`) only applies `BP_GE_KnockUp`, which grants
+  `BP_GA_KnockUp` (the airborne motion). Swapping the effect for `BP_GE_Stun` therefore removes the fly-up. The
+  proposal says so and asks again.
+
+### The proposal (16 Oct)
+
+A second fillable PDF for a community member (made 16 Oct, sent by the user): 24 cards of "now → after", each with OK / Change something, a few follow-ups (Q5
+fly-up, Somnia before or after the 15 Oct fix, how to start a training round, Wylde's RMB range, where Stormlense's
+ramp starts), Fiorne for information, and a "later" list (bigger features) to rank. Nothing for the community list is
+built before his OK.
+
 ### New requests from the answers
 
 - Loadouts in Inventory → Heroes (a tab per hero), the same loadouts as the in-match presets (Q1).
