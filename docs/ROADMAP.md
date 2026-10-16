@@ -132,11 +132,13 @@ Nothing.
    "Steam authorization" (a new player's report, 15 Oct; it resolved on the player's side, cause not confirmed).
 
 9. **Fiorne restore** (user, 16 Oct: "she's my favourite champion, but she's not really playable in this patch"; plan
-   approved with 800 HP). Research and evidence: `docs/recon/fiorne.md`. **Built and tested, not enabled**: patch
+   approved; rebalanced the same day to 700 HP, the Aug passive cooldown and a smaller Earthbreaker Pommel, the
+   user's choice after a roster comparison). Research and evidence: `docs/recon/fiorne.md`. **Built and tested, not enabled**: patch
    `tools/patch/patches/fiorne.json` (`"enabled": false`) on branch `fiorne-restore` (worktree `../fangs-fiorne-restore`,
    on top of the patch-tool branches `assetpatch-export-prop` and `assetpatch-rewrite`, none merged).
    - What it does: the Bunny Stacks fix (the stack system sets itself up whenever it starts), Aug 2022 numbers for LMB,
-     passive, Space, RMB, E, R and 11 heirlooms (Feb's buffs kept), 800 base HP, all four dashes stop dead, two
+     passive (7 s cooldown), Space, RMB, E, R and 11 heirlooms (Earthbreaker Pommel +95; Feb's move speed and buffed
+     heirlooms kept), 700 base HP, all four dashes stop dead, two
      tooltips. It builds alone and after `ccrevert`.
    - Tested 16 Oct, `tools/run/test_fiorne.sh` with and without the pak: max HP 800 (900); Space dashes 0.6 s apart
      3 of 3 (1 of 3); dash end 2750 → 0 within 50 ms (2325 → 338 → 0); after a mid-round restart of the stack system

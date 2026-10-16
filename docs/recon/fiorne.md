@@ -298,6 +298,29 @@ and `LOC_EN_AUGMENTS_LANCER`, on different values.
 | Stack system removed and granted again mid-round (`regrant`, as `CheckAmmoSystemIsInit` does), then 3 dashes | 3 → 0, and still **0 with no stack cooldown running** 8 s later: the bug | 3 → 0, then **1 back** 8 s later: refilling |
 
 What a match didn't show: damage numbers on targets, Retaliate's catch area, E and R in use, and how she feels.
+
+## Rebalanced: 700 HP (user, 16 Oct)
+
+The user asked whether the 800 HP build was too strong. Compared with the roster, it was:
+- The other heroes' damage barely changed Aug → Feb. A rough measure, the median Feb/Aug ratio of each hero's
+  damage-named ability defaults, is 1.00 for 9 of the 12 other heroes it covers (Brutus 0.94, Rowan 0.92, Belroth
+  1.67; Fiorne 0.82). Their HP moved −100 to +150. So Aug Fiorne, balanced around **650 HP**, is the
+  reference, and her Aug damage is normal for today's roster.
+- On top of the Aug kit, the 800 build gave her +150 HP (+23 %). It also kept Feb's 5 s passive cooldown (Aug 7 s:
+  about 40 % more uptime of an Aug-strength passive), and Feb's 80 Shift base with Aug's +125 Earthbreaker Pommel (205,
+  Aug 175).
+
+The user's choice, "Aug Fiorne with a small cushion":
+- `BP_GE_Lancer_Stats` HP 900 → **700**;
+- `GA_Lancer_P.PassiveCooldown` 5 → **7** (read by the LMB as `Modified Passive CD`);
+- Earthbreaker Pommel `DHDamageIncrease` 40 → **95**, so Shift with it does Aug's 175.
+
+Kept: Feb's move speed (600, Aug 573) and its buffed heirlooms. Tune further from players' feedback; each value is
+one line in `fiorne.json`.
+
+Rerun with these values (`RUN=fiorne-700`, `tools/run/test_fiorne.sh`): 39 of 40 patched values loaded on both clients
+and the server (the 40th, the nested HP value, `check()` can't read), health **700/700**, Space dashes at 2750 that
+stop dead, stacks refilling after a dash chain and after a mid-round restart of the stack system (0 → 1).
 Those need play.
 
 The 0 stacks trigger in real games is still unconfirmed. a community member (Q40, 16 Oct): when it starts, "not sure"; once
