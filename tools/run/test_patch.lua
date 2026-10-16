@@ -9,6 +9,10 @@
 --   fill(name)       server: the hero's mana to full (ults cost mana).
 --   fire(pattern)    client: activates the own hero's ability whose class name contains pattern.
 --   count(class)     client: how many live objects of a class exist (e.g. a gameplay cue's actor: the visual played).
+--   stats(name)      server: the hero's health, Bunny Stacks and stack cooldowns (Fiorne), also to patchwatch.log.
+--   track(name, s)   server: the hero's speed and Bunny Stacks every 50 ms for s seconds, to track.log.
+--   regrant(name)    server: Fiorne's stack system removed and granted again mid-round, as the passive's safety net does.
+--   chain(p, n, ms)  client: fire(p) n times, ms apart (game thread), results to chain.log.
 FCE_PATCH = FCE_PATCH or {}
 local T = FCE_PATCH
 
@@ -132,6 +136,75 @@ function T.fill(name)   -- full mana (ults cost mana), on the server: replicated
     return string.format("fill: %s mana %.0f/%.0f", name, set.Mana.CurrentValue, max)
 end
 
+-- Server, for one hero: active effects by class (without _C) with their stack counts.
+local function effectsOf(p)
+    local t = {}
+    pcall(function()
+        p.AbilitySystemComponent.ActiveGameplayEffects.GameplayEffects_Internal:ForEach(function(_, e)
+            local s = e:get().Spec
+            local d = s.Def
+            if valid(d) then
+                local n = d:GetClass():GetFName():ToString():gsub("_C$", "")
+                t[n] = (t[n] or 0) + math.max(s.StackCount, 1)
+            end
+        end)
+    end)
+    return t
+end
+local function stacksOf(p)   -- Fiorne's Bunny Stacks (either stack effect), and the running stack cooldowns
+    local e = effectsOf(p)
+    return (e.BP_GE_Lancer_BunnyStacks or 0) + (e.BP_GE_Lancer_MoreBunnyStacks or 0), e.BP_GE_Ammo_Q_CD or 0
+end
+
+function T.stats(name)   -- health, Bunny Stacks, stack cooldowns running
+    local p = hero(name)
+    if not valid(p) then return "stats: no hero " .. name end
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local st, cd = stacksOf(p)
+    local s = string.format("%s: health %.0f/%.0f, Bunny Stacks %d, stack cooldowns %d", name, set.Health.CurrentValue,
+        set.MaxHealth.CurrentValue, st, cd)
+    log("        " .. s)
+    return "stats: " .. s
+end
+
+function T.track(name, seconds)   -- every 50 ms for a while: the hero's speed and Bunny Stacks, to track.log
+    local p = hero(name)
+    if not valid(p) then return "track: no hero " .. name end
+    local f = io.open("track.log", "a")
+    local t0, n = now(p), 0
+    f:write(string.format("== %s from %.2f\n", name, t0))
+    LoopInGameThreadWithDelay(50, function()
+        n = n + 1
+        if n > seconds * 20 then
+            if n == seconds * 20 + 1 then f:close() end
+            return
+        end
+        if not valid(p) then return end
+        local v = p:GetVelocity()
+        f:write(string.format("%6.2f speed %5.0f stacks %d\n", now(p) - t0, math.sqrt(v.X * v.X + v.Y * v.Y), (stacksOf(p))))
+        f:flush()
+    end)
+    return "tracking " .. name
+end
+
+-- What the passive's safety net does when it can't find the stack system (GA_Lancer_P.CheckAmmoSystemIsInit): the
+-- grant effect is removed (the ability with it) and applied again, here in the middle of a round.
+function T.regrant(name)
+    local p = hero(name)
+    if not valid(p) then return "regrant: no hero " .. name end
+    local asc = p.AbilitySystemComponent
+    local grant = loadClass("/Game/Gameplay/Abilities/Player/Lancer/Skill1/BP_GE_GrantLancerAmmoSystem.BP_GE_GrantLancerAmmoSystem_C")
+    local passiveCls = loadClass("/Game/Gameplay/Abilities/Player/Lancer/P/GA_Lancer_P.GA_Lancer_P_C")
+    local lib = StaticFindObject("/Script/MOBA.Default__MOBAAbilityLibrary")
+    local passive = lib:GetAbilityInstanceFromAbilityClass(asc, passiveCls)
+    if not valid(passive) then return "regrant: no passive instance" end
+    asc:RemoveActiveGameplayEffectBySourceEffect(grant, nil, -1)
+    passive["Init Ammo"](passive)
+    local st, cd = stacksOf(p)
+    log(string.format("        %s: stack system granted again (Bunny Stacks %d, stack cooldowns %d)", name, st, cd))
+    return string.format("regrant: %s, Bunny Stacks %d", name, st)
+end
+
 -- ---------------------------------------------------------------------------------------------- client
 function T.count(className)   -- live objects of a class, e.g. a gameplay cue's actor (an object scan)
     local n = 0
@@ -153,6 +226,19 @@ function T.fire(pattern)
     end)
     if not cls then return "fire: no ability like " .. pattern end
     return "fire " .. cls:GetFName():ToString() .. " -> " .. tostring(p.AbilitySystemComponent:TryActivateAbilityByClass(cls, true))
+end
+
+function T.chain(pattern, n, ms)   -- client: fire(pattern) n times, ms apart, each result to chain.log
+    local f, i = io.open("chain.log", "a"), 0
+    LoopInGameThreadWithDelay(ms, function()
+        i = i + 1
+        if i > n then
+            if i == n + 1 then f:close() end
+            return
+        end
+        f:write(string.format("%s %d: %s\n", os.date("%H:%M:%S"), i, T.fire(pattern))); f:flush()
+    end)
+    return string.format("chain: %s x%d, %d ms apart", pattern, n, ms)
 end
 
 return "test_patch helpers"

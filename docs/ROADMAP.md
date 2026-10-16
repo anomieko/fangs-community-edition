@@ -13,7 +13,7 @@ The single place that says what is being worked on, what is done but not shipped
   duplicates it and the results get merged back.
 - Nothing secret here (no join code, keys, server credentials): this repo is public.
 
-Last updated: 2026-10-15.
+Last updated: 2026-10-16.
 
 ## Live on the server
 
@@ -130,6 +130,20 @@ Nothing.
    Live since `deploy-2026-10-15-2144`: the launcher checks the mod loader files before and 5 s after starting the
    game, puts back what an antivirus removed and tells the player how to add the exclusion, instead of leaving them at
    "Steam authorization" (a new player's report, 15 Oct; it resolved on the player's side, cause not confirmed).
+
+9. **Fiorne restore** (user, 16 Oct: "she's my favourite champion, but she's not really playable in this patch"; plan
+   approved with 800 HP). Research and evidence: `docs/recon/fiorne.md`. **Built and tested, not enabled**: patch
+   `tools/patch/patches/fiorne.json` (`"enabled": false`) on branch `fiorne-restore` (worktree `../fangs-fiorne-restore`,
+   on top of the patch-tool branches `assetpatch-export-prop` and `assetpatch-rewrite`, none merged).
+   - What it does: the Bunny Stacks fix (the stack system sets itself up whenever it starts), Aug 2022 numbers for LMB,
+     passive, Space, RMB, E, R and 11 heirlooms (Feb's buffs kept), 800 base HP, all four dashes stop dead, two
+     tooltips. It builds alone and after `ccrevert`.
+   - Tested 16 Oct, `tools/run/test_fiorne.sh` with and without the pak: max HP 800 (900); Space dashes 0.6 s apart
+     3 of 3 (1 of 3); dash end 2750 → 0 within 50 ms (2325 → 338 → 0); after a mid-round restart of the stack system
+     the stacks refill (stay at 0 with nothing refilling).
+   - Next: the user's OK to enable it and deploy (merge order: `assetpatch-export-prop` → `assetpatch-rewrite` →
+     `fiorne-restore`), then players' feedback. a community member (Q40): once broken, her stacks stay broken all match. The
+     patch fixes the restart case; another trigger is possible.
 
 ## Known issues and small ideas
 

@@ -142,7 +142,7 @@ there.
 | Fifi's Little Helper (passive) | P `Snowball Damage Percent` / `LS Percent` per stack | 3 % / 1 % | 1 % / 0.75 % | heavily nerfed |
 | Duelist's Zone (artifact) | 6 / 10 heal | same | same | – |
 | Champion's Helm (Space) | Space `Debuffing Dash Heal Reduction` | 50 % | 40 % | nerfed |
-| Trickster's Mixture (Space) | Space `UntargetableArmorPercent` | 10 % | 15 % (tooltip says 10 %) | buffed |
+| Trickster's Mixture (Space) | the stack ability's `UntargetableArmor` (`ApplyDamageReductionItem`); Space's `UntargetableArmorPercent` (Aug 0.10, Feb 0.15) is read by no code | 10 | 10 | – (tooltip right) |
 | Wanderer's Travelpack (Space) | +2 stacks, dash cooldown 2.5 s | same | same | relatively better (base went to 1.0 s) |
 | Dreadland's Corsage (Space) | resets the passive | same | same | – |
 | Earthbreaker Pommel (Shift) | Shift `DHDamageIncrease`; CC | 125, stun 1.0 | 40, root 1.5 | nerfed; the CC is back to stun 1.0 through `ccrevert.json` |
@@ -161,7 +161,8 @@ there.
 | `LancerItem19` (Space, restored) | no texts in any build | – | – | `docs/recon/items.md` |
 
 Every Feb tooltip above is computed from the ability's values (`$Property$`), so value patches update them. The
-exceptions: Retaliate's "up to 5 attacks" and Trickster's "10 %" are written out in the text.
+exceptions: Retaliate's "up to 5 attacks" and Trickster's "10 %" are written out in the text (both right with the
+restore).
 
 ## Bugs
 
@@ -195,7 +196,6 @@ exceptions: Retaliate's "up to 5 attacks" and Trickster's "10 %" are written out
 ### Others
 
 - Retaliate's tooltip says 5 parries; `CounterCap` is 4.
-- Trickster's Mixture says 10 % less damage; the value is 15 %.
 - Lance Frills' "+2 stacks if rooted" has no code.
 - R's tooltip total uses the stale `ModifiedKnockDownDamage` (30).
 
@@ -220,7 +220,7 @@ Fiorne is the hero with the most predicted dashes in a row (3-5 Space dashes at 
 
 Most likely to rubber-band: chained Space (1, 2 and 4), then R (1, 2), then Shift (1, 2).
 
-## Proposed restore (a new `tools/patch/patches/fiorne.json`, not built)
+## Proposed restore (built as `tools/patch/patches/fiorne.json`: see "Built and tested" at the end)
 
 ### (a) Bug fixes
 
@@ -266,3 +266,43 @@ Brutus' HP goes through the same edit type: `set-export-prop` `BP_GE_Lancer_Stat
   shots from beside her, stacks after death, round change and a forced re-grant (FangsCtl).
 - Then a latency run with `netem` inside the test's own network namespace, counting snaps (measurement plan in
   `docs/recon/community-patchnotes.md`) before and after (c).
+
+## Built and tested (16 Oct)
+
+The user approved the plan with **800 HP** ("for fiorne, we should go with your plan!"). Built as
+`tools/patch/patches/fiorne.json` (`"enabled": false`, branch `fiorne-restore`):
+- (a) the Bunny Stacks fix: `insert-call` `Clear Stacks and Listeners` (inherited from `BP_GA_Template_Ammo`) at the
+  start of `BP_GA_Lancer_Ammo`'s `On Round Start`, and `On Round Start` at the end of its `K2_ActivateAbility`. The
+  decompile reads `ExecuteUbergraph_BP_GA_Lancer_Ammo(948); On Round Start(); return`. The Lance Frills and Spear Throw
+  tooltips are fixed (no "+2 if rooted"; a wall pin "stuns").
+- (b) every Aug value of the table above, 800 HP through `set-export-prop` on `BP_GE_Lancer_Stats`.
+- (c) `VelocityOnFinishMode` 0 → 1 on the four dash calls (`set-call-arg` keeps the byte literal).
+- Not built: Aug's sync points (`SyncDashes`, the server-waits on Shift and R; new code) and the netcode settings
+  (all heroes, `docs/recon/community-patchnotes.md`).
+- Correction to the table above: Trickster's Mixture wasn't buffed. Space's `UntargetableArmorPercent` is read by no
+  code; the damage reduction is the stack ability's `UntargetableArmor` 10, as the tooltip says.
+
+The patch builds alone and after `ccrevert` (`tools/patch/build.sh <game> ccrevert fiorne`). Both edit `Lancer/Skill2`
+and `LOC_EN_AUGMENTS_LANCER`, on different values.
+
+**Match test** (`tools/run/test_fiorne.sh`: `test_patch.sh` with bob as Fiorne plus `test_fiorne.steps`), with the pak
+(`RUN=fio-a`) and without it (`RUN=fio-ctl`, `PATCHES=none`):
+
+| | Without (Feb) | With the patch |
+|---|---|---|
+| Patched values loaded (alice, bob, server) | – | 38/38 (the 39th, the nested HP value, `check()` can't read; `stats` shows it) |
+| Max HP | 900 | **800** |
+| Space ×3, 0.6 s apart (client `TryActivateAbilityByClass`) | true, false, false: one dash | **true, true, true: three dashes** |
+| Dash speed; speed in the 50 ms samples after the dash | 2325; 2325 → 338 → 0 | **2750; 2750 → 0** |
+| Stacks after the chain, then 7 s later | 2, then 3 | 0, then 1 (6 s per stack) |
+| Stack system removed and granted again mid-round (`regrant`, as `CheckAmmoSystemIsInit` does), then 3 dashes | 3 → 0, and still **0 with no stack cooldown running** 8 s later: the bug | 3 → 0, then **1 back** 8 s later: refilling |
+
+What a match didn't show: damage numbers on targets, Retaliate's catch area, E and R in use, and how she feels.
+Those need play.
+
+The 0 stacks trigger in real games is still unconfirmed. a community member (Q40, 16 Oct): when it starts, "not sure"; once
+broken, it "stays broken all match". In Feb the restarted stack system would set itself up again at the next round
+start (it binds the round delegates when it activates), so "all match" points to a second cause: an activation that
+ends before it binds them (`K2_CommitAbility` failing, or no `Player`). The patch covers that too, as long as the
+ability activates at all. One that never activates again isn't covered: a FangsHost watcher would be the safety net
+(not built).

@@ -1,0 +1,15 @@
+# Fiorne's steps for tools/run/test_patch.sh (bob = Fiorne; run through tools/run/test_fiorne.sh): her health and
+# Bunny Stacks, a Space chain with her speed tracked (time between dashes, how each dash ends), and her stack system
+# granted again mid-round, as the passive's safety net does (the 0 Bunny Stacks bug).
+host 'lua return FCE_PATCH.stats("bob")'
+sleep 8; host 'lua return FCE_PATCH.stats("bob")'                       # stacks back after the casts above
+host 'lua return FCE_PATCH.track("bob", 6)'
+echo 'lua return FCE_PATCH.chain("Lancer_Skill1", 3, 600)' >> $B          # Aug: 0.3 s between dashes, Feb: 1.0 s
+sleep 3; host 'lua return FCE_PATCH.stats("bob")'
+sleep 7; host 'lua return FCE_PATCH.stats("bob")'                       # a stack comes back every 6 s
+sleep 12; host 'lua return FCE_PATCH.stats("bob")'
+host 'lua return FCE_PATCH.regrant("bob")'
+sleep 1; host 'lua return FCE_PATCH.stats("bob")'
+echo 'lua return FCE_PATCH.chain("Lancer_Skill1", 3, 1500)' >> $B         # use the stacks up
+sleep 6; host 'lua return FCE_PATCH.stats("bob")'
+sleep 8; host 'lua return FCE_PATCH.stats("bob")'                       # do stacks come back?

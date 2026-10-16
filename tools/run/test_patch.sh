@@ -13,6 +13,7 @@
 #   Env: HERO_A/HERO_B (DT_Heroes rows), ULT_A, LMB_B, CAST_A, CAST_B (ability class name parts), RUN, DURATION,
 #        CHECK="<patch> ..." (whose values check() expects; default PATCHES, or ccrevert in a control run),
 #        AIM_A=<range>: CAST_A lands at alice's pointer (e.g. Brutus' Earthquake, 1350): bob is put there instead.
+#        STEPS=<file>: bash steps run after the CC casts (helpers host, \$A, \$B as in this script).
 #        CUE_A=<class>: the gameplay cue actor CAST_A's hit spawns on the clients, counted after each cast
 #        (default Allure's charm visual, BP_GC_BookMage_Skill4CharmVFX_C; CUE_A= to skip).
 #   e.g. Brutus' Earthquake centre (root -> stun): HERO_A=Berserker CAST_A=Berserker_Skill2 AIM_A=1350 ULT_A=Berserker_Skill3
@@ -92,6 +93,7 @@ pick() {
     sleep 0.5; echo "lua return FCE_PATCH.fire(\"$CAST_B\")" >> $B
     sleep 6
   done
+  [[ -n ${STEPS:-} ]] && source "$STEPS"   # a hero's own extra steps (e.g. tools/run/test_fiorne.steps)
   # self-locks: alice's ult (mana filled first: ults cost mana), then bob's LMB (it stays active: no button release)
   host 'lua return FCE_PATCH.fill("alice")'
   sleep 2; echo "lua return FCE_PATCH.fire(\"$ULT_A\")" >> $A
