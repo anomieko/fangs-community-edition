@@ -1,0 +1,248 @@
+{
+  "name": "community",
+  "summary": "The community patch list (Sheepa, 16 Oct), part 1: numbers, texts and knock-ups as stuns",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/community-patchnotes.md, docs/recon/community-build-values.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/DemonGirl/Q/BP_GA_DemonGirl_Q_Instant",
+      "why": "Rose, Klaive's Puzzlebox (Space): the teleport deals 75 damage (Feb 50, Aug 100).",
+      "edits": [
+        { "op": "set-default", "property": "TPDamage", "from": 50.0, "to": 75.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/LMB/BP_GA_Gunslinger_LMB",
+      "why": "Wylde, Brim (LMB): 40 damage (Feb 35).",
+      "edits": [
+        { "op": "set-default", "property": "AbilityDamage", "from": 35.0, "to": 40.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 35.0, "to": 40.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/RMB/BP_GA_Gunslinger_RMB",
+      "why": "Wylde, Blight (RMB): back to a short-range, high-damage shot like Aug 2022: 95 damage (Feb 65), range 562 (Feb 932, as far as the LMB), 1 s cooldown shared with the LMB (Feb 0.5 s). Still 1 ammo and hold to keep firing.",
+      "edits": [
+        { "op": "set-default", "property": "AbilityDamage", "from": 65.0, "to": 95.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 65.0, "to": 95.0 },
+        { "op": "set-default", "property": "Range", "from": 932.0, "to": 562.5 },
+        { "op": "set-default", "property": "ModifiedRange", "from": 950.0, "to": 562.5 },
+        { "op": "set-default", "property": "AbilityCooldown", "from": 0.5, "to": 1.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/E/BP_GA_Gunslinger_E",
+      "why": "Wylde, Bounty's Reward (Shift): 30 bullets landed with Fan the Hammers give the extra ammo (Feb 35).",
+      "edits": [
+        { "op": "set-default", "property": "MaxAmmoIncrease Stack Count Required", "from": 35, "to": 30 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/E/Items/BP_GE_Gunslinger_Skill2_MaxAmmoIncreaseStack",
+      "why": "Wylde, Bounty's Reward: the bullet counter stops at 30, the new requirement (Feb 35).",
+      "edits": [
+        { "op": "set-default", "property": "StackLimitCount", "from": 35, "to": 30 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/Passive/BP_GA_Gunslinger_P",
+      "why": "Wylde, Speedshine: +20 % move speed while reloading (Feb +10 %).",
+      "edits": [
+        { "op": "set-default", "property": "ReloadSpeedBoostPercentageSpeedUp", "from": 0.1, "to": 0.2 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_AUGMENTS_GUNSLINGER",
+      "why": "Wylde, Bounty's Reward tooltip: 30 bullets.",
+      "edits": [
+        { "op": "replace-text", "key": "gunslinger_maxammoincrease_desc", "from": "lands 35 bullets", "to": "lands 30 bullets" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/LMB/BP_GA_ShieldGirl_LMB",
+      "why": "Ethryn, Talon Strike (LMB): 40, 40 and 50 damage for the three hits (Feb 50, 50, 55).",
+      "edits": [
+        { "op": "set-default", "property": "FirstAttackDamage", "from": 50.0, "to": 40.0 },
+        { "op": "set-default", "property": "SecondAttackDamage", "from": 50.0, "to": 40.0 },
+        { "op": "set-default", "property": "ShieldAttack Damage", "from": 55.0, "to": 50.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/Skill4/BP_GA_ShieldGirl_Skill4",
+      "why": "Ethryn, Holy Brazier (E): 4 s cooldown (Feb 2 s) and a 1 s shield (Feb 0.75 s).",
+      "edits": [
+        { "op": "set-default", "property": "ItemPrecisionShieldAbilityCooldown", "from": 2.0, "to": 4.0 },
+        { "op": "set-default", "property": "ItemPrecisionShieldMaxShieldLifetime", "from": 0.75, "to": 1.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Effects/Player/Berserker/BP_GE_Berserker_Stats",
+      "why": "Brutus: 1050 base health (Feb 950, Aug 1000).",
+      "edits": [
+        { "op": "set-export-prop", "export": "Default__BP_GE_Berserker_Stats_C", "path": "Modifiers[0].ModifierMagnitude.ScalableFloatMagnitude.Value", "from": 950.0, "to": 1050.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/CatSupp/LMB/BP_GA_CatSupp_LMB",
+      "why": "Zoey, Witch Ball (LMB): an ally hit heals 50 over 2 s (Feb about 40: two instant heals and 8 ticks, each of this value).",
+      "edits": [
+        { "op": "set-default", "property": "BaseHealPerTick", "from": 4.0, "to": 5.0 },
+        { "op": "set-default", "property": "ModifiedHealPerTickToApply", "from": 8.0, "to": 5.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/CatSupp/RMB/BP_GA_CatSupp_RMB",
+      "why": "Zoey, Shield of Hope (RMB): a 50 shield (Feb 45) for 2 s (Feb 1.5 s); Cursed Candle, Bloom's Brew and Haste Chimes follow the 2 s.",
+      "edits": [
+        { "op": "set-default", "property": "Base Shield Amont", "from": 45.0, "to": 50.0 },
+        { "op": "set-default", "property": "ModifiedShieldAmount", "from": 45.0, "to": 50.0 },
+        { "op": "set-default", "property": "Shield Duration", "from": 1.5, "to": 2.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/CatSupp/Skill2/BP_GA_CatSupp_Skill2",
+      "why": "Zoey, Shieldnip (Shift): the 125 shield lasts 1.5 s (Feb 0.75 s).",
+      "edits": [
+        { "op": "set-default", "property": "AOESDuration", "from": 0.75, "to": 1.5 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/CatSupp/Skill3/BP_GA_CatSupp_Skill3",
+      "why": "Zoey, Mentor's Locket (R): allies heal 75 per enemy hit (Feb 35).",
+      "edits": [
+        { "op": "set-default", "property": "AVHealPerEnemy", "from": 35.0, "to": 75.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_ABILITIES_CATSUPP",
+      "why": "Zoey's tooltips show the true heals: Witch Ball heals 10 times its per-tick value (50), and the ult heals allies for its real value (150), not the old 200.",
+      "edits": [
+        { "op": "replace-text", "key": "catsupp_basicattack_desc", "from": "$BaseHealPerTick*12$ HP", "to": "$BaseHealPerTick*10$ HP" },
+        { "op": "replace-text", "key": "catsupp_ult_desc", "from": "<RichText.TooltipHeal>200 HP</>", "to": "<RichText.TooltipHeal>$AV Heal$ HP</>" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/LightningArcher/RMB/BP_GA_LightningArcher_RMB",
+      "why": "Rayo, Pinpoint Spotter (RMB): +50 % damage on the single target (Feb +75 %).",
+      "edits": [
+        { "op": "set-default", "property": "BonusDamage", "from": 75.0, "to": 50.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/LightningArcher/LMB/BP_GA_LightningArcher_LMB",
+      "why": "Rayo, Storm Shot (LMB): he stands still 0.25 s to draw (Feb 0.45 s, Aug 0.25 s) and waits 0.45 s after (Feb 0.25 s): the same 0.7 s per shot. Blitzhead Arrows: at most +35 damage (Feb +60), and a miss no longer damages Rayo.",
+      "edits": [
+        { "op": "set-default", "property": "CastTime", "from": 0.45, "to": 0.25 },
+        { "op": "set-default", "property": "AbilityCooldown", "from": 0.25, "to": 0.45 },
+        { "op": "set-default", "property": "ModifiedAbilityCooldown", "from": 0.5, "to": 0.45 },
+        { "op": "set-default", "property": "DeathstrikeMaxStacks", "from": 60.0, "to": 35.0 },
+        { "op": "set-call-arg", "function": "ActivateDeathstrikeMissEffect", "call": "Greater_FloatFloat", "arg": 0, "from": "CallFunc_GetFloatAttributeFromAbilitySystemComponent_ReturnValue", "to": "CallFunc_Divide_FloatFloat_ReturnValue", "count": 1 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_AUGMENTS_LIGHTNINGARCHER",
+      "why": "Rayo, Blitzhead Arrows tooltip: no self-damage on a miss any more.",
+      "edits": [
+        { "op": "replace-text", "key": "LightningArcher_BlitzheadArrows_desc", "from": "<br><br>Missing with <RichText.TooltipKeyWords>#LOC_EN_ABILITIES_LIGHTNINGARCHER|LightningArcher_LMB_title#</> deals <RichText.TooltipDamage>$DeathstrikeSelfDamage$ damage</> to <RichText.TooltipKeyWords>#LOC_EN_GENERAL_LIGHTNINGARCHER|LightningArcher_Name_title#</>.", "to": "" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BigBoi/Skill1/BP_GA_BigBoi_Skill2",
+      "why": "Belroth, Angerstone Talons (Shift): +40 damage (Feb: the item set the damage to 60, 10 below the base 70), still no heal.",
+      "edits": [
+        { "op": "set-default", "property": "ODMagnitude", "from": 60.0, "to": 110.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BigBoi/Skill4/BP_GA_BigBoi_Skill4",
+      "why": "Belroth, Craterthorns (E): the boulder deals 50 damage when picked up (Feb 40).",
+      "edits": [
+        { "op": "set-default", "property": "PUDMagnitude", "from": 40.0, "to": 50.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BookMage/R/BP_GA_BookMage_RNEw",
+      "why": "Somnia, Tethers of Eternity (R): ticks 4 times a second instead of 10, with the same total damage, slow and length; fewer slow changes on the tethered players means less rubber-banding. AllyTether heals 8.33 per tick to keep its total.",
+      "edits": [
+        { "op": "set-default", "property": "Tick Frequency", "from": 0.1, "to": 0.25 },
+        { "op": "set-default", "property": "ATTickHeal", "from": 3.3333, "to": 8.3333 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Effects/Shared/BP_GA_GreenBuffHoT",
+      "why": "Green (Life) Shard: the 50 % heal lands within half a second (two ticks) instead of over 5 s. One 0.25 s tick healed only about two thirds of it in a test.",
+      "edits": [
+        { "op": "set-default", "property": "Duration", "from": 5.0, "to": 0.5 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Effects/Shared/BP_GA_ManaFill",
+      "why": "Blue (Aether) Shard: mana fills at once (in the first quarter second) instead of over 5 s.",
+      "edits": [
+        { "op": "set-default", "property": "ManaPerQuarterSecond", "from": 125.0, "to": 10000.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/BluePrints/Gameplay/GameRules/King/BP_RS_King",
+      "why": "No more blank \"choosing captain\" wait: the server waited 18 s while players' screens were done after 2 s.",
+      "edits": [
+        { "op": "set-default", "property": "MaxKingVotingTime", "from": 18.0, "to": 2.0 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/BluePrints/Library/BP_FL_MOBA_FunctionLibrary",
+      "why": "Every knock-up (Zoey's ult, Belroth's Space, Brutus' Head Splitter, Ethryn's ult and the rest all go through DoTargetKnockUp) becomes a stun of the same length: the knock-up's status text was missing from the game.",
+      "edits": [
+        { "op": "rename-import", "from": "BP_GE_KnockUp_C", "to": "BP_GE_Stun_C", "uses": 1 },
+        { "op": "rename-import", "from": "Default__BP_GE_KnockUp_C", "to": "Default__BP_GE_Stun_C", "uses": 0 },
+        { "op": "rename-import", "from": "/Game/Gameplay/Effects/Shared/BP_GE_KnockUp", "to": "/Game/Gameplay/Effects/Shared/BP_GE_Stun", "uses": 2 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_FEATURE_ROUNDSTART",
+      "why": "Heirlooms are called Combat, Utility and Ultimate Augments.",
+      "edits": [
+        { "op": "replace-text", "key": "augment_combative", "from": "COMBAT HEIRLOOMS", "to": "COMBAT AUGMENTS" },
+        { "op": "replace-text", "key": "augment_utility", "from": "UTILITY HEIRLOOMS", "to": "UTILITY AUGMENTS" },
+        { "op": "replace-text", "key": "augment_epic", "from": "ULTIMATE HEIRLOOMS", "to": "ULTIMATE AUGMENTS" },
+        { "op": "replace-text", "key": "flex_augment_help", "from": "Combat Heirloom or", "to": "Combat Augment or" },
+        { "op": "replace-text", "key": "flex_augment_help", "from": "Utility Heirloom <br>", "to": "Utility Augment <br>" },
+        { "op": "replace-text", "key": "tip_heirloom_artifact_desc", "from": "select all your Heirlooms and Artifacts", "to": "select all your Augments" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/FANGS_LOC_EN",
+      "why": "Heirlooms are called Augments in the menus. The Training text names the P key (Tab is the scoreboard).",
+      "edits": [
+        { "op": "replace-text", "key": "heroes_heromastery_augments_tab", "from": "HEIRLOOMS", "to": "AUGMENTS" },
+        { "op": "replace-text", "key": "choose_hero_augment_title", "from": "CHOOSE AN HEIRLOOM", "to": "CHOOSE AN AUGMENT" },
+        { "op": "replace-text", "key": "heroes_heirlooms", "from": "HEIRLOOMS", "to": "AUGMENTS" },
+        { "op": "replace-text", "key": "Heirloom_roll", "from": "HEIRLOOM ROLL", "to": "AUGMENT ROLL" },
+        { "op": "replace-text", "key": "gamemode_training_desc", "from": "[TAB]", "to": "[P]" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/FANGS_CLIENT_LOC_EN",
+      "why": "The Training text names the P key (Tab is the scoreboard).",
+      "edits": [
+        { "op": "replace-text", "key": "STR_TRAINING_DESC", "from": "[TAB]", "to": "[P]" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_FEATURE_TUTORIAL",
+      "why": "Heirlooms are called Augments in the tutorial texts too.",
+      "edits": [
+        { "op": "replace-text", "key": "tutorial_augments_flex", "from": "Try selecting 3 Combat Heirlooms.", "to": "Try selecting 3 Combat Augments." },
+        { "op": "replace-text", "key": "tutorial_augments_ultimate", "from": "Ultimate Heirlooms empower", "to": "Ultimate Augments empower" },
+        { "op": "replace-text", "key": "tutorial_client_earncores", "from": "choose from Heirlooms, Artifacts, and Boons", "to": "choose from Hero Augments, Artifacts, and Boons" },
+        { "op": "replace-text", "key": "tutorial_augments_utility", "from": "Select a Utility Heirloom", "to": "Select a Utility Augment" },
+        { "op": "replace-text", "key": "tutorial_augments_types", "from": "Heirlooms are specific to your hero", "to": "Combat, Utility and Ultimate Augments are specific to your hero" },
+        { "op": "replace-text", "key": "tutorial_augments_heroabilities", "from": "Heirlooms are specific to a Hero.", "to": "Combat, Utility and Ultimate Augments are specific to a Hero." },
+        { "op": "replace-text", "key": "tutorial_augments_combat", "from": "Heirlooms are specific to your Hero. Select a Combat Heirloom", "to": "Combat Augments are specific to your Hero. Select a Combat Augment" },
+        { "op": "replace-text", "key": "tutorial_client_coresheirloom", "from": "directly unlock any Heirloom.", "to": "directly unlock any Hero Augment." },
+        { "op": "replace-text", "key": "tutorial_client_coresheirloom", "from": "a random Rayo Heirloom.", "to": "a random Rayo Augment." }
+      ]
+    }
+  ]
+}

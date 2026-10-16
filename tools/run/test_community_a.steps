@@ -1,0 +1,12 @@
+# Community patch, match A (tools/run/test_community.sh; alice = Belroth, bob = Zoey): Zoey's ult on alice (a stun
+# with the patch, a knock-up without), then the Green and Blue Shard buffs on alice from 30 % health and 0 mana.
+host 'lua return FCE_PATCH.fill("bob")'
+host 'lua return FCE_PATCH.aim("bob", "alice", 1000)'                  # Feline Attraction lands at the pointer (range 1000)
+sleep 0.5; echo 'lua return FCE_PATCH.fire("CatSupp_Skill3")' >> $B
+sleep 8
+host 'lua return FCE_PATCH.lower("alice")'
+host 'lua return FCE_PATCH.apply("alice", "/Game/Gameplay/Effects/Shared/BP_GA_RedBuff_Garden.BP_GA_RedBuff_Garden_C")'
+host 'lua return FCE_PATCH.apply("alice", "/Game/Gameplay/Effects/Shared/BP_GE_BlueBuff.BP_GE_BlueBuff_C")'
+sleep 0.7; host 'lua return FCE_PATCH.attr("alice")'                   # patched: healed and full mana already
+sleep 2; host 'lua return FCE_PATCH.attr("alice")'
+sleep 4; host 'lua return FCE_PATCH.attr("alice")'                     # Feb: done after 5 s

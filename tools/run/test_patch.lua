@@ -12,6 +12,10 @@
 --   stats(name)      server: the hero's health, Bunny Stacks and stack cooldowns (Fiorne), also to patchwatch.log.
 --   track(name, s)   server: the hero's speed and Bunny Stacks every 50 ms for s seconds, to track.log.
 --   regrant(name)    server: Fiorne's stack system removed and granted again mid-round, as the passive's safety net does.
+--   attr(name)       server: health and mana with their maximums.
+--   trackms(name, s) server: the hero's MoveSpeed attribute and health every 50 ms for s seconds, to track.log.
+--   lower(name)      server: health to 30 %, mana to 0.
+--   apply(name, cls) server: a gameplay effect class (full path, e.g. a Shard's buff) applied to the hero.
 --   chain(p, n, ms)  client: fire(p) n times, ms apart (game thread), results to chain.log.
 FCE_PATCH = FCE_PATCH or {}
 local T = FCE_PATCH
@@ -185,6 +189,55 @@ function T.track(name, seconds)   -- every 50 ms for a while: the hero's speed a
         f:flush()
     end)
     return "tracking " .. name
+end
+
+function T.attr(name)   -- server: health and mana with their maximums, also to patchwatch.log
+    local p = hero(name)
+    if not valid(p) then return "attr: no hero " .. name end
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local s = string.format("%s: health %.0f/%.0f, mana %.0f/%.0f", name, set.Health.CurrentValue, set.MaxHealth.CurrentValue,
+        set.Mana.CurrentValue, set.MaxMana.CurrentValue)
+    log("        " .. s)
+    return "attr: " .. s
+end
+
+function T.trackms(name, seconds)   -- server: the hero's MoveSpeed attribute (slows) every 50 ms, to track.log
+    local p = hero(name)
+    if not valid(p) then return "trackms: no hero " .. name end
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local f = io.open("track.log", "a")
+    local t0, n = now(p), 0
+    f:write(string.format("== %s's MoveSpeed from %.2f\n", name, t0))
+    LoopInGameThreadWithDelay(50, function()
+        n = n + 1
+        if n > seconds * 20 then
+            if n == seconds * 20 + 1 then f:close() end
+            return
+        end
+        if not valid(p) then return end
+        f:write(string.format("%6.2f movespeed %4.0f health %4.0f\n", now(p) - t0, set.MoveSpeed.CurrentValue, set.Health.CurrentValue))
+        f:flush()
+    end)
+    return "tracking " .. name .. "'s MoveSpeed"
+end
+
+function T.lower(name)   -- server: health to 30 % and mana to 0, so a heal or a mana gain shows
+    local p = hero(name)
+    if not valid(p) then return "lower: no hero " .. name end
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local h = math.floor(set.MaxHealth.CurrentValue * 0.3)
+    set.Health.BaseValue = h; set.Health.CurrentValue = h
+    set.Mana.BaseValue = 0; set.Mana.CurrentValue = 0
+    return T.attr(name)
+end
+
+function T.apply(name, path)   -- server: a gameplay effect class (e.g. a Shard's buff) applied to the hero
+    local p = hero(name)
+    if not valid(p) then return "apply: no hero " .. name end
+    local cls = loadClass(path)
+    local ok, err = pcall(function() p.AbilitySystemComponent:BP_ApplyGameplayEffectToSelf(cls, 1.0, {}) end)
+    log(string.format("        %s: %s applied%s", name, path:match("[^.]+$"), ok and "" or (" FAILED " .. tostring(err))))
+    return ok and ("apply: " .. path:match("[^.]+$") .. " on " .. name) or ("apply failed: " .. tostring(err))
 end
 
 -- What the passive's safety net does when it can't find the stack system (GA_Lancer_P.CheckAmmoSystemIsInit): the
