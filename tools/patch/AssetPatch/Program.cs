@@ -5,12 +5,14 @@
 //   assetpatch props <asset.uasset> [export]             exports; or every value stored in one, by path
 //   assetpatch roundtrip <asset.uasset> <out-dir>         read and write back unchanged; fails if a byte differs
 //   assetpatch apply <patch.json> <in-root> <out-root>    apply a patch; writes the edited assets under out-root
+//   assetpatch rewrite-check <dir>                       insert + remove a statement in every function; must write back identical
 //
-// Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default, set-export-prop
+// Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default, set-export-prop,
+// insert-call, remove-call
 // (docs/PATCHING.md has the fields).
 // Every edit states what it expects to find ("from", "uses", "count") and fails if the asset differs, so a patch
-// can't silently apply to another build. Bytecode edits must keep the function's in-memory size: jump offsets
-// inside the function are not recomputed.
+// can't silently apply to another build. Edits inside a statement must keep the function's in-memory size; edits
+// that add or remove whole statements go through Splice (Rewrite.cs), which moves every code offset along.
 using System.Globalization;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
@@ -22,7 +24,7 @@ using UAssetAPI.PropertyTypes.Objects;
 using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 
-static class Program
+static partial class Program
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
@@ -520,6 +522,8 @@ static class Program
         "replace-text" => ReplaceText(a, ed),
         "copy-default" => CopyDefault(a, ed, inRoot),
         "set-export-prop" => SetExportProp(a, ed),
+        "insert-call" => InsertCall(a, ed),
+        "remove-call" => RemoveCall(a, ed),
         var op => throw new PatchError($"unknown op '{op}'"),
     };
 
@@ -676,6 +680,8 @@ static class Program
                 ["props", var p, var e] => CmdProps(p, e),
                 ["roundtrip", var p, var o] => CmdRoundtrip(p, o),
                 ["apply", var patch, var i, var o] => CmdApply(patch, i, o),
+                ["rewrite-check", var d] => CmdRewriteCheck(d),
+                ["nop", var p, var fn, var at, var o] => CmdNop(p, fn, int.Parse(at), o),
                 _ => Usage(),
             };
         }
@@ -686,7 +692,7 @@ static class Program
     {
         Console.Error.WriteLine("usage: assetpatch info <asset> | calls <asset> <function> [call] | props <asset> [export]"
                                 + " | roundtrip <asset> <out-dir>"
-                                + " | apply <patch.json> <in-root> <out-root>");
+                                + " | apply <patch.json> <in-root> <out-root> | rewrite-check <dir>");
         return 2;
     }
 }

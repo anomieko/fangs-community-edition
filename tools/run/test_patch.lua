@@ -43,7 +43,8 @@ end
 -- ---------------------------------------------------------------------------------------------- server
 local CC = { BP_GE_Stun = "STUN", BP_GE_Root = "ROOT", BP_GE_Charm = "CHARM", BP_GE_BookMage_Skill3_Charm = "CHARM",
              BP_GE_Fear = "FEAR", BP_GE_KnockUp = "KNOCKUP", BP_GE_Incapacitate = "INCAP",
-             BP_GE_LockAbilities = "ABILITY-LOCK", BP_GE_LockCastDebuff = "CAST-LOCK" }
+             BP_GE_LockAbilities = "ABILITY-LOCK", BP_GE_LockCastDebuff = "CAST-LOCK",
+             BP_GE_AntiDisplacement_Duration = "ANTI-CC" }
 local heroes, lookedUp = {}, -1
 
 local function pname(p) local ok, n = pcall(function() return p.PlayerState:GetPlayerName():ToString() end); return ok and n or "?" end

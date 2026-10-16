@@ -31,7 +31,7 @@ that is a different value, a different effect class or a different call.
 |---|---|
 | `tools/patch/patches/<name>.json` | One patch: the build it is for, `enabled`, and the edits per asset, each with a `why` |
 | `tools/patch/build.sh <game-dir> [patch...]` | Builds `work/patch/<build>/FangsCE_P.pak` (`OUT=` elsewhere). With no patches named, it uses the enabled ones for that build |
-| `tools/patch/AssetPatch` (C#, UAssetAPI) | Applies the edits. Its `info`, `calls`, `props` and `roundtrip` commands help you write a patch |
+| `tools/patch/AssetPatch` (C#, UAssetAPI) | Applies the edits. Its `info`, `calls`, `props` and `roundtrip` commands help you write a patch; `rewrite-check` and `nop` check the code rewriter |
 | `tools/pak/pakwrite.py` | Writes the pak: v11, unencrypted, laid out like UnrealPak's |
 | `server/install-paks.sh` | Puts the paks of `FANGS_PAKS` into a copy of the game and removes the ones it put there before |
 | `FANGS_PAKS=<dir>` | Patch paks for game servers (`run-host.sh`), test clients (`tools/run/headless.sh`) and local play |
@@ -83,14 +83,54 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `replace-text` | `key`, `from`, `to`, optional `count` (1) | Text in a string table entry, e.g. a tooltip in `UI/Localization/LOC_EN_*`. Match the raw text, including its `<RichText…>` markup. The game ships English only. |
 | `set-export-prop` | `export`, `path`, `from`, `to` | One value anywhere in the asset: a component template (`wer_GEN_VARIABLE`), a value nested in the class defaults (a gameplay effect's `Modifiers[0].ModifierMagnitude.ScalableFloatMagnitude.Value`), a data asset's field. `export` is the export's name, or `<outer>.<name>` if several share it. `path` joins property names with dots; `[i]` picks an array element; a Vector, Rotator, Vector2D or LinearColor ends in a component (`BoxExtent.Y`, `ColorOptions.Color.B`). Values: numbers, `true`/`false`, enum names as `AssetPatch props` prints them (`"EGameplayModOp::Override"`). `AssetPatch props` lists the paths. |
 | `copy-default` | `from` (an asset path), `property`, optional `rename` | Adds a class default copied from the same property of another asset's class defaults, renaming names in it. Example: the ult charm's `GameplayCues` onto the generic charm, with the cue tag renamed. The property must not be set in the target yet, and the copied value must not reference other objects. `build.sh` extracts the `from` asset too. |
+| `insert-call` | `function`, `call`, optional `args`, and `at` (`start`, `end`) or `before`/`after` (a call in that function) | Adds a call to one of the Blueprint's own functions as a new statement, e.g. Rowan's `ApplyUnstoppable` at the start of `Lock Pre Dash`. `before`/`after` name a call that exactly one statement of the function makes. `args` are literals typed by the called function's parameters (numbers, `true`/`false`, `self`, `nullptr`) or variables the function already uses; no output parameters. Not into an ubergraph yet (see "Rewriting functions"). |
+| `remove-call` | `function`, `call`, `count` | Removes the statements that are a call to `call` (not those that use its result); a jump to a removed statement lands on the next one. |
 
-What a patch can't do:
-- Add code or functions.
+What a patch can't do (yet):
+- Add functions, or code other than a call to one of the Blueprint's own functions (`insert-call`).
 - Add a value the asset doesn't store. A value equal to its default isn't saved, so `set-default` and `set-export-prop`
   only change values that are there (`AssetPatch props` shows them).
-- Change the size of a function's code. Its jumps are byte offsets, and the tool refuses such an edit.
+- Change the size of a statement in place (`set-call-arg` refuses it); add or remove whole statements instead.
 
-Bigger changes need a UE4SS hook, or a new kind of edit in `AssetPatch` that recomputes the jumps.
+## Rewriting functions
+
+`insert-call` and `remove-call` add and remove whole statements. The code offsets that point into the function are
+moved along with them (`Splice` in `tools/patch/AssetPatch/Rewrite.cs`). In a cooked 4.26 Blueprint, code offsets live
+in these places:
+- the function's own jumps: `EX_Jump`, `EX_JumpIfNot`, `EX_PushExecutionFlow`, `EX_Skip`, `EX_SwitchValue` (each case
+  and the end);
+- for an ubergraph (`ExecuteUbergraph_<Class>`), also in other functions:
+  - every event stub calls it with its entry point, an int constant;
+  - latent actions resume it through `FLatentActionInfo.Linkage`, an `EX_SkipOffsetConst` in the struct constant next
+    to the function's name; -1 means "resume nowhere";
+  - a function's `EventGraphCallOffset`, the last 4 bytes of its export data, names an offset when
+    `EventGraphFunction` is set (0 in this build).
+
+`EX_Context`'s skip count is the size of its own sub-expression. Statements that move unchanged keep it.
+
+A jump to the statement where code is inserted lands on the inserted code, so the new code runs wherever that
+statement used to.
+
+How it is checked:
+- `AssetPatch rewrite-check <dir>`: for every function of every Blueprint under `<dir>`, it inserts a 1-byte statement
+  (at the start, the middle and the end). That moves every offset after it. Then it removes the statement again, and
+  the asset must write back byte for byte. On the Feb build's `MOBA/Content` (16 Oct): 1,779 assets, 20,486
+  functions, 61,458 runs, 0 failed. Every kind of offset above was moved, except `EventGraphCallOffset`, which this
+  build doesn't set.
+- `AssetPatch nop <asset> <function> <statement> <out-dir>` writes a copy with that 1-byte statement in place. Its
+  decompile (`tools/bpdump`) must equal the original's, with the moved offsets set back. Checked with the statement
+  at the start of the ubergraph of `GS_MOBA_Battle`, `BP_PC_MOBA_PlayerController`, `WB_HUD`, `WB_PreRoundSelection`,
+  `BP_PlayerChar`, `BP_PC_Lobby_PlayerController` and Rowan's `BP_GA_WoodenSword_Skill1`: 0 differences, covering
+  2,564 jump labels, 374 entry points and 29 latent actions.
+- In a match (16 Oct): a test patch (not in the repo) put `insert-call` `ApplyUnstoppable` at the start of Rowan's
+  `Lock Pre Dash`, as Aug 2022 had it. In `tools/run/test_patch.sh`, which now also logs `BP_GE_AntiDisplacement_Duration`
+  as ANTI-CC, the game server showed Rowan with ANTI-CC from the start of his Dourling Dive (109.69 s) until it ended
+  (110.23 s). The Feb build never applies it, and the game loaded and ran the rewritten function without errors.
+
+Not done yet:
+- `insert-call` into an ubergraph. The rewrite handles it, but it needs a match test first.
+- Copying code from another asset, e.g. a function as the developers fixed it in the Dec 2023 build. Its names,
+  imports and property references have to be re-created in the target, as `copy-default` does for values.
 
 ## Things learned
 
