@@ -219,6 +219,9 @@ return function(env)
             end
         end
         rs.MaxKingVotingTime = vote and VOTE_SECS or 0.0
+        if gs and env.gameMode() == CUSTOM and S.rounds ~= 2 and gs.MaxRounds ~= S.rounds then   -- in case BeginPlay was too early
+            gs.MaxRounds = S.rounds; log("match: first to " .. S.rounds .. " rounds")
+        end
         voteRound = voteRound + 1
         if vote then
             local round = voteRound
@@ -238,7 +241,8 @@ return function(env)
     -- MaxRounds for the match (set on the arena's game state as it begins)
     pcall(RegisterBeginPlayPreHook, function(ctx)
         local actor = ctx:get()
-        if not (actor and actor:IsValid()) or actor:GetClass():GetFName():ToString() ~= "GS_MOBA_Battle_C" then return end
+        -- GS_MOBA_Battle_C or a map's own subclass (the arenas use GS_MOBA_Battle_Dragon_C)
+        if not (actor and actor:IsValid()) or not actor:GetClass():GetFName():ToString():find("^GS_MOBA_Battle") then return end
         if env.gameMode() == CUSTOM and S.rounds ~= 2 then
             pcall(function() actor.MaxRounds = S.rounds end)
             log("match: first to " .. S.rounds .. " rounds")
