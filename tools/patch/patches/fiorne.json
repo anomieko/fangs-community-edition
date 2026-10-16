@@ -7,9 +7,9 @@
   "assets": [
     {
       "path": "MOBA/Content/Gameplay/Effects/Player/Lancer/BP_GE_Lancer_Stats",
-      "why": "Fiorne: 800 base health (Aug 2022 had 650, Feb 900). With her Aug damage back, 900 would make her too strong.",
+      "why": "Fiorne: 700 base health (Aug 2022 had 650, Feb 900). Her Aug damage is back, so she gets the Aug kit with a small cushion, not Feb's tankiness.",
       "edits": [
-        { "op": "set-export-prop", "export": "Default__BP_GE_Lancer_Stats_C", "path": "Modifiers[0].ModifierMagnitude.ScalableFloatMagnitude.Value", "from": 900.0, "to": 800.0 }
+        { "op": "set-export-prop", "export": "Default__BP_GE_Lancer_Stats_C", "path": "Modifiers[0].ModifierMagnitude.ScalableFloatMagnitude.Value", "from": 900.0, "to": 700.0 }
       ]
     },
     {
@@ -36,10 +36,11 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/P/GA_Lancer_P",
-      "why": "Fiorne, passive: +100 % attack speed for 1.25 s after an LMB hit, as in Aug 2022 (Feb: +50 % for 0.7 s; Feb's 5 s cooldown stays). Warrior's Bounty gives 3 stacks per kill or assist (Feb 2); Fifi's Little Helper 3 % damage and 1 % lifesteal per stack (Feb 1 % and 0.75 %).",
+      "why": "Fiorne, passive: +100 % attack speed for 1.25 s after an LMB hit, every 7 s, as in Aug 2022 (Feb: +50 % for 0.7 s every 5 s). Warrior's Bounty gives 3 stacks per kill or assist (Feb 2); Fifi's Little Helper 3 % damage and 1 % lifesteal per stack (Feb 1 % and 0.75 %).",
       "edits": [
         { "op": "set-default", "property": "PassiveASMagnitude", "from": 0.5, "to": 1.0 },
         { "op": "set-default", "property": "PassiveASDuration", "from": 0.7, "to": 1.25 },
+        { "op": "set-default", "property": "PassiveCooldown", "from": 5.0, "to": 7.0 },
         { "op": "set-default", "property": "Item23 Kill Stacks to Add", "from": 2.0, "to": 3.0 },
         { "op": "set-default", "property": "Item23 Assist Stacks to Add", "from": 2.0, "to": 3.0 },
         { "op": "set-default", "property": "Snowball Damage Percent", "from": 0.01, "to": 0.03 },
@@ -70,9 +71,9 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill2/BP_GA_Lancer_Skill2",
-      "why": "Fiorne, Hiari Smash (Shift): Feb's 80 damage stays. Both jumps stop dead at their end again (less rubber-banding). Earthbreaker Pommel adds 125 damage (Feb 40); Dreadborn Artifact executes below 20 % missing health (Feb 10 %).",
+      "why": "Fiorne, Hiari Smash (Shift): Feb's 80 damage stays. Both jumps stop dead at their end again (less rubber-banding). Earthbreaker Pommel adds 95 damage (Feb 40), so Shift with it does Aug's 175 in total (Feb's base 80 + 95); Dreadborn Artifact executes below 20 % missing health (Feb 10 %).",
       "edits": [
-        { "op": "set-default", "property": "DHDamageIncrease", "from": 40.0, "to": 125.0 },
+        { "op": "set-default", "property": "DHDamageIncrease", "from": 40.0, "to": 95.0 },
         { "op": "set-default", "property": "ItemKillResetExecuteRatio", "from": 0.1, "to": 0.2 },
         { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_Lancer_Skill2", "call": "ApplyRootMotionJumpForce", "arg": 8, "from": "0", "to": "1", "count": 2 }
       ]
