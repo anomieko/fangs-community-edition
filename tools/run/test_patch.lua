@@ -15,10 +15,10 @@
 --   chain(p, n, ms)  client: fire(p) n times, ms apart (game thread), results to chain.log.
 --   health(name)     server: the hero's health, also to patchwatch.log.
 --   hurt(name, f)    server: the hero's health set to f of its maximum.
---   place(name, cls) server: the hero onto the newest actor of class path cls (e.g. a Sourblossom).
+--   place(n, cls, d) server: the hero onto the newest actor of class path cls (e.g. a Sourblossom), d units ahead of it.
 --   hptrack(n, s, l) server: the hero's health and heal effects every 0.25 s for s seconds, labelled l, to hp.log.
 --   caltrops(name)   server: the Dourling Caltrops boxes: where they lie from the hero (ahead/behind), drawn or not.
---   stun(name, s)    server: a stun of s seconds on the hero, as an enemy's ability applies it.
+--   stun(name, s, by) server: a stun of s seconds on the hero from hero by, as an enemy's ability applies it.
 --   equip(path...)   client: once the augment phase is on, the own hero equips these items by tier, then locks in.
 --   key(n)           client: presses and releases ability key n (BP_AC_InputManager.QueueInput: 3 = Space).
 FCE_PATCH = FCE_PATCH or {}
@@ -252,14 +252,14 @@ function T.hurt(name, f)   -- the hero's health to f of its maximum (base and cu
     return string.format("hurt: %s health %.0f", name, v)
 end
 
-function T.place(name, path)   -- the hero onto the newest actor of a class
+function T.place(name, path, ahead)   -- the hero onto the newest actor of a class (ahead: units along its facing)
     local p = hero(name)
     if not valid(p) then return "place: no hero " .. name end
     local list = actorsOf(p, path)
     local a = list[#list]
     if not valid(a) then return "place: no " .. path:match("([^.]+)$") end
-    local l = a:K2_GetActorLocation()
-    p:K2_SetActorLocation({ X = l.X, Y = l.Y, Z = p:K2_GetActorLocation().Z }, false, {}, true)
+    local l, yaw, d = a:K2_GetActorLocation(), math.rad(a:K2_GetActorRotation().Yaw), ahead or 0
+    p:K2_SetActorLocation({ X = l.X + math.cos(yaw) * d, Y = l.Y + math.sin(yaw) * d, Z = p:K2_GetActorLocation().Z }, false, {}, true)
     log(string.format("        %s placed on %s (%d of them)", name, a:GetClass():GetFName():ToString(), #list))
     return string.format("place: %s on %s", name, a:GetFName():ToString())
 end
@@ -306,15 +306,16 @@ function T.caltrops(name)   -- the Dourling Caltrops boxes, measured from the he
     return "caltrops: " .. s
 end
 
-function T.stun(name, seconds)   -- a stun on the hero, made and applied the way abilities do it
-    local p = hero(name)
+function T.stun(name, seconds, by)   -- a stun on the hero from hero `by`, made and applied the way abilities do it
+    local p, src = hero(name), hero(by or "")
     if not valid(p) then return "stun: no hero " .. name end
+    if not valid(src) then src = p end
     loadClass("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
     local lib = StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.Default__BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
     if not valid(lib) then return "stun: no ability library" end
     local ok, err = pcall(function()
-        local spec = lib:MakeStunEffectSpec(p, seconds, p)
-        lib:ApplyEffectSpecToTarget(p, p, spec, p)
+        local spec = lib:MakeStunEffectSpec(src, seconds, src)
+        lib:ApplyEffectSpecToTarget(src, p, spec, src)
     end)
     log(string.format("        %s stunned for %.2f s%s", name, seconds, ok and "" or (": " .. tostring(err))))
     return ok and string.format("stun: %s %.2f s", name, seconds) or ("stun failed: " .. tostring(err))
