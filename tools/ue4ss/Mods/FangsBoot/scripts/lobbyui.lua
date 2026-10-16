@@ -13,7 +13,8 @@
 return function(env)
     local log, every, gameInstance = env.log, env.every, env.gameInstance
     local CUSTOM = 4
-    local PANEL_X, PANEL_Y, PANEL_W = -48.0, 150.0, 540.0     -- from the screen's top right corner
+    -- design units (1920 x 1080 screen): the panel at the top right, the two team columns moved left to make room
+    local PANEL_X, PANEL_Y, PANEL_W, TEAMS_SHIFT = -36.0, 140.0, 470.0, -200.0
     local COMBO = "/Game/UI/Settings/WB_SettingComboBoxOption.WB_SettingComboBoxOption_C"
     local TOGGLE = "/Game/UI/Settings/WB_SettingToggleButton.WB_SettingToggleButton_C"
     local BUTTON = "/Game/UI/MainMenu/WB_IconButton_Secondary.WB_IconButton_Secondary_C"
@@ -42,10 +43,11 @@ return function(env)
 
     local function parse(s)
         if type(s) ~= "string" or s:sub(1, 5) ~= "fce1|" then return nil end
-        local t = { maps = {} }
+        local t = {}
         for k, v in s:gmatch("|(%w+)=([^|]*)") do t[k] = v end
-        for name, level in (t.maps or ""):gmatch("([^:,]+):([^,]+)") do t.maps[#t.maps + 1] = { name = name, level = level } end
-        if type(t.maps) == "string" then t.maps = {} end
+        local list = {}
+        for name, level in (t.maps or ""):gmatch("([^:,]+):([^,]+)") do list[#list + 1] = { name = name, level = level } end
+        t.maps = list
         t.size, t.rounds, t.vote = tonumber(t.size) or 0, tonumber(t.rounds) or 2, t.vote == "1"
         return t
     end
@@ -83,6 +85,20 @@ return function(env)
         sb:AddChild(widget)
         return widget
     end
+    -- a WB_IconButton_Secondary (the game's button look) with a label: its BtnText is shown nowhere, so a text block
+    -- goes into its TextWrapper; BtnText is set too, to find it again (tests)
+    local function button(menu, panel, text)
+        local b = WBL:Create(menu, loadClass(BUTTON), nil)
+        b.PaddingOverride = { Left = 32.0, Top = 10.0, Right = 32.0, Bottom = 10.0 }
+        local slot = panel:AddChild(b)
+        local tb = StaticConstructObject(StaticFindObject("/Script/UMG.TextBlock"), menu.WidgetTree, FName("FCE_ButtonText"))
+        tb:SetFont(menu.LobbyNameTxt.Font); tb.Font.Size = 22
+        tb:SetJustification(1)                                        -- centred
+        b.TextWrapper:SetContent(tb)
+        local function label(t) tb:SetText(FText(t)); b:UpdateText(FText(t)) end
+        label(text)
+        return b, label, slot
+    end
     local function combo(menu, box, label, options)
         local w = WBL:Create(menu, loadClass(COMBO), nil)
         row(menu, box, w, 64.0)
@@ -108,8 +124,16 @@ return function(env)
         border:SetContent(box)
         local title = StaticConstructObject(StaticFindObject("/Script/UMG.TextBlock"), tree, FName("FCE_LobbySettingsTitle"))
         title:SetFont(menu.LobbyNameTxt.Font); title.Font.Size = 26
-        title:SetText(FText(owner and "LOBBY SETTINGS" or "LOBBY SETTINGS (the owner changes them)"))
-        box:AddChild(title):SetPadding({ Left = 0.0, Top = 0.0, Right = 0.0, Bottom = 8.0 })
+        title:SetText(FText("LOBBY SETTINGS"))
+        box:AddChild(title):SetPadding({ Left = 0.0, Top = 0.0, Right = 0.0, Bottom = owner and 8.0 or 0.0 })
+        if not owner then
+            local note = StaticConstructObject(StaticFindObject("/Script/UMG.TextBlock"), tree, FName("FCE_LobbySettingsNote"))
+            note:SetFont(menu.LobbyNameTxt.Font); note.Font.Size = 16
+            note:SetText(FText("Set by the lobby owner"))
+            note:SetColorAndOpacity({ SpecifiedColor = { R = 0.7, G = 0.7, B = 0.7, A = 1.0 }, ColorUseRule = 0 })
+            box:AddChild(note):SetPadding({ Left = 0.0, Top = 0.0, Right = 0.0, Bottom = 8.0 })
+        end
+        pcall(function() menu.TeamsPanel:SetRenderTranslation({ X = TEAMS_SHIFT, Y = 0.0 }) end)
 
         local u = { menu = menu, addr = menu:GetAddress(), owner = owner, mapLevels = {}, border = border }
         local mapNames = {}
@@ -123,20 +147,16 @@ return function(env)
         u.vote = WBL:Create(menu, loadClass(TOGGLE), nil)
         row(menu, box, u.vote, 64.0)
         u.vote.OptionLbl:SetText(FText("CAPTAIN VOTE"))
-        u.shuffle = WBL:Create(menu, loadClass(BUTTON), nil)
-        u.shuffle.FontSize = 20
-        row(menu, box, u.shuffle)
-        u.shuffle:UpdateText(FText("SHUFFLE TEAMS"))
+        local shuffleSlot
+        u.shuffle, _, shuffleSlot = button(menu, box, "SHUFFLE TEAMS")
+        shuffleSlot:SetPadding({ Left = 0.0, Top = 12.0, Right = 0.0, Bottom = 0.0 })
+        shuffleSlot:SetHorizontalAlignment(2)                        -- centred
         if not owner then
             for _, w in ipairs({ u.map, u.size, u.rounds, u.vote }) do w:SetIsEnabled(false) end
             u.shuffle:SetVisibility(1)   -- Collapsed
         end
         -- the owner's launch when players wait outside the seats: a third page of the Launch switcher
-        if owner then
-            u.launch = WBL:Create(menu, loadClass(BUTTON), nil)
-            menu.LobbyStatusSwitch:AddChild(u.launch)
-            u.launch:UpdateText(FText("LAUNCH"))
-        end
+        if owner then u.launch, u.launchLabel = button(menu, menu.LobbyStatusSwitch, "START") end
         u.mapNames = mapNames
         log("lobby settings: panel built (" .. (owner and "owner" or "player") .. ", " .. #mapNames .. " maps)")
         return u
@@ -203,7 +223,7 @@ return function(env)
             return
         end
         if waiting > 0 and seated > 0 and sw:GetActiveWidgetIndex() ~= 1 then
-            ui.launch:UpdateText(FText(string.format("LAUNCH (%d waiting: removed)", waiting)))
+            ui.launchLabel(string.format("START (%d waiting: removed)", waiting))
             sw:SetActiveWidgetIndex(2)
         end
     end
@@ -253,7 +273,8 @@ return function(env)
         local gi = gameInstance()
         if not (gi and gi:IsValid()) then return end
         local ok, gs = pcall(function() return gi:GetWorld().GameState end)
-        if not (ok and gs and gs:IsValid() and gs:GetClass():GetFName():ToString() == "GS_MOBA_Battle_C") then return end
+        -- GS_MOBA_Battle_C or a map's own subclass (the arenas use GS_MOBA_Battle_Dragon_C)
+        if not (ok and gs and gs:IsValid() and gs:GetClass():GetFName():ToString():find("^GS_MOBA_Battle")) then return end
         if applied == gs:GetAddress() then return end
         local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
         local hud = pc and pc:IsValid() and pc.WB_HUDGamplayRef
@@ -273,6 +294,5 @@ return function(env)
         log(string.format("match: Captain %s, first to %s rounds", vote and "vote every round" or "random (no vote)",
             tostring(custom and last and last.rounds or "the game's")))
     end)
-    FCE_LOBBYUI = { state = function() return ui, last end }   -- for tests (tools/run/test_lobbyui.sh)
     log("lobby settings loaded")
 end
