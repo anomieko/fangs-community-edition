@@ -167,9 +167,109 @@ tooltip 60 or real 60; 37 RMB heirloom durations, Shieldnip shield; 38 Zoey ult 
 tooltip 200 vs real 150; 40 when Fiorne's stacks break; 41 "red" = combat heirlooms, Stormlense ramp; 42 Rayo M1:
 shorter draw or walk while drawing.
 
-## Answers
+## Answers (a community member, 16 Oct)
 
-None yet.
+a community member filled in the PDF the same day. His ticks and notes, decoded (`q<NN>` fields of the returned PDF):
+
+| Question | Answer | Notes |
+|---|---|---|
+| Q1 Presets reset your augments | In a match, on the augment screen (the Presets tab) | so far there is no loadouts screen in the main menu. it should be in inventory->heroes menu as a tab after you click on a sepcific hero. would be nice if you add this here as well though! make sure the loadouts are persistent between here and the in game augment selection screen |
+| Q2 The “choosing captain” wait | Something else (write it below) | can you add an option in custom games (a checkmark) to vote on who will be ally captain for a round & then give people about 8 seconds to vote for a specific captain? (cant pick same captain twice in a row). If this option is not picked or the gamemode is casual/ranked, just skip this "vote for captain screen" entirely and instantly start on augment selection screen |
+| Q3 CC immunity on dashes (Rowan, Belroth, Rush) | a) Yes, exactly like the old version<br>b) The dash keeps going, and you get stunned when it ends (like the old version) |  |
+| Q4 Green and blue Shards: instant again | Heal at once, nothing else |  |
+| Q5 Knock-ups show “MISSING STRING TABLE ENTRY” | a) Turn them all into stuns<br>b) Yes, only the text |  |
+| Q6 Renaming “Heirlooms” to “Augments” | Combat Augments, Utility Augments, Ultimate Augments |  |
+| Q7 Training servers not freed | Making a lobby or a Training fails; It works again after a few minutes | currently there is no reconnect feature. Could you add this for custom games? (training does not need this) |
+| Q8 Removing Shardseeker and Wing Rush | Remove them | Somnia hero is missing most of the artifact choices, i forgot to mention this. please make them all available to her (minus these 2 removed ones) |
+| Q9 Changing mode and map inside a lobby | a) Change the map or size before the first game, without making a new lobby<br>b) We really need buttons | the people in the lowest slots should be put in the "users in lobby" screen (like when you click the (-) button on yourself. for now, if the game is started with users in this list, they should just be kicked. at a later point if there is spectator mode, these players should be spectators. |
+| Q10 Best of 5, 7 or 9 | a) Only in custom lobbies<br>b) As an extra mode in the list when making the lobby (needs a mod update) | they matter a bit but not super much. But please add a dropdown for this in the lobby or 2 buttons to go more/less rounds (<) (>). make it cleanly fit the rest of the lobby screen. feel free to move other things in the lobby screen though |
+| Q11 Randomize teams | a) Fully random<br>b) Yes<br>c) When the owner asks for it | in the custom lobby, just add a single click button to fully randomize teams. for casual&ranked, matchmaking doesnt matter yet so you can skip it (except do keep people in a party on the same side) |
+| Q12 Spectator mode | a) Friends watching each other; Recording videos<br>b) Not needed for now | short delay is fine, best would be seeing the fog of war from the perspective of the team that you are currently watching |
+| Q13 Which training do you use? | Both | whichever doesn't need to block a full server. bonus points if you add a dps & damage dealt number to these. also currently dummies are lagging the game quite a bit, look into it if you can make them less laggy/causing fps drops |
+| Q14 Which timer should never run out? | The augment-pick timer, while the dummies are there | even after the round starts, just keep the dummies alive in training mode instead of making them vanish like in an actual game |
+| Q15 Changing augments after locking in | a) Stay in the augment phase with the dummies as long as I like, and start the round myself<br>b) Yes | if its too hard to allow changing augments later, starting the round manually is fine. If you opt for this, then allow players to take damage in this phase in training mode. |
+| Q16 The “blue flying island” practice mode | Yes, that’s the one | the current training tile just loads a solo game on the embersong map, it does not use this extra map. would be banger if you could give the option to go into either of these. |
+| Q17 Training while in queue | Accept it automatically and take me to the match |  |
+| Q18 Crownwatch | a) Both<br>b) In big team fights | graphics settings are on high, 90% texture streaming quality. the best way to describe it is stutters, the shown fps stays at 144 but its not true. additionally to these fps drop stutters, there is teleporting/rubberbanding in bigger team fights. All maps have this to an extent but crownwatch by far the most. my cpu&graphics card: ryzen 9 7950x and amd radeon rx 7900xt |
+| Q19 Other maps loaded below the map | People said so, and we saw fps drops |  |
+| Q20 Rubber-banding in general | Don’t know | i think older versions were worse, current felt better than old ones. but still happens too often |
+| Q21 Somnia’s ult makes people rubber-band | a) Everyone on screen, even players it didn’t hit<br>b) Yes | idk |
+| Q22 Tufts’ Space (Wing Dive) lag | a) On my own screen when I play Tufts<br>b) No, the slide is part of Tufts | it was reported by player tigga. his ping is pretty low afaik like ~30ms & hes not on wifi |
+| Q23 Astrada: ally and enemy cage colours | a) Yes, exactly the same<br>b) Ally yellow-orange, enemy red<br>c) Yes |  |
+| Q24 Ishir: gun sound on the ult | a) A wish: we want a gun sound on the ult<br>b) When the mark on the enemy pops | yeh. use a shotgun sound but make it not overly loud. also could you colour the hp that an enemy is about to lose from ishir ult differently? like croak ult in battlerite |
+| Q25 Rowan: passive stops healing | a) The green ring around a Sourblossom (E); The arc from Earth Rend (right click); The ult’s overgrowth<br>b) Like the old version: 2% of missing health per second plus 3 per second | most of the time rowan is actually healing correctly from E (sourblossom) overgrowth area and from his M2. It seemed to happen more likely on captains round but not sure. picked augments do not seem connected(?) possibly an ally using spite could have caused it but not sure. it is more like a rare bug. also add this +3 per second to the tooltip. |
+| Q26 Rowan: Propagator’s charge bar | a) Yes, only the bar is wrong<br>b) No |  |
+| Q27 Rowan: Dourling Caltrops | a) On the path Rowan just dashed (behind)<br>b) Root, like now (can’t move, can still cast)<br>c) Thorny, like Iron Thorns | 0.75s root and vines staying 3s is good. make sure the space recast also spawns them when picking that augment |
+| Q28 Rowan: the item with missing text | a) No<br>b) Something else: see my idea below | turn it red, name it "Burning Harvest" and make the effect:  "Using Glade slash on a sourblossom destroys it, applying its damage to enemies in the area of effect". (in other words: m1 a plant to pop it, applying its dot to enemies in its area. however, it does not slow when applied this way. make sure shardpouch does work in combination with it.) |
+| Q29 Wylde: the old RMB | a) Yes, but with different numbers (write them below)<br>b) –<br>c) Yes | 95 damage, 1 ammo, 1 second cooldown, and hold to keep firing should also exist |
+| Q30 Wylde: ammo during the dummy phase | Yes | no |
+| Q31 Ethryn: the third LMB hit | Something else (write it below) | do 40-40-50 |
+| Q32 Ethryn: shield too wide, reflects from behind | a) Only as wide as her body (the shield’s look may be a little wider)<br>b) No | will do. Could you please shrink the shield visual a bit as well, like 15% less wide & 10% less tall to not make it look out of proportion |
+| Q33 Ethryn’s shield and Belroth’s boulder | No, only fix how early the shield reflects it (harder) | the boulder hits other heros at a normal timing, only ethryn shield reflects it wayy too early (and maybe tufts suck thing, not sure). so please fix this specific interaction |
+| Q34 Ethryn’s shield and Wylde’s Fan the Hammers | The bullets come back, each with its normal damage | it is not fan the hammers (shift) that im talking about, the issue is wylde E (shotgun that self knockbacks a bit). normally wylde E deals damage once, but on ethryn shield reflect each of the little projectiles deals the full damage. how much damage exactly im not sure, but easily 500+ it just depends how close he is to ethryn |
+| Q35 Brutus: +100 health | Yes, 1050 |  |
+| Q36 Zoey: LMB heal 48 to 60 | – | i wasnt aware the actual number was 40. So instead, increase her actual healing to 50 and fix the tooltip. |
+| Q37 Zoey: shields | a) Yes<br>b) Keep 125 |  |
+| Q38 Zoey: invisible ult effect | a) Both<br>b) Everyone<br>c) Hellhound colours | i for sure saw it missing on hellhound, it might exist on other skins too not sure. |
+| Q39 Zoey: the ult heals less than it says | Fix the text to say 150 |  |
+| Q40 Fiorne: 0 Bunny Stacks | a) Not sure<br>b) No, it stays broken all match |  |
+| Q41 Rayo: the “red” heirlooms | a) Yes<br>b) A smooth rise to +50% at max range (takes longer to make) |  |
+| Q42 Rayo: standing still for LMB | A shorter draw: stand still 0.25 seconds (like the old version) and wait a bit longer after, same shots per second |  |
+
+### What the answers change
+
+- **Captain wait (Q2):** skip the screen entirely and go straight to augment selection. Exception: a new custom-game
+  option (a checkbox) for a teammate vote on the Captain, about 8 s, no same Captain twice in a row. That option is
+  new lobby UI.
+- **Knock-ups (Q5):** all become stuns (`rename-import` `BP_GE_KnockUp_C` → `BP_GE_Stun_C` in `DoTargetKnockUp`), even
+  though the missing text was the only problem.
+- **Lobby (Q9, Q10, Q11):** real buttons, not chat commands:
+  - map and size;
+  - rounds (a dropdown or < > buttons);
+  - a one-click team shuffle.
+
+  When the size shrinks, the lowest seats move to the "users in lobby" list, and they're kicked if the game starts
+  with them still there. All of this is new lobby UI (FangsBoot or widget edits) plus FangsHost.
+- **Spectator (Q12):** not now.
+- **Training (Q13-Q17):**
+  - both maps, and it shouldn't block a whole game server (Training on the player's PC);
+  - the augment timer never runs out, the player starts the round, the dummies stay alive after it, and damage is
+    taken in that phase;
+  - also in custom Solo lobbies;
+  - a match found while training is accepted automatically.
+
+  New: DPS and damage-dealt numbers, and the dummies' own lag.
+- **Q16 contradicts our finding:** a community member says the TRAINING tile loads a solo game on Embersong, not the island. To
+  check: what our backend or mods do to the Training session's map.
+- **Q18:** a Ryzen 9 7950X + RX 7900 XT on high settings stutters while the fps counter shows 144 (frame pacing, not
+  low fps), plus teleporting in big fights, worst on Crownwatch.
+- **Q22:** Tufts rubber-bands on the Tufts player's own screen at about 30 ms ping on a wired connection, and the
+  slide stays. So the fix is the sync and the network settings, not `VelocityOnFinishMode`.
+- **Q25 contradicts our finding:** Rowan "mostly heals correctly" from Sourblossom overgrowth and M2. We read the Feb
+  passive heal as ≈ 0. Measure it in a match before changing anything. Also: rare, maybe more often in Captain
+  rounds, maybe an ally's Spite; add the +3/s to the tooltip.
+- **Q28:** the screenshot item becomes **Burning Harvest**, a red (combat) heirloom: Glade Slash on a Sourblossom
+  destroys it and applies its damage over time (no slow) to enemies in its area; must work with Shardpouch. New
+  code. a community member ticked "not this item" at Pwyff's Saplings; which item the screenshot shows needs a check.
+- **Q29:** Wylde's RMB: 95 damage, 1 ammo, 1 s cooldown, hold to keep firing (range: the old short range, to confirm).
+- **Q31:** Ethryn's LMB 40-40-50.
+- **Q32:** the reflect zone as narrow as her body, but the slow-and-push zone stays as it is (one box today, so they
+  must be separated). The shield's visual is 15 % narrower and 10 % lower.
+- **Q33:** keep the boulder's size; only the shield's early reflect of it gets fixed (maybe Tufts' suck too).
+- **Q34:** it's **Wylde's E, Lamblaster** (`Gunslinger/Skill4`), not Fan the Hammers. Normally it deals damage once; a
+  reflected Lamblaster deals full damage per pellet (500+ up close). Wanted: the same damage as a normal hit.
+- **Q36:** Zoey's real LMB heal goes to 50, and the tooltip shows the true number.
+- **Q41:** Stormlense rises smoothly to +50 % at max range (code).
+
+### New requests from the answers
+
+- Loadouts in Inventory → Heroes (a tab per hero), the same loadouts as the in-match presets (Q1).
+- Reconnect to custom games (Q7).
+- Somnia "missing most of the artifact choices" (Q8). One cause was fixed in `deploy-2026-10-15-2336`; check
+  whether a community member's games were before it.
+- Ishir: a shotgun sound (not loud) when the ult's mark pops, and the health an enemy is about to lose shown in
+  another colour, like Croak's ult in Battlerite (Q24).
+- Dourling Caltrops also on the Space recast (Q27).
 
 # The six stream reports
 
