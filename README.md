@@ -60,10 +60,10 @@ whatever is missing.
 | UE4SS mods | `tools/ue4ss/` | Small Lua mods for [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS): `FangsBoot` (player side: skip the dead Epic login, use username login), `FangsHost` (server side: dedicated-server setup and replacements for server-only code missing from the client build), `FangsCtl` (remote control for automated tests). |
 | Client config | `tools/run/config/Engine.ini.template` | User-level config that points the game at your backend. No game files are modified. |
 | Patch pak | `tools/patch/` | Gameplay changes to the game's own data (e.g. ability effects and numbers) as one extra pak that the game loads after its own. It is built from your game files at deploy, never committed (`docs/PATCHING.md`). |
-| Research tools | `tools/pak`, `tools/bpdump`, `tools/re` | Pak reader, Blueprint bytecode decompiler (built on [UAssetAPI](https://github.com/atenfyr/UAssetAPI)), and small x64 helpers used to understand the client. |
+| Research tools | `tools/pak`, `tools/bpdump`, `tools/re` | Pak reader, Blueprint bytecode decompiler (built on [UAssetAPI](https://github.com/atenfyr/UAssetAPI)), small x64 helpers used to understand the client, and a Ghidra wrapper that decompiles chosen functions (`tools/re/decomp.sh`). |
 | Notes | `docs/` | Findings about the client and the backend API it expects. |
 
-Third-party tools (UE4SS, UAssetAPI) are downloaded separately into `third_party/` and are not part of
+Third-party tools (UE4SS, UAssetAPI, Ghidra and its JDK) are downloaded separately into `third_party/` and are not part of
 this repository. Game installs live in `clients/` and extracted or generated data in `work/`; both are
 git-ignored.
 
@@ -83,6 +83,9 @@ git clone --depth 1 https://github.com/atenfyr/UAssetAPI third_party/UAssetAPI
 dotnet build -c Release tools/bpdump -o work/bin/bpdump
 work/bin/bpdump/BpDump work/extract work/bpjson <asset.uasset | dir>...  # Blueprint -> JSON
 python3 -I tools/bpdump/bp2txt.py work/bpjson -o work/bp                # JSON -> pseudocode
+# native code: Ghidra 12.1.4 + Temurin JDK 21, unpacked into third_party/ (check the release SHA-256 first)
+#   github.com/NationalSecurityAgency/ghidra/releases, adoptium.net (OpenJDK21U-jdk_x64_linux_hotspot_*.tar.gz)
+tools/re/decomp.sh <exe> -depth 1 <UFunctionName | 0xVA>...            # decompile chosen functions
 
 # end-to-end test on Linux (backend + 2 off-screen clients in a private network namespace;
 # needs Wine, gamescope, a Vulkan GPU, and UE4SS in third_party/ue4ss/dist)

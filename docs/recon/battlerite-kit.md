@@ -24,9 +24,10 @@ own build. The checks are on the Feb 2023 build unless a line names another one.
   own pak tools.
 - **The viewer.** The kit rebuilds the game in another engine to watch abilities. We run the real game under Wine, so
   `tools/run/test_hero.sh` already plays that role.
-- **Ghidra does carry over.** Ghidra 12.1.4 in the kit runs on Linux: the `linux_x86_64` decompiler is included and so is
-  `support/analyzeHeadless`. It needs JDK 21, which isn't installed here. If we adopt it, we download it from upstream
-  and check the release digest, rather than run binaries that came in a zip.
+- **Ghidra does carry over.** It runs on Linux and needs JDK 21. Since 16 Oct, Ghidra 12.1.4 and Temurin JDK 21.0.12.1
+  are in `third_party/`, downloaded from upstream:
+  - the Ghidra zip's SHA-256 matches both GitHub's release digest and the one recorded in the kit;
+  - the JDK matches Adoptium's checksum.
 
 ## What we already do the same way
 
@@ -44,17 +45,17 @@ own build. The checks are on the Feb 2023 build unless a line names another one.
 
 ## Checked in our build because of it
 
-### Our extract is incomplete (the kit's habit: count outputs against an independent list)
+### Our extract was incomplete (the kit's habit: count outputs against an independent list)
 
 - `work/extract-2023-02-15` has 19,364 `.uasset` headers but only 2,580 of the pak's 19,377 `.uexp` files.
 - A tool that reads an asset without its `.uexp` dies inside UAssetAPI with
   `ArgumentOutOfRangeException: count ('-1192')`. It doesn't say which file is missing. This happened with
   `BpDump --raw` on 155 of the 245 montages.
 - Fresh from the pak (`pakextract.py`), all 773 animation assets (montages, sequences) parse, with 0 failures.
-- The missing `.uexp` files total 6.0 GB (`.ubulk`: 3,585 files, 6.4 GB more). Anyone surveying assets should extract
-  what they read from the pak, or the extract should be completed once.
+- **Completed on 16 Oct:** the 25,029 missing files (12.45 GB, mostly `.uexp` and `.ubulk`) were extracted from the pak.
+  All 46,370 pak entries are now in `work/extract-2023-02-15` at their pak sizes.
 
-### Ability timing is cast time + event percent, like Battlerite (decoded, not checked in a match)
+### Ability timing is cast time + event percent, like Battlerite (decoded and decompiled, not checked in a match)
 
 - **Battlerite:** an ability has `CastTime`. Its anticipation animation is stretched to the cast time, and the release
   comes at the execute clip's `NormalisedTimeOfRelease`. That's from the kit's port of `ActionAnimationController`.
@@ -64,7 +65,13 @@ own build. The checks are on the Feb 2023 build unless a line names another one.
   - `UMOBABlueprintLibrary::GetMontagePlayRateFromEvent(Montage, EventPercent, CastTime)` picks the play rate that puts
     the montage's event point at the end of the cast;
   - `GetMontageWaitTime` gives the matching wait.
-  - Their bodies are native and not read yet: the UHT dump only has stubs.
+  - Both decompiled from the Feb exe with `tools/re/decomp.sh` (`FUN_1412fece0` and `FUN_1412fed30`, below their exec
+    thunks):
+    - `rate = Montage.Length × EventPercent ÷ CastTime`, or `1 ÷ CastTime` without a montage;
+    - `MontagePlayTime = Length ÷ rate` and `EventWaitTime = MontagePlayTime × EventPercent`. The header calls the
+      third parameter `CastTime`; the Blueprints pass the event percent there.
+    - `Length` is the montage's virtual at vtable `+0x288`, most likely `UAnimSequenceBase::GetPlayLength`
+      (inference).
 - **No animation sends gameplay events.** We surveyed the notifies of all 773 animation assets:
   - visual effects: `BP_PlayVFX` 122, `TimedNiagaraEffect` 3;
   - footsteps: `Step` 32;
@@ -107,7 +114,7 @@ own build. The checks are on the Feb 2023 build unless a line names another one.
 
 ### For `docs/recon/foreign-heroes.md` (branch `foreign-heroes-recon`, not merged)
 
-From the kit's notes, which are grounded in the decompiled loaders:
+Applied on that branch (`6b5dbdf`). From the kit's notes, which are grounded in the decompiled loaders:
 - **The current gameplay database is `Battlerite/Gameplay.go.bin`.** `Old/<version>/` holds per-gameplay-version copies
   that the client loads for old replays: 155-168 of each set's 184 files are identical to the current ones.
 - **"Kits are data, not code" is only partly true.** A champion consists of:
@@ -141,12 +148,17 @@ From the kit's notes, which are grounded in the decompiled loaders:
 4. **An import-closure check for porting Dec 2023 assets** (ROADMAP "Newer builds"). Walk a Dec asset's imports and
    report the packages, classes and Blueprint functions that are missing or changed in Feb. The kit's
    `build_viewer.py` computes the same kind of closure.
-5. **Ghidra headless, targeted.** Decompile only the functions that `tools/re/xref.py`/`natives.py` find, from a list of
-   addresses. The kit's post-script decompiles every function, which is too slow for an 88 MB exe. First candidates:
-   - `GetMontagePlayRateFromEvent` (the timing formula);
-   - why replication stays at ~20-25 Hz (`docs/recon/server-performance.md`);
-   - the server CloudSave functions compiled out of the client.
-   Needs JDK 21 and Ghidra from upstream (the user's OK to install).
+5. **Ghidra headless, targeted: done** (`tools/re/decomp.sh`, 16 Oct).
+   - It decompiles only the functions you name: by address, or by UFUNCTION name through UHT's tables, the way
+     `natives.py` does. `-depth N` follows the direct calls.
+   - The exe is imported once without auto-analysis (the kit's post-script decompiles every function, too slow for
+     88 MB). A run takes about 20 s.
+   - Every run writes `result.json`. A run without the script's own `targets.json` counts as failed: on the first try
+     Ghidra exited 0 with a script that hadn't compiled.
+   - Gotcha, which `natives.py` shares: a UFUNCTION name pointer also sits in `FClassFunctionLinkInfo` ({construct
+     getter, name}), where the next pointer is the next entry's getter. `decomp.sh` recognises and skips those.
+   - Next targets: why replication stays at ~20-25 Hz (`docs/recon/server-performance.md`); the server CloudSave
+     functions compiled out of the client.
 6. **Run receipts for `tools/run` tests.** A `result.json` with the inputs (build, pak hash, seed), each check and its
    result. A missing receipt counts as a failure. Each wrapper gets one negative test: the kit's AssetRipper wrapper
    first reported a text file as a successful export.
