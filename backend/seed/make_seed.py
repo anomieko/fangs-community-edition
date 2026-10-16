@@ -55,8 +55,8 @@ levels = augments('levels-feb2023.json')
 
 # THE switch for the old Shard system (docs/recon/shards.md). True: on the arena maps Shards are carried and turned in
 # at a Capture Zone and Health Shrines are channeled again, as in Aug 2022 (FangsHost on the game servers reads
-# CEOldShards below), and the nine artifacts made for them are restored ("_old_shards", "_old_health_shrines" in the
-# restore list). False: the Feb 2023 game as shipped (Shards are destroyed, walk-over health pickups) and those nine
+# CEOldShards below), and the artifacts made for them are restored ("_old_shards", "_old_health_shrines" in the
+# restore list). False: the Feb 2023 game as shipped (Shards are destroyed, walk-over health pickups) and those
 # artifacts are parked. Server only: change, deploy.
 OLD_SHARDS = True
 # With the old Shards on: Shard captures also speed the Aspect up for the capturing team (Feb 2023's leftover formula:
@@ -70,9 +70,15 @@ OLD_SHARD_GROUPS = ('_old_shards', '_old_health_shrines')   # restore-list keys 
 # restore-feb2023.json lists DT_MOBALoot rows per hero ("Generic": boons and artifacts, every hero); each is
 # verified in a match before it goes in. Keys starting with "_" are not restored (parked), except OLD_SHARD_GROUPS
 # while OLD_SHARDS (Generic items). itempaths-feb2023.json (tools/re/itempaths.py) gives their objects.
+# Taken out of play on the community's request (a community member's patch list, 16 Oct 2026): stock or restored, never offered.
+REMOVED = {'Generic_BobAndWeave',     # Shardseeker (an old-shard artifact): channel Shards and Health Shrines faster
+           'Generic_FlyPhoenixFly'}   # Wing Rush (a stock Feb artifact): the Aspect speeds up near its owner
+
+
 def restore_groups(restore_file):
     """(hero, rows) of the restore list that are on: hero lists, plus the old-shard groups while OLD_SHARDS."""
     for hero, rows in augments(restore_file).items():
+        rows = [r for r in rows if r not in REMOVED]
         if hero in OLD_SHARD_GROUPS and OLD_SHARDS:
             yield 'Generic', rows
         elif not hero.startswith('_'):
@@ -86,7 +92,7 @@ def offered_augments(all_file, paths_file, restore_file, heroes):
     pools = augments(paths_file)['pools']
     keep = {row for h in ['Generic', *heroes] for row in pools.get(h, [])}
     keep |= {row for _, rows in restore_groups(restore_file) for row in rows}
-    return [a for a in augments(all_file) if a['Item'] in keep]
+    return [a for a in augments(all_file) if a['Item'] in keep - REMOVED]
 
 
 def restored(paths_file, restore_file):
@@ -105,7 +111,11 @@ version_data = {
     # is locked out. Left out: Trio (2 against 1), AI (its bots come from the developers' editor test list,
     # EditorTestClients, which holds no bot in the shipped game: a match against nobody).
     'AvailableCustomModes': ['6vs6', '5vs5', '4vs4', '3vs3', '2vs2', 'Duel', 'Solo'],
-    'AvailableMaps': [{'Name': n, 'Map': m, 'Custom': True} for n, m in maps],
+    # TRAINING asks the create-lobby screen for the map named "Basic Training" (WB_PlayMenu -> WB_CreateLobby.SelectMap,
+    # looked up by GetMapLocName): without this entry the lookup fails and Training ran on the preselected Embersong.
+    # Not "Custom": it stays out of the create-lobby map list.
+    'AvailableMaps': [{'Name': n, 'Map': m, 'Custom': True} for n, m in maps]
+                     + [{'Name': 'Basic Training', 'Map': 'LE_BeautifulCorner', 'Custom': False}],
     # matchmade games: the lobby server picks one at random (GS_Lobby_GameState.GetRandomMap)
     'CasualMaps': [{'Name': n, 'Map': m} for n, m in maps if m in PLAY_MAPS],
     'RankedMaps': [{'Name': n, 'Map': m} for n, m in maps if m in PLAY_MAPS],
