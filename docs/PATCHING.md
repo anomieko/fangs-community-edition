@@ -85,9 +85,14 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `copy-default` | `from` (an asset path), `property`, optional `rename` | Adds a class default copied from the same property of another asset's class defaults, renaming names in it. Example: the ult charm's `GameplayCues` onto the generic charm, with the cue tag renamed. The property must not be set in the target yet, and the copied value must not reference other objects. `build.sh` extracts the `from` asset too. |
 | `insert-call` | `function`, `call`, optional `args`, optional `inherited`, and `at` (`start`, `end`) or `before`/`after` (a call in that function) | Adds a call to one of the Blueprint's own functions as a new statement, e.g. Rowan's `ApplyUnstoppable` at the start of `Lock Pre Dash`. `at: end` puts it before the final return, so it runs on every way out. A parent Blueprint's function (e.g. `Clear Stacks and Listeners` of `BP_GA_Template_Ammo`) needs `"inherited": true` and takes no arguments: its parameters aren't in this asset. `before`/`after` name a call that exactly one statement of the function makes. `args` are literals typed by the called function's parameters (numbers, `true`/`false`, `self`, `nullptr`) or variables the function already uses; no output parameters. Not into an ubergraph yet (see "Rewriting functions"). |
 | `remove-call` | `function`, `call`, `count` | Removes the statements that are a call to `call` (not those that use its result); a jump to a removed statement lands on the next one. |
+| `wrap-call-arg` | `function`, `call`, `arg`, `from`, `count`, `with`, optional `args` | Puts a call around one argument of the matching calls, e.g. `Add_FloatFloat(r, 1.0)` → `Add_FloatFloat(Multiply_FloatFloat(r, 0.5), 1.0)` (Rayo's Stormlense ramp). `with` must already be called somewhere in the asset (its call node is reused); `args` are its further arguments. The statement grows, and the code offsets after it move along. |
+| `replace-call-arg` | `function`, `call`, `arg`, `from`, `count`, `to` (an `insert-code` expression) | Like `set-call-arg`, but the new argument may have another size, e.g. a vector literal `{"vec": [5, 240, 162]}` in place of a property read (Ethryn's shield push keeps its old box). |
+| `rename-prop-ref` | `function`, `from`, `to`, `count`, optional `call` | Points property reads at another property of the same owner, e.g. `MOBAProjectile.ProjectileSphere` → `ProjectileInteractionsSphere`. With `call`, only in statements that make that call. Same size. |
+| `insert-code` | `function`, `at` (`start`, `end`) or `before`/`after` (a call in that function), `code` | New statements, built from a small JSON form (below), inserted as a block; works in ubergraphs. Engine (`/Script`) functions it calls are added as imports when the asset lacks them. |
 
 What a patch can't do (yet):
-- Add functions, or code other than a call to one of the Blueprint's own functions (`insert-call`).
+- Add functions or variables. New statements (`insert-call`, `insert-code`) can only use variables the function or class
+  already has, and engine functions (`/Script`); a reference to another game asset (`/Game`) isn't added.
 - Add a value the asset doesn't store. A value equal to its default isn't saved, so `set-default` and `set-export-prop`
   only change values that are there (`AssetPatch props` shows them).
 - Change the size of a statement in place (`set-call-arg` refuses it); add or remove whole statements instead.
@@ -128,8 +133,23 @@ How it is checked:
   (110.23 s). In the control run without the pak, the same dash gave only the ability lock (109.75-110.38 s). The game
   loaded and ran the rewritten function without errors.
 
+`insert-code`'s JSON form (`tools/patch/AssetPatch/Code.cs`):
+
+| Kind | Form | Bytecode |
+|---|---|---|
+| variable | `{"local": name}`, `{"self": name}` | a copy of an existing use of that variable |
+| literal | `{"str": s}`, `{"bool": b}`, `{"float": f}`, `{"int": n}`, `{"vec": [x, y, z]}` | the constant |
+| pure engine call | `{"math": "/Script/Engine.KismetStringLibrary:Contains", "args": [...]}` | `EX_CallMath` |
+| member call | `{"on": expr, "call": "/Script/Engine.SceneComponent:SetRelativeScale3D", "args": [...]}` | `EX_Context` + `EX_FinalFunction` |
+| statement | `{"do": expr}`, `{"let-obj": local, "value": expr}`, `{"set-bool": {"on": expr, "prop": name}, "value": b}` | the call, `EX_LetObj`, `EX_LetBool` through a context |
+| condition | `{"if": expr, "then": [statements]}` | `EX_JumpIfNot` past the block |
+
+Pure static library functions are called with `EX_CallMath`, as the compiler does (`KismetMathLibrary::…` in the
+decompile); non-pure static ones (`KismetArrayLibrary.Array_Add`) need the library's default object as context, which
+`insert-code` doesn't write yet.
+
 Not done yet:
-- `insert-call` into an ubergraph. The rewrite handles it, but it needs a match test first.
+- `insert-call` into an ubergraph (`insert-code` does it).
 - Copying code from another asset, e.g. a function as the developers fixed it in the Dec 2023 build. Its names,
   imports and property references have to be re-created in the target, as `copy-default` does for values.
 

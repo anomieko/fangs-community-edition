@@ -8,7 +8,8 @@
 //   assetpatch rewrite-check <dir>                       insert + remove a statement in every function; must write back identical
 //
 // Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default, set-export-prop,
-// insert-call, remove-call
+// insert-call, remove-call, wrap-call-arg, insert-code, replace-call-arg,
+// rename-prop-ref
 // (docs/PATCHING.md has the fields).
 // Every edit states what it expects to find ("from", "uses", "count") and fails if the asset differs, so a patch
 // can't silently apply to another build. Edits inside a statement must keep the function's in-memory size; edits
@@ -534,6 +535,10 @@ static partial class Program
         "set-export-prop" => SetExportProp(a, ed),
         "insert-call" => InsertCall(a, ed),
         "remove-call" => RemoveCall(a, ed),
+        "wrap-call-arg" => WrapCallArg(a, ed),
+        "insert-code" => InsertCode(a, ed),
+        "replace-call-arg" => ReplaceCallArg(a, ed),
+        "rename-prop-ref" => RenamePropRef(a, ed),
         var op => throw new PatchError($"unknown op '{op}'"),
     };
 

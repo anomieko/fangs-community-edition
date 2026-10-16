@@ -1,0 +1,16 @@
+# Ethryn's shield steps for tools/run/test_patch.sh (run through tools/run/test_shield.sh): alice (Belroth or Wylde)
+# shoots SHOT into bob's (Ethryn's) raised shield, twice; the game server logs every reflect and alice's health
+# (shield.log next to the server's exe).
+LOADS="lua return dofile(\"Z:$PWD/tools/run/test_shield.lua\")"
+host "$LOADS"; echo "$LOADS" >> $A; echo "$LOADS" >> $B
+sleep 1; host 'lua return S.watch()'
+for round in 1 2; do
+  host 'lua return FCE_PATCH.fill("alice")'; host 'lua return FCE_PATCH.fill("bob")'
+  host "lua return FCE_PATCH.face(\"bob\", \"alice\", ${GAP:-650})"
+  sleep 0.5; echo 'lua return S.aimAt("bob")' >> $A; echo 'lua return S.aimAt("alice")' >> $B
+  sleep 0.6; host 'lua return S.hp("alice")'
+  echo 'lua return FCE_PATCH.fire("ShieldGirl_Skill4")' >> $B
+  sleep 0.2; echo "lua return FCE_PATCH.fire(\"$SHOT\")" >> $A
+  sleep 3; host 'lua return S.hp("alice")'
+  sleep 10
+done
