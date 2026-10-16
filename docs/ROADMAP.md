@@ -13,7 +13,7 @@ The single place that says what is being worked on, what is done but not shipped
   duplicates it and the results get merged back.
 - Nothing secret here (no join code, keys, server credentials): this repo is public.
 
-Last updated: 2026-10-15.
+Last updated: 2026-10-16.
 
 ## Live on the server
 
@@ -130,6 +130,25 @@ Nothing.
    Live since `deploy-2026-10-15-2144`: the launcher checks the mod loader files before and 5 s after starting the
    game, puts back what an antivirus removed and tells the player how to add the exclusion, instead of leaving them at
    "Steam authorization" (a new player's report, 15 Oct; it resolved on the player's side, cause not confirmed).
+
+9. **The community patch list** (a community member's list, 16 Oct, about 60 items: general, artifacts, custom lobby, training,
+   optimization, 12 heroes). State: researched, nothing built. `docs/recon/community-patchnotes.md` has every item with
+   its cause in the Feb build, the plan, the size and the open question.
+   - Questions out (16 Oct): 42 to a community member as a fillable PDF (Q1-Q42, listed in the recon file). The "Michael Mouse
+     fountain" was cleared up through swagnaros: block re-entering the base, as in Aug (the base blockers).
+   - Blocked on a community member's answers for most hero, lobby and training choices.
+   - Ready without answers (the community's numbers match the Feb build):
+     - patch-pak values: Rose's Puzzlebox, Wylde's LMB, Bounty's Reward, Speedshine, Holy Brazier, Mentor's Locket,
+       Blitzhead Arrows, Angerstone Talons, Craterthorns;
+     - backend: the short grace for Training servers.
+   - Next:
+     - `tools/patch/patches/balance.json` with those values, and `test_patch.sh` runs;
+     - AssetPatch `set-export-prop` (Brutus' HP, Ethryn's shield, Belroth's boulder, Astrada's cage colour, the
+       Caltrops box);
+     - A/B tests of the Dec netcode settings, never while people play.
+   - Needs the user's call: several items need new logic the pak can't express (Rowan's heal, Wylde's ammo in the
+     dummy phase, Fiorne's stacks, the training phase and timer, Bo5+, team shuffle, the base blockers). Do them through
+     FangsHost/FangsBoot, against the 15 Oct "pak, not hooks" decision, or through a heavier AssetPatch op?
 
 ## Known issues and small ideas
 
