@@ -31,7 +31,7 @@ that is a different value, a different effect class or a different call.
 |---|---|
 | `tools/patch/patches/<name>.json` | One patch: the build it is for, `enabled`, and the edits per asset, each with a `why` |
 | `tools/patch/build.sh <game-dir> [patch...]` | Builds `work/patch/<build>/FangsCE_P.pak` (`OUT=` elsewhere). With no patches named, it uses the enabled ones for that build |
-| `tools/patch/AssetPatch` (C#, UAssetAPI) | Applies the edits. Its `info`, `calls`, `props` and `roundtrip` commands help you write a patch; `rewrite-check` and `nop` check the code rewriter |
+| `tools/patch/AssetPatch` (C#, UAssetAPI) | Applies the edits. Its `info`, `calls`, `props` and `roundtrip` commands help you write a patch; `rewrite-check`, `reshape-check` and `nop` check the code rewriter |
 | `tools/pak/pakwrite.py` | Writes the pak: v11, unencrypted, laid out like UnrealPak's |
 | `server/install-paks.sh` | Puts the paks of `FANGS_PAKS` into a copy of the game and removes the ones it put there before |
 | `FANGS_PAKS=<dir>` | Patch paks for game servers (`run-host.sh`), test clients (`tools/run/headless.sh`) and local play |
@@ -79,18 +79,21 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `set-default` | `property`, `from`, `to` | A float, int or bool in the class defaults (`Default__<Class>_C`). Only values stored in that class's own defaults (the tool says "found 0" otherwise). For an ability's `Base…`/`Modified…` pair, set both: `ResetAbilityAttributes` derives the modified value from the base one. |
 | `rename-call` | `from`, `to`, `count`, optional `function` | Calls to a Blueprint function of another class, e.g. `BP_FL_MOBA_AbilitySystemFunctionLibrary_C.MakeRootEffectSpec` → `MakeStunEffectSpec`. These calls are by name (`EX_VirtualFunction`) and resolved when they run. The new function must take the same arguments. |
 | `rename-import` | `from`, `to`, `uses` | A reference to another object, e.g. a `TSubclassOf` default from `BP_GE_Root_C` to `BP_GE_Stun_C`. Rename the class, its `Default__` object and its package together. Imports whose class is the renamed one are updated too: the game checks an import's class. |
-| `set-call-arg` | `function`, `call`, `arg`, `from`, `to`, `count`, optional `match` | One argument of the matching calls in one function: a number, `true`/`false`, or a variable that function already uses. A byte or int literal stays one (`VelocityOnFinishMode` `0` → `1`), so the function keeps its size. `match` (`{"<arg index>": "<text>"}`) narrows the calls down. Arguments are written the way `AssetPatch calls` prints them. |
+| `set-call-arg` | `function`, `call`, `arg`, `from`, `to`, `count`, optional `match` | One argument of the matching calls in one function: a number, `true`/`false`, a variable that function already uses, or `self.<name>`, a variable of the Blueprint's class. A byte or int literal stays one (`VelocityOnFinishMode` `0` → `1`). An argument of another size (a variable for a number) moves the code after it; `Reshape` moves the offsets (see "Rewriting functions"). `match` (`{"<arg index>": "<text>"}`) narrows the calls down. Arguments are written the way `AssetPatch calls` prints them. |
 | `replace-text` | `key`, `from`, `to`, optional `count` (1) | Text in a string table entry, e.g. a tooltip in `UI/Localization/LOC_EN_*`. Match the raw text, including its `<RichText…>` markup. The game ships English only. |
 | `set-export-prop` | `export`, `path`, `from`, `to` | One value anywhere in the asset: a component template (`wer_GEN_VARIABLE`), a value nested in the class defaults (a gameplay effect's `Modifiers[0].ModifierMagnitude.ScalableFloatMagnitude.Value`), a data asset's field. `export` is the export's name, or `<outer>.<name>` if several share it. `path` joins property names with dots; `[i]` picks an array element; a Vector, Rotator, Vector2D or LinearColor ends in a component (`BoxExtent.Y`, `ColorOptions.Color.B`). Values: numbers, `true`/`false`, enum names as `AssetPatch props` prints them (`"EGameplayModOp::Override"`). `AssetPatch props` lists the paths. |
 | `copy-default` | `from` (an asset path), `property`, optional `rename` | Adds a class default copied from the same property of another asset's class defaults, renaming names in it. Example: the ult charm's `GameplayCues` onto the generic charm, with the cue tag renamed. The property must not be set in the target yet, and the copied value must not reference other objects. `build.sh` extracts the `from` asset too. |
 | `insert-call` | `function`, `call`, optional `args`, optional `inherited`, and `at` (`start`, `end`) or `before`/`after` (a call in that function) | Adds a call to one of the Blueprint's own functions as a new statement, e.g. Rowan's `ApplyUnstoppable` at the start of `Lock Pre Dash`. `at: end` puts it before the final return, so it runs on every way out. A parent Blueprint's function (e.g. `Clear Stacks and Listeners` of `BP_GA_Template_Ammo`) needs `"inherited": true` and takes no arguments: its parameters aren't in this asset. `before`/`after` name a call that exactly one statement of the function makes. `args` are literals typed by the called function's parameters (numbers, `true`/`false`, `self`, `nullptr`) or variables the function already uses; no output parameters. Not into an ubergraph yet (see "Rewriting functions"). |
 | `remove-call` | `function`, `call`, `count` | Removes the statements that are a call to `call` (not those that use its result); a jump to a removed statement lands on the next one. |
+| `set-name-const` | `function`, `from`, `to`, `count` | Name constants in one function, e.g. a gameplay tag literal: `Data.Heal` → `Data.Heal.MissingMultiple` (a SetByCaller tag), `VFXPack.Skill1.AOEVFX` → `VFXPack.Skill2.AugmentVFX` (another effect of the hero's VFX pack). Same size. |
+| `set-branch` | `function`, `call`, optional `match`, `from`, `to` (`true`/`false`), optional `count` (1) | The constant branch (`if (!true)` / `if (!false)`) right before the statement that calls `call` with `match`ing arguments, e.g. the dash payload flag `AddGameplayTag(…, Event.Identifiers.CanBeCrowdControlled)` behind `if (!true)`: `false` skips the statement. One byte. |
+| `insert-copy` | `function`, `copy`, optional `match`, optional `args`, `before`/`after`, optional `anchor-match` | Inserts a copy of the one statement that calls `copy` (`match` narrows it by its arguments), with some arguments of the copied call changed (`{"<index>": "<new>"}`: as `set-call-arg` makes them; a gameplay tag literal takes the new tag), before or after the one statement that calls another function (`anchor-match` narrows it). Example: a second `AssignTagSetByCallerMagnitude` on the same spec with another tag and value. The copy may hold no code offsets. |
 
 What a patch can't do (yet):
-- Add functions, or code other than a call to one of the Blueprint's own functions (`insert-call`).
+- Add functions, or code other than a call to one of the Blueprint's own functions (`insert-call`) or a copy of one of
+  the function's statements with other arguments (`insert-copy`).
 - Add a value the asset doesn't store. A value equal to its default isn't saved, so `set-default` and `set-export-prop`
   only change values that are there (`AssetPatch props` shows them).
-- Change the size of a statement in place (`set-call-arg` refuses it); add or remove whole statements instead.
 
 ## Rewriting functions
 
@@ -108,6 +111,11 @@ in these places:
 
 `EX_Context`'s skip count is the size of its own sub-expression. Statements that move unchanged keep it.
 
+`Reshape` (`tools/patch/AssetPatch/MoreOps.cs`) is the same for a statement changed in place, e.g. `set-call-arg`
+putting a variable where a number was: offsets into unchanged statements move by the change before them; an offset
+into the changed statement must be the start or the end of an expression that is still there (a switch's case or
+its end) and moves with that expression, or the edit is refused.
+
 A jump to the statement where code is inserted lands on the inserted code, so the new code runs wherever that
 statement used to.
 
@@ -117,6 +125,9 @@ How it is checked:
   the asset must write back byte for byte. On the Feb build's `MOBA/Content` (16 Oct): 1,779 assets, 20,486
   functions, 61,458 runs, 0 failed. Every kind of offset above was moved, except `EventGraphCallOffset`, which this
   build doesn't set.
+- `AssetPatch reshape-check <dir>`: in every function with a number argument and a variable, the number becomes the
+  variable (another size, through `Reshape`) and then the number again; the asset must write back byte for byte. On
+  the Feb build (16 Oct): 3,174 functions, 0 failed (37 of them with a switch's offsets inside the changed statement).
 - `AssetPatch nop <asset> <function> <statement> <out-dir>` writes a copy with that 1-byte statement in place. Its
   decompile (`tools/bpdump`) must equal the original's, with the moved offsets set back. Checked with the statement
   at the start of the ubergraph of `GS_MOBA_Battle`, `BP_PC_MOBA_PlayerController`, `WB_HUD`, `WB_PreRoundSelection`,

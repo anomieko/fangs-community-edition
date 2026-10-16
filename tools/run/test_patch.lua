@@ -13,6 +13,14 @@
 --   track(name, s)   server: the hero's speed and Bunny Stacks every 50 ms for s seconds, to track.log.
 --   regrant(name)    server: Fiorne's stack system removed and granted again mid-round, as the passive's safety net does.
 --   chain(p, n, ms)  client: fire(p) n times, ms apart (game thread), results to chain.log.
+--   health(name)     server: the hero's health, also to patchwatch.log.
+--   hurt(name, f)    server: the hero's health set to f of its maximum.
+--   place(name, cls) server: the hero onto the newest actor of class path cls (e.g. a Sourblossom).
+--   hptrack(n, s, l) server: the hero's health and heal effects every 0.25 s for s seconds, labelled l, to hp.log.
+--   caltrops(name)   server: the Dourling Caltrops boxes: where they lie from the hero (ahead/behind), drawn or not.
+--   stun(name, s)    server: a stun of s seconds on the hero, as an enemy's ability applies it.
+--   equip(path...)   client: once the augment phase is on, the own hero equips these items by tier, then locks in.
+--   key(n)           client: presses and releases ability key n (BP_AC_InputManager.QueueInput: 3 = Space).
 FCE_PATCH = FCE_PATCH or {}
 local T = FCE_PATCH
 
@@ -48,7 +56,8 @@ end
 local CC = { BP_GE_Stun = "STUN", BP_GE_Root = "ROOT", BP_GE_Charm = "CHARM", BP_GE_BookMage_Skill3_Charm = "CHARM",
              BP_GE_Fear = "FEAR", BP_GE_KnockUp = "KNOCKUP", BP_GE_Incapacitate = "INCAP",
              BP_GE_LockAbilities = "ABILITY-LOCK", BP_GE_LockCastDebuff = "CAST-LOCK",
-             BP_GE_AntiDisplacement_Duration = "ANTI-CC" }
+             BP_GE_AntiDisplacement_Duration = "ANTI-CC", BP_GE_AntiRoot_Duration = "ANTI-ROOT",
+             BP_GE_AntiDisplacementandCC_Duration = "ANTI-CC+DISPLACEMENT" }
 local heroes, lookedUp = {}, -1
 
 local function pname(p) local ok, n = pcall(function() return p.PlayerState:GetPlayerName():ToString() end); return ok and n or "?" end
@@ -205,6 +214,112 @@ function T.regrant(name)
     return string.format("regrant: %s, Bunny Stacks %d", name, st)
 end
 
+
+-- Every actor of one class (class path), through the world's actor list (tests only).
+local function actorsOf(ctx, path)
+    local cls = loadClass(path)
+    if not valid(cls) then return {} end
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local res, out = {}, {}
+    GPS:GetAllActorsOfClass(ctx, cls, res)
+    local function add(o)
+        if not valid(o) then pcall(function() o = o:get() end) end
+        if valid(o) then out[#out + 1] = o end
+    end
+    local list = res.OutActors
+    if list == nil and res[1] ~= nil then list = res end
+    if type(list) == "table" then for _, o in pairs(list) do add(o) end
+    elseif list ~= nil then pcall(function() list:ForEach(function(_, e) add(e) end) end) end
+    return out
+end
+
+function T.health(name)
+    local p = hero(name)
+    if not valid(p) then return "health: no hero " .. name end
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local s = string.format("%s: health %.1f/%.0f", name, set.Health.CurrentValue, set.MaxHealth.CurrentValue)
+    log("        " .. s)
+    return "health: " .. s
+end
+
+function T.hurt(name, f)   -- the hero's health to f of its maximum (base and current value, as fill() does for mana)
+    local p = hero(name)
+    if not valid(p) then return "hurt: no hero " .. name end
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local v = set.MaxHealth.CurrentValue * f
+    set.Health.BaseValue = v; set.Health.CurrentValue = v
+    log(string.format("        %s's health set to %.0f", name, v))
+    return string.format("hurt: %s health %.0f", name, v)
+end
+
+function T.place(name, path)   -- the hero onto the newest actor of a class
+    local p = hero(name)
+    if not valid(p) then return "place: no hero " .. name end
+    local list = actorsOf(p, path)
+    local a = list[#list]
+    if not valid(a) then return "place: no " .. path:match("([^.]+)$") end
+    local l = a:K2_GetActorLocation()
+    p:K2_SetActorLocation({ X = l.X, Y = l.Y, Z = p:K2_GetActorLocation().Z }, false, {}, true)
+    log(string.format("        %s placed on %s (%d of them)", name, a:GetClass():GetFName():ToString(), #list))
+    return string.format("place: %s on %s", name, a:GetFName():ToString())
+end
+
+function T.hptrack(name, seconds, label)   -- health and heal effects every 0.25 s, to hp.log
+    local p = hero(name)
+    if not valid(p) then return "hptrack: no hero " .. name end
+    local f = io.open("hp.log", "a")
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local t0, n, last = now(p), 0, set.Health.CurrentValue
+    f:write(string.format("== %s %s from %.2f, health %.1f/%.0f\n", name, label or "", t0, last, set.MaxHealth.CurrentValue))
+    LoopInGameThreadWithDelay(250, function()
+        n = n + 1
+        if n > seconds * 4 then
+            if n == seconds * 4 + 1 then f:close() end
+            return
+        end
+        if not valid(p) then return end
+        local e = effectsOf(p)
+        local hp = set.Health.CurrentValue
+        f:write(string.format("%6.2f health %7.1f (%+5.1f)  passive-heal %d overgrowth %d arc-heal %d\n", now(p) - t0, hp, hp - last,
+            e.BP_GE_DotHealFourPerSec or 0, e.BP_GE_WoodenSword_Skill4_Creep or 0, e.BP_GE_WoodenSword_HealingOverTime or 0))
+        last = hp
+        f:flush()
+    end)
+    return "hptrack " .. name .. " " .. (label or "")
+end
+
+function T.caltrops(name)   -- the Dourling Caltrops boxes, measured from the hero along its facing
+    local p = hero(name)
+    if not valid(p) then return "caltrops: no hero " .. name end
+    local list = actorsOf(p, "/Game/Gameplay/Abilities/Player/WoodenSword/Skill1/Items/BP_TA_Woodensword_DourlingCaltrops.BP_TA_Woodensword_DourlingCaltrops_C")
+    local l, yaw = p:K2_GetActorLocation(), math.rad(p:K2_GetActorRotation().Yaw)
+    local out = {}
+    for _, a in ipairs(list) do
+        local c = a:K2_GetActorLocation()
+        local ahead = (c.X - l.X) * math.cos(yaw) + (c.Y - l.Y) * math.sin(yaw)
+        local hidden = "?"
+        pcall(function() hidden = tostring(a.Box.bHiddenInGame) end)
+        out[#out + 1] = string.format("%+.0f ahead, box hidden %s", ahead, hidden)
+    end
+    local s = string.format("%s: %d Dourling Caltrops [%s]", name, #list, table.concat(out, "; "))
+    log("        " .. s)
+    return "caltrops: " .. s
+end
+
+function T.stun(name, seconds)   -- a stun on the hero, made and applied the way abilities do it
+    local p = hero(name)
+    if not valid(p) then return "stun: no hero " .. name end
+    loadClass("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
+    local lib = StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_AbilitySystemFunctionLibrary.Default__BP_FL_MOBA_AbilitySystemFunctionLibrary_C")
+    if not valid(lib) then return "stun: no ability library" end
+    local ok, err = pcall(function()
+        local spec = lib:MakeStunEffectSpec(p, seconds, p)
+        lib:ApplyEffectSpecToTarget(p, p, spec, p)
+    end)
+    log(string.format("        %s stunned for %.2f s%s", name, seconds, ok and "" or (": " .. tostring(err))))
+    return ok and string.format("stun: %s %.2f s", name, seconds) or ("stun failed: " .. tostring(err))
+end
+
 -- ---------------------------------------------------------------------------------------------- client
 function T.count(className)   -- live objects of a class, e.g. a gameplay cue's actor (an object scan)
     local n = 0
@@ -239,6 +354,57 @@ function T.chain(pattern, n, ms)   -- client: fire(pattern) n times, ms apart, e
         f:write(string.format("%s %d: %s\n", os.date("%H:%M:%S"), i, T.fire(pattern))); f:flush()
     end)
     return string.format("chain: %s x%d, %d ms apart", pattern, n, ms)
+end
+
+function T.equip(...)   -- once the augment phase is on: the own hero equips these items by tier, then locks in
+    local paths, done = { ... }, false
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local f = io.open("equip.log", "a")
+    LoopInGameThreadWithDelay(1000, function()
+        if done then return end
+        local pc = GPS:GetPlayerController(gi, 0)
+        local gs = GPS:GetGameState(gi)
+        if not (valid(pc) and valid(pc.Pawn) and valid(gs)) then return end
+        local okAt, at = pcall(function() return gs:IsAtItemSelection() end)
+        if not (okAt and at) then return end
+        done = true
+        local hud, ps = pc.WB_HUDGamplayRef, pc.PlayerState
+        local pre, taken, out = hud.PreRoundSelection, {}, {}
+        for _, path in ipairs(paths) do
+            local it = loadClass(path) or StaticFindObject(path)
+            local name = path:match("([^.]+)$")
+            if not valid(it) then out[#out + 1] = name .. ": not loaded" else
+                local tier = it.ItemTier
+                local s
+                for _, c in ipairs(({ [2] = { 1, 4 }, [0] = { 2, 4 }, [1] = { 3, 4 }, [4] = { 5 }, [5] = { 6 } })[tier] or {}) do
+                    if not taken[c] then s = c break end
+                end
+                if not s then out[#out + 1] = name .. ": no free slot (tier " .. tier .. ")" else
+                    taken[s] = true
+                    local slot = pre["PlayerItem" .. s]
+                    hud.SelectedSlot = slot; hud.CurrentTierFilter = tier
+                    pcall(function() hud:RefreshItemStash() end)
+                    local ok, err = pcall(function() slot:SetItem(it, true) end)
+                    out[#out + 1] = name .. " -> slot " .. s .. (ok and "" or (" failed: " .. tostring(err)))
+                end
+            end
+        end
+        pcall(function() ps:ReportetFinishedItemSelectOnServer(false) end)
+        pcall(function() pc:PlayerLockedIn() end)
+        f:write(os.date("%H:%M:%S") .. " equipped: " .. table.concat(out, "; ") .. "\n"); f:close()
+    end)
+    return "equip: waiting for the augment phase"
+end
+
+function T.key(n)   -- press and release ability key n, as the player controller does for a key
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local p = GPS:GetPlayerController(gi, 0).Pawn
+    if not valid(p) then return "key: no pawn" end
+    p.BP_AC_InputManager:QueueInput(n, true)
+    ExecuteInGameThreadWithDelay(80, function() if valid(p) then p.BP_AC_InputManager:QueueInput(n, false) end end)
+    return "key " .. n
 end
 
 return "test_patch helpers"
