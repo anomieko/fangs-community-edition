@@ -4,7 +4,7 @@ Each host serves one custom lobby or one matchmade game: it starts on the lobby 
 heroes, and the server travels to the arena. When the match is over (everyone gone) the host is
 stopped and its port freed. Hosts report map/player-count through FangsHost's status file.
 """
-import asyncio, json, os, signal, time
+import asyncio, json, os, re, signal, time
 from pathlib import Path
 
 READY_LINE = 'IpNetDriver listening on port {port}'
@@ -29,6 +29,8 @@ class Host:
         self.match_over = None   # when its match's result arrived: no longer listed or joinable, stopped soon after
         self.reserved = False    # booted by allocate() for its own request: never handed to another one as idle
         self.peak_players = 0    # most players connected at once (a Ranked result: did every matched player join?)
+        self.solo = False        # a 1-player session (Training, a Solo lobby): nobody else to wait for once its player left
+        self.players_map = None  # the map its players were last seen on (a player still loading a new map isn't gone)
 
     @property
     def log_path(self):
@@ -47,21 +49,23 @@ class HostManager:
     and restarts a server that dies while booting (a few % of starts under Wine die early).
 
     Servers are stopped when nobody needs them: a lobby everyone left (before its match started) after
-    `lobby_grace`, a match everyone left after `idle_grace` (time to reconnect), a server nobody joined after
-    `unused_timeout`. When every slot is taken, the longest-empty server is stopped for a new one."""
+    `lobby_grace`, a match everyone left after `idle_grace` (time to reconnect), a solo session (Training, a Solo
+    lobby) its player left after `solo_grace`, a server nobody joined after `unused_timeout`. When every slot is taken,
+    the longest-empty server is stopped for a new one."""
 
     def __init__(self, *, game_dir, inst_root, ports, run_script, backend_addr, log, data_dir,
-                 ready_timeout=180, idle_grace=180, lobby_grace=20, unused_timeout=180, post_match=120, standby=1,
-                 attempts=3):
+                 ready_timeout=180, idle_grace=180, lobby_grace=20, solo_grace=10, unused_timeout=180, post_match=120,
+                 standby=1, attempts=3):
         self.game_dir, self.inst_root, self.ports = game_dir, Path(inst_root), list(ports)
         self.run_script, self.backend_addr, self.log, self.data_dir = run_script, backend_addr, log, data_dir
         self.ready_timeout, self.idle_grace, self.unused_timeout = ready_timeout, idle_grace, unused_timeout
-        self.lobby_grace, self.post_match = lobby_grace, post_match
+        self.lobby_grace, self.solo_grace, self.post_match = lobby_grace, solo_grace, post_match
         self.standby, self.attempts = standby, attempts
         self.standby_retry = 60  # seconds before a standby whose boots all failed is tried again
         self.hosts = {}          # id -> Host
         self.on_stopped = []     # callbacks(host)
         self.on_result = []      # callbacks(host, result): a finished match (FangsHost's fangshost_result-*.json)
+        self.on_loadout = []     # callbacks(host, user_id, loadouts): a preset saved in a match (fangshost_loadout-*.json)
         self._booting = 0        # standby servers being started
         self._allocating = 0     # allocate() calls still waiting for their server
         self._releasing = set()  # ports of stopped servers whose process hasn't exited yet
@@ -112,6 +116,7 @@ class HostManager:
         finally:
             self._allocating -= 1
         host.session_id, host.started, host.reserved, host.peak_players = session_id, time.time(), False, 0
+        host.solo, host.players_map = False, None
         if match:
             (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_match.json').write_text(json.dumps(match))
         self.replenish()
@@ -132,18 +137,25 @@ class HostManager:
                 return None
             await asyncio.sleep(0.5)
 
+    def grace(self, host, st):
+        """How long an emptied server waits for its players: a solo session whose player was seen on this map and
+        left `solo_grace`, a lobby `lobby_grace`, a match `idle_grace` (players are empty for a while when they load
+        the arena or reconnect)."""
+        if host.solo and host.players_map == st.get('map'):
+            return self.solo_grace
+        in_lobby = st.get('map', '').endswith('LE_Lobby_Map') and not st.get('launched')
+        return self.lobby_grace if in_lobby else self.idle_grace
+
     def empty_for(self, host, now=None):
         """Seconds an assigned server has been empty past its grace (None if it has players or isn't assigned): the
-        same graces as _watch (a lobby `lobby_grace`, a match `idle_grace`: players are empty for a while when they
-        load the arena or reconnect). A new server gets 90 s for its players to arrive."""
+        same graces as _watch. A new server gets 90 s for its players to arrive."""
         now = now or time.time()
         st = host.status
         if host.session_id is None or not host.ready.is_set() or st.get('players', 0):
             return None
         if not host.had_players:
             return now - host.started - 90
-        in_lobby = st.get('map', '').endswith('LE_Lobby_Map') and not st.get('launched')
-        return now - (host.empty_since or now) - (self.lobby_grace if in_lobby else self.idle_grace)
+        return now - (host.empty_since or now) - self.grace(host, st)
 
     async def _reclaim(self):
         """Every slot is taken: stop the server that has been empty the longest past its grace, if any."""
@@ -229,6 +241,30 @@ class HostManager:
                 except Exception as e:   # one bad result must not stop the server's watcher
                     self.log({'host': host.id, 'event': 'match result failed', 'error': repr(e)})
 
+    LOADOUT_FILE = re.compile(r'^fangshost_loadout-([0-9a-f]{32})-\d+\.json$')
+
+    def collect_loadouts(self, host, limit=65536):
+        """Hands every preset save FangsHost wrote (the in-match preset panel: one JSON object per file, the player's id
+        in the name) to on_loadout once, then deletes it. Too big, not an object or a strange name: kept as .bad."""
+        for f in sorted((host.inst / 'MOBA' / 'Binaries' / 'Win64').glob('fangshost_loadout-*.json')):
+            m = self.LOADOUT_FILE.match(f.name)
+            try:
+                if not m or f.stat().st_size > limit:
+                    raise ValueError('name or size')
+                value = json.loads(f.read_text())
+                if not isinstance(value, dict):
+                    raise ValueError('not an object')
+            except (OSError, ValueError) as e:
+                self.log({'host': host.id, 'event': 'unreadable preset save', 'file': f.name, 'error': str(e)})
+                f.rename(f.with_suffix('.bad'))
+                continue
+            f.unlink(missing_ok=True)
+            for cb in self.on_loadout:
+                try:
+                    cb(host, m.group(1), value)
+                except Exception as e:   # one bad save must not stop the server's watcher
+                    self.log({'host': host.id, 'event': 'preset save failed', 'error': repr(e)})
+
     async def _ready_or_exit(self, host):
         waiter = asyncio.create_task(host.ready.wait())
         exited = asyncio.create_task(host.proc.wait())
@@ -290,18 +326,21 @@ class HostManager:
                     self.log({'host': host.id, 'event': 'ready', 'port': host.port})
                 continue
             self.collect_results(host)
+            self.collect_loadouts(host)
             st = host.status
             players = st.get('players', 0)
             host.peak_players = max(host.peak_players, players)
             if players:
                 self._perf(host, st)
-                host.had_players, host.empty_since = True, None
+                host.had_players, host.empty_since, host.players_map = True, None, st.get('map')
             elif host.empty_since is None:
                 host.empty_since = time.time()
             idle = time.time() - (host.empty_since or time.time())
             in_lobby = st.get('map', '').endswith('LE_Lobby_Map') and not st.get('launched')
-            if host.had_players and idle > (self.lobby_grace if in_lobby else self.idle_grace):
-                await self.stop(host, 'everyone left the lobby' if in_lobby else 'match over / empty'); return
+            if host.had_players and idle > self.grace(host, st):
+                reason = ('solo player left' if host.solo and host.players_map == st.get('map')
+                          else 'everyone left the lobby' if in_lobby else 'match over / empty')
+                await self.stop(host, reason); return
             # a finished match: the end screen gets `post_match` seconds, then its server goes (players still on it
             # return to the menu), sooner once everyone left; it is no longer listed or joinable (fangs_backend)
             if host.match_over and (time.time() - host.match_over > self.post_match or (host.had_players and idle > 10)):
@@ -356,6 +395,7 @@ class HostManager:
         # the heartbeat of a stopped server must not count as players (deploy.sh's busy check reads these files)
         (host.inst / 'MOBA' / 'Binaries' / 'Win64' / 'fangshost_status.json').unlink(missing_ok=True)
         self.collect_results(host)
+        self.collect_loadouts(host)
         for cb in self.on_stopped:
             cb(host)
         self.replenish()

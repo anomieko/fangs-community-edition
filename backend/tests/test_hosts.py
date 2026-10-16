@@ -620,6 +620,36 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertTrue(hm.is_live(host))
         self.assertEqual(self.reasons(), [])
 
+    async def test_solo_session_stops_soon_after_its_player_left(self):
+        # Training and Solo lobbies: nobody else to wait for (Sheepa: a left Training blocked a slot for 3 minutes)
+        hm = self.manager(solo_grace=10)
+        host = await self.playing(hm, players=1, game_map=ARENA, launched=True)
+        host.solo = True
+        await self.emptied(host, game_map=ARENA, launched=True)
+        self.clock.advance(8)
+        await self.look(host, 2)
+        self.assertTrue(hm.is_live(host))
+        self.clock.advance(5)
+        await self.until(lambda: self.stopped, 'stopped')
+        self.assertEqual(self.reasons(), ['solo player left'])
+        self.assert_clean(hm)
+
+    async def test_solo_player_still_loading_the_arena_is_not_gone(self):
+        # on the way from the lobby to the arena the server counts nobody until the player has loaded it
+        hm = self.manager(solo_grace=10, idle_grace=60)
+        host = await self.playing(hm, players=1)
+        host.solo = True
+        await self.emptied(host, game_map=ARENA, launched=True)
+        self.clock.advance(30)
+        await self.look(host, 2)
+        self.assertTrue(hm.is_live(host))      # idle_grace, not solo_grace: not seen on this map yet
+        self.status(host, 1, game_map=ARENA, launched=True)
+        await self.until(lambda: host.empty_since is None, 'player arrived')
+        await self.emptied(host, game_map=ARENA, launched=True)
+        self.clock.advance(11)
+        await self.until(lambda: self.stopped, 'stopped')
+        self.assertEqual(self.reasons(), ['solo player left'])
+
     async def test_server_nobody_joined_stops_after_unused_timeout(self):
         hm = self.manager(ports=2, standby=1, unused_timeout=60)
         host = await hm.allocate('lobby')
@@ -652,6 +682,16 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(c.port, a.port)
         self.assert_clean(hm, live=[b, c])
 
+    async def test_full_slots_reclaim_an_emptied_solo_server_after_solo_grace(self):
+        hm = self.manager(solo_grace=10, idle_grace=180)   # production's graces
+        a = await self.playing(hm, 'a', players=1, game_map=ARENA, launched=True)
+        a.solo = True
+        await self.emptied(a, game_map=ARENA, launched=True)
+        self.clock.advance(11)
+        b = await hm.allocate('b')
+        self.assertEqual(self.stopped, [a])
+        self.assertEqual(b.port, a.port)
+
     async def test_full_slots_reclaim_a_server_nobody_came_to(self):
         hm = self.manager(unused_timeout=180)
         a = await hm.allocate('a')
@@ -678,6 +718,39 @@ class Hosts(Lifecycle, unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(RuntimeError, 'no free game server slots'):
             await hm.allocate('c')
         self.assertTrue(hm.is_live(b))
+
+    # ------------------------------------------------------------ preset saves (the in-match preset panel)
+
+    def loadout_file(self, host, name, text):
+        f = self.win64(host.id) / name
+        f.with_suffix('.tmp').write_text(text)
+        f.with_suffix('.tmp').replace(f)
+        return f
+
+    async def test_preset_save_goes_to_on_loadout_once(self):
+        hm = self.manager()
+        saved = []
+        hm.on_loadout.append(lambda h, uid, v: saved.append((h, uid, v)))
+        host = await self.playing(hm)
+        uid = 'a' * 32
+        f = self.loadout_file(host, f'fangshost_loadout-{uid}-1.json', '{"FireMage": {"CurrentLoadoutIndex": 1}}')
+        await self.until(lambda: saved, 'preset save collected')
+        self.assertEqual(saved, [(host, uid, {'FireMage': {'CurrentLoadoutIndex': 1}})])
+        self.assertFalse(f.exists())
+        await self.look(host, 2)
+        self.assertEqual(len(saved), 1)
+
+    async def test_bad_preset_saves_are_kept_aside(self):
+        hm = self.manager()
+        saved = []
+        hm.on_loadout.append(lambda h, uid, v: saved.append(uid))
+        host = await self.playing(hm)
+        bad = [self.loadout_file(host, 'fangshost_loadout-NotAPlayerId-1.json', '{}'),   # not a player id
+               self.loadout_file(host, f'fangshost_loadout-{"b" * 32}-2.json', '[1, 2]'),  # not an object
+               self.loadout_file(host, f'fangshost_loadout-{"c" * 32}-3.json', '{"x": "' + 'y' * 70000 + '"}')]
+        await self.until(lambda: all(f.with_suffix('.bad').exists() for f in bad), 'bad saves set aside')
+        self.assertEqual(saved, [])
+        self.assertEqual(len(self.events('unreadable preset save')), 3)
 
     # ------------------------------------------------------------ backend shutdown
 
@@ -817,6 +890,62 @@ class AppHosts(Lifecycle, BackendCase):
         self.assertEqual(len(self.app['store'].data['player_records'][token['user_id']]['PROFILE_HISTORY_KEY']
                              ['Matches']), 1)
         self.assertEqual(await self.session_status(sid), 404)
+
+    async def test_solo_game_is_marked_and_stopped_when_its_owner_starts_another(self):
+        # TRAINING and Solo lobbies ask for max_player 1; the player's next game replaces a still running solo one
+        token = await self.login('alice')
+        r = await self.client.post(f'/sessionbrowser/namespaces/{fb.NAMESPACE}/gamesession', headers=self.auth(token),
+                                   json={'session_type': 'dedicated',
+                                         'game_session_setting': {'mode': 'custom', 'max_player': 1}})
+        sid = (await r.json())['session_id']
+        ws = await self.client.ws_connect('/lobby', protocols=('wss',), headers=self.auth(token))
+        self.addAsyncCleanup(ws.close)
+        await ws.send_str(fb.lobby_frame(type='createDSRequest', id='1', matchId=sid))
+        await self.frame(ws, 'dsNotif')
+        host = self.app['sessions'][sid]['_host']
+        self.assertTrue(host.solo)
+        self.status(host, 1, game_map=ARENA, launched=True)
+        await self.until(lambda: host.had_players, 'player seen')
+        await self.client.post(f'/sessionbrowser/namespaces/{fb.NAMESPACE}/gamesession', headers=self.auth(token),
+                               json={'session_type': 'dedicated', 'game_session_setting': {'mode': 'custom'}})
+        await self.gone(host)
+        self.assertEqual(self.reasons(), ['owner created a new lobby'])
+
+    async def test_bigger_lobby_is_not_solo_and_its_match_survives_a_new_lobby(self):
+        sid, _ = await self.lobby('alice')
+        host = self.app['sessions'][sid]['_host']
+        self.assertFalse(host.solo)
+        self.status(host, 2, game_map=ARENA, launched=True)
+        await self.until(lambda: host.had_players, 'players seen')
+        token = await self.login('alice')
+        await self.client.post(f'/sessionbrowser/namespaces/{fb.NAMESPACE}/gamesession', headers=self.auth(token),
+                               json={'session_type': 'dedicated', 'game_session_setting': {'mode': 'custom'}})
+        await self.look(host, 2)
+        self.assertTrue(self.hm.is_live(host))
+
+    async def test_preset_saved_in_a_match_is_stored_and_exported(self):
+        token = await self.login('alice')
+        sid, _ = await self.lobby('alice')
+        host = self.app['sessions'][sid]['_host']
+        self.status(host, 1, game_map=ARENA, launched=True)
+        await self.until(lambda: host.had_players, 'player seen')
+        uid = token['user_id']
+        f = self.win64(host.id) / f'fangshost_loadout-{uid}-1.json'
+        f.write_text('{"Lancer": {"CurrentLoadoutIndex": 2, "Loadout2": {"Name": "x", "Augments": []}}}')
+        records = self.app['store'].data['player_records']
+        await self.until(lambda: 'PROFILE_LOADOUT_KEY' in records.get(uid, {}), 'preset stored')
+        self.assertEqual(records[uid]['PROFILE_LOADOUT_KEY']['Lancer']['CurrentLoadoutIndex'], 2)
+        exported = self.tmp / 'records' / 'players' / uid / 'PROFILE_LOADOUT_KEY.json'
+        self.assertEqual(json.loads(exported.read_text())['Lancer']['CurrentLoadoutIndex'], 2)   # FangsHost serves this
+
+    async def test_preset_save_for_an_unknown_player_is_ignored(self):
+        sid, _ = await self.lobby('alice')
+        host = self.app['sessions'][sid]['_host']
+        self.status(host, 1)
+        await self.until(lambda: host.had_players, 'player seen')
+        (self.win64(host.id) / f'fangshost_loadout-{"d" * 32}-1.json').write_text('{}')
+        await self.until(lambda: self.events('preset save for an unknown player'), 'refused')
+        self.assertNotIn('d' * 32, self.app['store'].data['player_records'])
 
     async def test_failed_boot_tells_the_owner_and_frees_the_ports(self):
         self.mode('die')
