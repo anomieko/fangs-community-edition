@@ -15,7 +15,9 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Where | Off switch |
+|---|---|---|
+| Zoey's ult: the Zoey player sees the landing burst again, on every skin (only her own screen missed it: a GAS prediction key made her client skip the server's cue; `docs/recon/community-build-heroes.md`). Her client now plays it locally too. Player update (pak) | pak `community-heroes.json`, first entry (branch `cp2-zoey`) | remove the `BP_GA_CatSupp_Skill3` entry from `community-heroes.json` (`"enabled": false` would also switch off Ethryn's shield, Lamblaster and Stormlense) |
 
 ## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
 

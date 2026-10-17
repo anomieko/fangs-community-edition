@@ -1,0 +1,19 @@
+# Zoey's ult steps for tools/run/test_patch.sh (run through tools/run/test_shield.sh MODE=zoey): in the middle of the
+# map, alice (Zoey, skin $SKIN, set on the server as the game does from the profile) ults bob. Each client reports the
+# skin, the VFX pack and the ult systems it spawned, before and after; screenshots on both: work/logs/<run>-{alice,bob}-shots/.
+LOADS="lua return dofile(\"Z:$PWD/tools/run/test_shield.lua\")"
+host "$LOADS"; echo "$LOADS" >> $A; echo "$LOADS" >> $B
+host "lua return S.skin(\"alice\", \"$SKIN\")"   # "Default" too: what the game sets for a player without a skin
+sleep 3
+for round in 1 2; do
+  host "lua return S.stage(600)"
+  echo 'lua return S.vfx("alice")' >> $A; echo 'lua return S.vfx("alice")' >> $B
+  sleep 1; host 'lua return FCE_PATCH.aim("alice", "bob", 1000)'   # bob where the ult lands (range 1000)
+  sleep 0.6; echo 'lua return FCE_PATCH.fire("CatSupp_Skill3")' >> $A
+  sleep 0.5; echo 'shot' >> $A; echo 'shot' >> $B
+  sleep 0.5; echo 'shot' >> $A; echo 'shot' >> $B
+  echo 'lua return S.vfx("alice")' >> $A; echo 'lua return S.vfx("alice")' >> $B
+  sleep 0.7; echo 'shot' >> $A; echo 'shot' >> $B
+  echo 'lua return S.vfx("alice")' >> $A; echo 'lua return S.vfx("alice")' >> $B
+  sleep 14
+done
