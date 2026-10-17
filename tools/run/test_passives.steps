@@ -1,0 +1,33 @@
+# Passive steps for tools/run/test_patch.sh (run through tools/run/test_passives.sh; alice = HERO_A on team A, bob =
+# HERO_B on team B). The game server logs each hero's passive and always-running helpers (Wylde's reload, Fiorne's
+# stack system: running, spec handle), ammo / stacks and the blocking tags (passives.log) while:
+#   1. the round ends and, on the augment screen, bob keeps shooting the dummies while he picks an item and locks in
+#      (alice picks one too): abilities granted or started again while casting?
+#   2. each hero dies at the enemy turret right before a round ends (dead at the round change).
+L="lua return dofile(\"Z:$PWD/tools/run/test_passives.lua\")"
+host "$L"; echo "$L" >> $A; echo "$L" >> $B
+host 'lua return FCE_PASSIVES.watch()'
+host 'lua return FCE_PASSIVES.cdo()'
+sleep 2; host 'lua return FCE_PASSIVES.state("alice")'; host 'lua return FCE_PASSIVES.state("bob")'
+host 'lua return FCE_PASSIVES.endround(1)'
+sleep ${ITEMS_WAIT:-40}                                   # round end, captain, augment screen with dummies
+host 'lua return FCE_PASSIVES.state("alice")'; host 'lua return FCE_PASSIVES.state("bob")'
+echo "lua return FCE_PATCH.chain(\"$LMB_B\", 24, 250)" >> $B   # bob shoots for 6 s
+sleep 1.5
+echo "lua return FCE_PASSIVES.lockin(\"${ITEM_B:-/Game/Gameplay/Abilities/Player/Gunslinger/Passive/Items/ITEM_Gunslinger_Passive8Shots.ITEM_Gunslinger_Passive8Shots}\", 2)" >> $B
+echo "lua return FCE_PASSIVES.lockin(\"${ITEM_A:-/Game/Items/Characters/Lancer/BloodthirstySpear/ITEM_Lancer_BloodthirstySpear.ITEM_Lancer_BloodthirstySpear}\", 2)" >> $A
+sleep 6; host 'lua return FCE_PASSIVES.state("alice")'; host 'lua return FCE_PASSIVES.state("bob")'
+sleep ${ROUND_GAP:-40}                                    # the round starts
+host 'lua return FCE_PASSIVES.state("alice")'; host 'lua return FCE_PASSIVES.state("bob")'
+echo "lua return FCE_PATCH.fire(\"$LMB_B\")" >> $B
+sleep 3; host 'lua return FCE_PASSIVES.state("bob")'
+for who in bob; do                                        # dead at the next round change
+  host "lua return FCE_PASSIVES.turret(\"$who\")"
+  sleep ${DEATH_WAIT:-10}
+  host "lua return FCE_PASSIVES.state(\"$who\")"
+  host "lua return FCE_PASSIVES.endround(1)"
+  sleep ${ROUND_GAP:-40}
+  host 'lua return FCE_PASSIVES.state("alice")'; host 'lua return FCE_PASSIVES.state("bob")'
+  echo "lua return FCE_PATCH.fire(\"$LMB_B\")" >> $B
+  sleep 3; host 'lua return FCE_PASSIVES.state("bob")'
+done

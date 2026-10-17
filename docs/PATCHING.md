@@ -87,6 +87,7 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `remove-call` | `function`, `call`, `count` | Removes the statements that are a call to `call` (not those that use its result); a jump to a removed statement lands on the next one. |
 | `soundwave-audio` | `media`, `sha256`, `source`, `doc`, optional `gain_db` | Only in a new SoundWave asset (see "New sounds"): puts the audio file `media` into it, encoded to Ogg Vorbis with ffmpeg (the template's channels and sample rate, `gain_db` applied), with its duration and sample count. `sha256` must match the file. |
 | `insert-play-sound` | `function`, `before`, `attach_arg`, `sound`, optional `volume`, `attenuation` | A new statement before the one call to `before` in `function`: `GameplayStatics.SpawnSoundAttached(sound, <argument attach_arg of that call>, …, volume, attenuation)`. Its imports are added, and listed in the function's create-before-serialization dependencies as the cooker does. |
+| `set-tags` | `property`, `from`, `to` (lists of tags), optional `export` (default: the class defaults) | Replaces the tags of one gameplay tag container, e.g. an ability's `ActivationBlockedTags`. `from` must list the stored tags in their stored order (the tool prints them when it doesn't match); `to` may be empty. Only a container stored in that export. |
 
 What a patch can't do (yet):
 - Add functions, or code other than a call to one of the Blueprint's own functions (`insert-call`).
