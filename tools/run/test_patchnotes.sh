@@ -31,7 +31,8 @@ STATE="lua $F"' local b = F("Border", "^FCE_PatchNotes%d+$"); local t = F("RichT
 ' return string.format("state: panel visibility=%s text=%s bytes scroll=%s of %s seen=%s tabs=%d last tab=\"%s\"", b and tostring(b:GetVisibility()) or "not built",'\
 ' t and #t:GetText():ToString() or 0, s and string.format("%.0f", s:GetScrollOffset()) or "-", s and string.format("%.0f", s:GetScrollOffsetOfEnd()) or "-",'\
 ' seen, row:GetChildrenCount(), tab.TabBtnLbl:GetText():ToString())'
-ENTRY="lua $F"' for _, w in ipairs(FindAllOf("WB_MainMenuTab_C") or {}) do if w:IsValid() and w.TabBtnLbl:GetText():ToString() == "%s" then w:'$CLICK'() return "clicked %s" end end return "no entry %s"'
+ENTRY="lua $F"' for _, w in ipairs(FindAllOf("WB_MainMenuTab_C") or {}) do local ok, t = pcall(function() return w.TabBtnLbl:GetText():ToString() end)'\
+' if ok and t == "%s" then w:'$CLICK'() return "clicked %s" end end return "no entry %s"'
 (
   waitfor "$BOOT1" 'patch notes: opened' 150; sleep 2
   echo "$STATE" >> $A; echo 'shot showui' >> $A; sleep 3                                      # 1: opened by itself
