@@ -70,7 +70,7 @@ Current deploy: `deploy-2026-10-17-2043` (`fab9d5f`); what each deploy changed: 
   the exit (`NS_PheonixWall`; on Embersong, whose Aug phoenix gate is gone, the same fire ring sized to the blocker).
   The base turrets remove themselves at the map's start (patch `base-turrets`). Tested headless on all three maps,
   before and after, with screenshots (`docs/recon/base-blockers.md`, "Walls" and "No base laser"); `CHANGELOG.md` has
-  the off switches. Players' notes `backend/patchnotes/2026-10-17-2300.json`. Next: deploy with the user's OK.
+  the off switches. Players' notes `backend/patchnotes/2026-10-17-2350.json`. Next: deploy with the user's OK.
 - **Main menu crash fix** (branch `cp3-base`): the PATCH NOTES tab could be added while the engine was still building
   the main menu (UE4SS runs our loops inside game events), and the game crashed (3 test clients of ~60 starts). The
   tab, the menu cleanup, the lobby settings panel and the hero select toggle now wait until their widget was on
