@@ -18,6 +18,7 @@
 --   hptrack(n, s, l) server: the hero's health and heal effects every 0.25 s for s seconds, labelled l, to hp.log.
 --   caltrops(name)   server: the Dourling Caltrops boxes: where they lie from the hero (ahead/behind), drawn or not.
 --   knockup(n, s, by) server: a knock-up of s seconds on the hero from hero by (the game's DoTargetKnockUp).
+--   stunhold(name)   server: a stun on the hero until unstun(name).
 --   equip(path...)   client: once the augment phase is on, the own hero equips these items by tier, then locks in.
 --   key(n)           client: presses and releases ability key n (BP_AC_InputManager.QueueInput: 3 = Space).
 FCE_PATCH = FCE_PATCH or {}
@@ -295,6 +296,25 @@ function T.caltrops(name)   -- the Dourling Caltrops boxes, measured from the he
     local s = string.format("%s: %d Dourling Caltrops [%s]", name, #list, table.concat(out, "; "))
     log("        " .. s)
     return "caltrops: " .. s
+end
+
+-- A stun that holds until unstun(): the stun effect applied without a duration (none of its SetByCaller is set, so
+-- it gets no expiry timer), then removed. A pure stun: locks movement and casting, no displacement.
+function T.stunhold(name)
+    local p = hero(name)
+    if not valid(p) then return "stunhold: no hero " .. name end
+    local cls = loadClass("/Game/Gameplay/Effects/Shared/BP_GE_Stun.BP_GE_Stun_C")
+    local ok, err = pcall(function() p.AbilitySystemComponent:BP_ApplyGameplayEffectToSelf(cls, 1.0, {}) end)
+    log(string.format("        %s stunned (held)%s", name, ok and "" or (": " .. tostring(err))))
+    return ok and ("stunhold: " .. name) or ("stunhold failed: " .. tostring(err))
+end
+function T.unstun(name)
+    local p = hero(name)
+    if not valid(p) then return "unstun: no hero " .. name end
+    local cls = loadClass("/Game/Gameplay/Effects/Shared/BP_GE_Stun.BP_GE_Stun_C")
+    p.AbilitySystemComponent:RemoveActiveGameplayEffectBySourceEffect(cls, nil, -1)
+    log("        " .. name .. " stun removed")
+    return "unstun: " .. name
 end
 
 -- A knock-up on the hero from hero `by`, through the game's own DoTargetKnockUp (it makes and applies the effect; a
