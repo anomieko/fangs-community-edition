@@ -14,7 +14,7 @@ return function(env)
     local log, every, gameInstance = env.log, env.every, env.gameInstance
     local CUSTOM = 4
     -- design units (1920 x 1080 screen): the panel at the top right, the two team columns moved left to make room
-    local PANEL_X, PANEL_Y, PANEL_W, TEAMS_SHIFT = -36.0, 140.0, 470.0, -200.0
+    local PANEL_X, PANEL_Y, PANEL_W, TEAMS_SHIFT = -32.0, 140.0, 500.0, -200.0
     local COMBO = "/Game/UI/Settings/WB_SettingComboBoxOption.WB_SettingComboBoxOption_C"
     local TOGGLE = "/Game/UI/Settings/WB_SettingToggleButton.WB_SettingToggleButton_C"
     local BUTTON = "/Game/UI/MainMenu/WB_IconButton_Secondary.WB_IconButton_Secondary_C"
@@ -145,6 +145,7 @@ return function(env)
         u.size = combo(menu, box, "TEAMS", sizeNames)
         u.rounds = combo(menu, box, "ROUNDS", roundNames)
         u.vote = WBL:Create(menu, loadClass(TOGGLE), nil)
+        u.vote.FontSize = 12                                         -- "CAPTAIN VOTE" fits next to the toggle
         row(menu, box, u.vote, 64.0)
         u.vote.OptionLbl:SetText(FText("CAPTAIN VOTE"))
         local shuffleSlot
@@ -156,7 +157,8 @@ return function(env)
             u.shuffle:SetVisibility(1)   -- Collapsed
         end
         -- the owner's launch when players wait outside the seats: a third page of the Launch switcher
-        if owner then u.launch, u.launchLabel = button(menu, menu.LobbyStatusSwitch, "START") end
+        -- shown only while players wait outside the seats (a label set later didn't show in tests: a fixed one)
+        if owner then u.launch = button(menu, menu.LobbyStatusSwitch, "START (WAITING PLAYERS LEAVE)") end
         u.mapNames = mapNames
         log("lobby settings: panel built (" .. (owner and "owner" or "player") .. ", " .. #mapNames .. " maps)")
         return u
@@ -223,7 +225,6 @@ return function(env)
             return
         end
         if waiting > 0 and seated > 0 and sw:GetActiveWidgetIndex() ~= 1 then
-            ui.launchLabel(string.format("START (%d waiting: removed)", waiting))
             sw:SetActiveWidgetIndex(2)
         end
     end

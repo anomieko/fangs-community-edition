@@ -14,7 +14,7 @@ custom-game Captain vote, which he wants in this update. This file has the desig
   - CAPTAIN VOTE: on / off;
   - SHUFFLE TEAMS: everyone seated, in random seats (even seats team A, odd seats team B).
   The owner changes them; everyone else sees them greyed out, with the owner's values.
-- **Launch with players waiting** outside the seats: the owner's Launch button reads "LAUNCH (N waiting: removed)"; it
+- **Launch with players waiting** outside the seats: the owner's start button reads "START (WAITING PLAYERS LEAVE)"; it
   has the server remove those players first, then the game's own launch runs.
 - **In the match**: the rounds to win are the lobby's. The Captain:
   - vote on: teammates vote every round, 8 s; the Captain is the most voted teammate who wasn't Captain yet (the
@@ -32,10 +32,16 @@ custom-game Captain vote, which he wants in this update. This file has the desig
     exports), heavy and fragile;
   - runtime widgets: FangsBoot already builds UI this way (the unreleased-heroes section and toggle). Chosen.
 - The panel is a `Border` + `VerticalBox` added to the lobby menu's root canvas (`WidgetTree.RootWidget`,
-  `AddChildToCanvas`, anchored top right), with rows made of the settings menu's widget Blueprints:
-  `WB_SettingComboBoxOption` (label + the game's styled dropdown), `WB_SettingToggleButton` (ON/OFF) and
-  `WB_IconButton_Secondary` (SHUFFLE TEAMS, and the owner's LAUNCH as a third page of `LobbyStatusSwitch`).
-  Classes are loaded with `LoadAsset_Blocking` (the settings widgets aren't loaded in the lobby).
+  `AddChildToCanvas`, anchored top right, 500 design units wide).
+  - Its rows are made of the settings menu's widget Blueprints: `WB_SettingComboBoxOption` (label + the game's styled
+    dropdown), `WB_SettingToggleButton` (Enable/Disable) and `WB_IconButton_Secondary` (SHUFFLE TEAMS, and the owner's
+    start button as a third page of `LobbyStatusSwitch`).
+  - `WB_IconButton_Secondary` shows no text of its own (its `BtnText` is unused), so a text block goes into its
+    `TextWrapper`.
+  - The two team columns (`TeamsPanel`) are moved 200 units left (render translation) to make room: at 1080p design
+    size the right side had 400 free units, the panel needs ~550.
+  - Classes are loaded with `LoadAsset_Blocking` (the settings widgets aren't loaded in the lobby).
+  - The owner flag (`IsLobbyOwner`) replicates a moment after joining: the panel is built again when it changes.
 - Clicks: hooks on the widgets' own bound events (`BndEvt__…OnSelectionChanged…`, `…ToggleBtn…OnButtonClicked…`,
   `…SecondaryBtn…OnButtonClicked…`), filtered by our widgets' addresses. A dropdown change made by the code
   (`SetSelectedOption`: `ESelectInfo::Direct`) is not sent; only key (0) and mouse (2) choices are.
@@ -94,7 +100,39 @@ sets it at the arena game state's BeginPlay; FangsBoot sets the clients' copy (H
 
 ## Tests
 
-(see below: filled in from `tools/run/test_lobbyui.sh` runs)
+`tools/run/test_lobbyui.sh` (three headless GPU clients, own backend data and game servers, the community-lobby patch
+pak). It drives the panel through its widgets' own click handlers, which FangsCtl finds by class and label (each UE4SS
+mod has its own Lua state: FangsBoot's variables aren't reachable from FangsCtl).
+
+Result (17 Oct, runs `lobbyui`):
+- **Lobby:**
+  - Panels were built for all three players; alice's could be changed, bob's and carol's were greyed out ("Set by the
+    lobby owner").
+  - alice chose Crownwatch, Best of 5 and Captain vote on. The server's `ServerPayload` and all three panels showed
+    them within 3 s.
+  - Shuffle twice: seats alice 0 / bob 2 / carol 4 → 2 / 0 / 1 → 1 / 0 / 2.
+  - Teams 1 vs 1: carol's seat 2 was gone, she waited outside (seat -1), and alice's start page switched to our button.
+  - Start: the server kicked carol ("launching: 1 waiting player(s) kicked"), then the game launched with alice and bob.
+- **Match:**
+  - On Crownwatch (the lobby's new map).
+  - The server set `MaxRounds` 3 ("match: first to 3 rounds") and an 8 s Captain window ("captain: vote, 8.0 s").
+  - Both players had `KingVoteRound` 1, `MaxRounds` 3 and an 8 s window.
+  - Screens: "ROUND 1 – SELECTING A CAPTAIN" for the window, the Captain reveal, then augment selection. Both
+    Captains were chosen.
+- **Screenshots** (local): `work/logs/lobbyui-shots/` in the `cp-lobby` worktree:
+  - `alice-ScreenShot00001.png`: the owner's panel;
+  - `bob-ScreenShot00002.png`: a player's panel;
+  - `alice-ScreenShot00002.png`: 1 vs 1 with the waiting player and our start button;
+  - `alice-ScreenShot00005-00008.png`: the Captain phase.
+- Backend unit tests: 211 pass, including the new lobby-list test.
+
+Not covered yet:
+- Teammate vote cards: a 1v1 has no teammate to vote for; a 2v2 test needs four clients.
+- Round 2 and later: Captain rotation, the reset rule, and the match ending at 3 round wins.
+- Vote off in a match (instant, random votes; the code path is the same hook).
+- Casual/Ranked.
+- The start button's final text, "START (WAITING PLAYERS LEAVE)", was set after the last run; that run showed a fixed
+  "START" set the same way.
 
 ## Reconnect (research only, Sheepa #2)
 
