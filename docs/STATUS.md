@@ -78,6 +78,13 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
   `obj:HasAnyInternalFlags(EInternalObjectFlags.PendingKill)` too (`KismetSystemLibrary:IsValid(x)` didn't help:
   most likely UE4SS's own `IsValid` method answers for the library object).
 
+- A player's mod can send the game server a command through `BP_PC_MOBA_PlayerController.DebugSpawnBot(Name, Int)`:
+  a server RPC whose body returns at once in Shipping builds (`IsInShippingBuild`), so FangsHost's post-hook on it is
+  a clean channel (F6 in Training sends "FangsStartRound", `docs/recon/community-build-modes.md`). The server must
+  check what it gets: any player can send any name.
+- The patch tool can't add actors to a map: actors both sides need (the base blockers) are spawned by FangsHost and
+  FangsBoot from the same table, at the arena game state's BeginPlay.
+
 - Joining a custom lobby from the lobby list: the PLAY button sets the game mode to Casual, which arms the
   lobby screen's 45 s matchmade timeout for the joiner ("Failed to Connect to Match.", then the lobby ends).
   FangsBoot keeps it Custom; `fangsboot.log` records why a player leaves a lobby.

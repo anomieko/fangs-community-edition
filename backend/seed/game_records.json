@@ -84,6 +84,11 @@
      "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
      "Custom": true
+    },
+    {
+     "Name": "Basic Training",
+     "Map": "LE_BeautifulCorner",
+     "Custom": false
     }
    ],
    "CasualMaps": [
@@ -1044,10 +1049,6 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_BobAndWeave",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_RepeatRegicide",
      "Owner": "Generic"
     },
@@ -1081,10 +1082,6 @@
     },
     {
      "Item": "Generic_ShootTheMoon",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_FlyPhoenixFly",
      "Owner": "Generic"
     },
     {
@@ -2574,6 +2571,11 @@
      "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
      "Custom": true
+    },
+    {
+     "Name": "Basic Training",
+     "Map": "LE_BeautifulCorner",
+     "Custom": false
     }
    ],
    "CasualMaps": [
@@ -3534,10 +3536,6 @@
      "Owner": "Generic"
     },
     {
-     "Item": "Generic_BobAndWeave",
-     "Owner": "Generic"
-    },
-    {
      "Item": "Generic_RepeatRegicide",
      "Owner": "Generic"
     },
@@ -3571,10 +3569,6 @@
     },
     {
      "Item": "Generic_ShootTheMoon",
-     "Owner": "Generic"
-    },
-    {
-     "Item": "Generic_FlyPhoenixFly",
      "Owner": "Generic"
     },
     {
@@ -5059,6 +5053,11 @@
      "Name": "Crownwatch",
      "Map": "LE_Payload03_Map",
      "Custom": true
+    },
+    {
+     "Name": "Basic Training",
+     "Map": "LE_BeautifulCorner",
+     "Custom": false
     }
    ],
    "CasualMaps": [
@@ -7240,11 +7239,6 @@
     "Class": "*",
     "List": "GenericItems",
     "Item": "/Game/Items/Characters/Generic/Garden/RoleGetSwole/ITEM_Generic_RoleGetSwole.ITEM_Generic_RoleGetSwole"
-   },
-   {
-    "Class": "*",
-    "List": "GenericItems",
-    "Item": "/Game/Items/Characters/Generic/Garden/BobAndWeave/ITEM_Generic_BobAndWeave.ITEM_Generic_BobAndWeave"
    },
    {
     "Class": "*",
