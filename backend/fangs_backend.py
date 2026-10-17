@@ -814,9 +814,9 @@ async def session_create(request):
     if 'user_id' not in who:
         return err(401, 20001, 'unauthorized')
     for old in [s for s in app['sessions'].values() if s['user_id'] == who['user_id']]:
-        if old['_host'] is not None and not lobby_open(old['_host']):
+        if old['_host'] is not None and not lobby_open(old['_host']) and not old['_host'].solo:
             continue                     # its match is running (or over): it ends on its own, for its other players
-        app['sessions'].pop(old['session_id'], None)          # one custom lobby per player
+        app['sessions'].pop(old['session_id'], None)          # one custom lobby (or solo game) per player
         if old['_host']:
             background(app, app['hosts'].stop(old['_host'], 'owner created a new lobby'))
     body = await request.json()
@@ -1009,6 +1009,8 @@ async def handle_create_ds(app, ws, fields, uid):
                 app['log']({'host': host.id, 'event': 'back to standby', 'reason': f'lobby {sid} was replaced'})
                 return
         sess['_host'] = host
+        # Training and Solo lobbies: one player, so its server goes soon after that player left (HostManager.grace)
+        host.solo = str(sess['game_session_setting'].get('max_player', '')) == '1'
         sess['server'] = {'ip': cfg.public_ip, 'port': host.port, 'region': 'local', 'status': 'READY',
                           'pod_name': host.id, 'deployment': fields.get('deployment', ''),
                           'game_version': fields.get('clientVersion', '')}
@@ -1341,6 +1343,14 @@ def make_app(a, log):
         app['matchmaker'].ranked_games.pop(host.session_id, None)
     app['hosts'].on_stopped.append(host_stopped)
     app['hosts'].on_result.append(lambda host, result: match_result(app, host, result))
+
+    def loadout_saved(host, uid, value):   # the in-match preset panel (FangsHost): same record as the lobby's loadouts
+        if not app['store'].user_by_id(uid):
+            return log({'host': host.id, 'event': 'preset save for an unknown player', 'user': uid})
+        app['store'].data['player_records'].setdefault(uid, {})['PROFILE_LOADOUT_KEY'] = value
+        app['store'].save()
+        log({'host': host.id, 'event': 'preset saved', 'user': uid})
+    app['hosts'].on_loadout.append(loadout_saved)
     if Path(a.seed).exists():  # seed (re)defines the global game records on every start
         app['store'].data['game_records'].update(json.loads(Path(a.seed).read_text()))
     app['store'].export_records()

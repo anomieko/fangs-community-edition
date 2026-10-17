@@ -575,3 +575,13 @@ if not IS_AUG2022 then
     local ok, err = pcall(function() require("lobby")(lobbyEnv) end)
     if not ok then log("lobby settings: not loaded: " .. tostring(err)) end
 end
+
+-- The community patch's game-mode changes (modes.lua): Training's augment phase, Wylde in the dummy phase, presets,
+-- base blockers. Feb 2023 build only.
+if not IS_AUG2022 then
+    local ok, err = pcall(function()
+        require("modes")({ log = log, every = every, readRecord = readRecord, hook = hook, later = later,
+                           gameInstance = gameInstance })
+    end)
+    if not ok then log("modes: not loaded: " .. tostring(err)) end
+end
