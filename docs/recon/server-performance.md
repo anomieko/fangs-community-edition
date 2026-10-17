@@ -119,3 +119,72 @@ From the backend's `perf` lines (one per 30 s per server with players): seven ma
 - Idle (one standby, nobody on): the container uses ~20% of one vCPU.
 - Open: the remaining 75-240 ms single frames (locally the worst was a 67 ms sleep overshoot); they could be GC or the
   wineserver without ntsync.
+
+## Rubber-banding: the netcode settings measured (17 Oct 2026)
+
+The community's complaints (`docs/recon/community-patchnotes.md`): players teleport in big team fights, worst on
+Crownwatch; tigga rubber-bands as Tufts at about 30 ms ping, wired. This measures what players see, with the live patch
+pak (`deploy-2026-10-17-1223`, all 8 patches) on clients and servers.
+
+**How** (`tools/run/test_perf.sh`, new options; branch `cp2-netcode`):
+- `SNAPS=1` loads `tools/run/net_snaps.lua` on every test client. Every frame it compares each hero's position with
+  where its velocity said it would be. On the own hero (a predicted actor), a jump is a correction from the server:
+  rubber-banding as the player feels it. On other heroes' meshes (after the game's smoothing), a jump is another
+  player teleporting on this screen. `tools/run/net_snaps_report.py` sums it up per minute.
+- `FIGHT=1` puts all 12 heroes in a ring in the middle of the map, and the active clients keep walking back to it: a
+  6v6 team fight (3 GPU clients walking and casting, `ACTIVE=1`, plus 9 of the game's bots). `MAP=` picks the arena.
+- `NETEM="delay 25ms 5ms loss 0.5%"` (`tools/run/headless.sh`): latency on the test namespace's loopback only, about
+  50 ms round trip with jitter and loss (never on the host).
+- `DASH=1` (`tools/run/net_dash.lua`): the client charges and releases Space every 2.5 s (Tufts' Wing Dive).
+- The settings under test:
+  - server `FANGS_NET_TICK`, `FANGS_POS_ERROR`, `FANGS_NET_RATE` (`server/run-host.sh`);
+  - clients `CLIENT_NET_RATE` and `CLIENT_ENGINE_INI` (`tools/run/headless.sh`).
+
+  The server's own read-back confirms what it got (`netdriver: tick=… clamp=… rate=…`).
+- 120 s per run on Embersong unless noted; servers pinned to 4 CPUs without ntsync, as on the VPS.
+
+**Results** (per minute, all clients together; "others" = other heroes' visible jumps over 80 units):
+
+| Run | Setting | Own snaps >20 | >50 | >100 | Others >80 | Packets/s per client, median gap | Server CPU (match) |
+|---|---|---|---|---|---|---|---|
+| nc-a, nc-a2 | live (tick 30, clamp, 40000) | 29.4 / 23.4 | 3.6 / 4.5 | 2.4 / 2.9 | 32.0 / 29.2 | 26, 40 ms | 31 / 26 % |
+| nc-b, nc-b2 | `FANGS_NET_TICK=60` (60/60, no clamp) | **12.8 / 12.3** | 4.8 / 3.6 | 3.4 / 2.6 | **15.6 / 15.5** | 57, 17 ms | 33 / 32 % |
+| nc-c | tick 60 + rate caps 100000 both ends | 15.0 | 3.4 | 2.7 | 12.2 | 58, 17 ms | 30 % |
+| nc-d3, nc-d3b | `FANGS_POS_ERROR=3.0` | 17.2 / 16.1 | 3.0 / 3.7 | 2.8 / 3.2 | 33.2 / 34.3 | 26, 40 ms | 30 / 33 % |
+| nc-bd | tick 60 + `FANGS_POS_ERROR=3.0` | 13.2 | 3.6 | 2.6 | 20.8 | 58, 17 ms | 34 % |
+| nc-d85 | `FANGS_POS_ERROR=8.5` (Aug's) | 28.9 | **13.5** | **10.9** | 33.1 | 26, 43 ms | 30 % |
+| nc-cw0 / nc-cw1 | Crownwatch, live / + `r.AllowOcclusionQueries=1` on the clients | 15.0 / 19.3 | 3.3 / 3.0 | 2.3 / 2.1 | 32.5 / 29.1 | 26, 40 ms | 25 / 28 % |
+| nc-e0 / nc-e1 | Tufts dashing (1 client, 3 bots), live / + patch `tufts-sync` | 62.5 / **29.0** | 17.5 / **6.7** | 0.6 / 0.6 | – | 23, 46 ms | 24 / 28 % |
+
+What it shows:
+- **Net tick 60 without the clamp halves the small corrections and other players' jumps.** Two runs each, the same
+  both times. The server sends each client a packet every 17 ms instead of every 40 ms. The bandwidth doesn't grow (13
+  kB/s per client either way, far under the 40000 cap). The 20-25 Hz replication of finding 6 above was the
+  listen-server clamp to `MaxNetTickRate` 30.
+- **The large corrections (over 50 and 100 units, about 3-4 a minute) don't change with any setting.** In a fight they
+  come from the server's own displacements: knockbacks, CC, dashes the client predicted differently. Fixing those means
+  per-ability work, e.g. the Tufts sync change below.
+- **`MAXPOSITIONERRORSQUARED` 3.0** cuts small snaps by about a third alone, but adds nothing on top of tick 60. **8.5**
+  made large snaps 3-4 times more frequent in its single run. Neither is switched on.
+- **Higher rate caps** change nothing: no client gets near 40000 bytes/s in a 6v6. They stay as they are (100000 once
+  dropped players in hero select).
+- **Tufts' Wing Dive with the sync change** (`tools/patch/patches/tufts-sync.json`: the dash's two
+  `WaitNetSync(OnlyClientWait)` become `OnlyServerWait`, so the player's screen dashes at once and the server follows)
+  more than halves his snaps while dashing at 50 ms latency.
+- **Crownwatch:** server and corrections look like Embersong's. The client frame rate can't be judged here: the
+  headless clients run capped at 60 fps (gamescope) and stayed there either way, so the occlusion setting's effect on
+  players' PCs is still unmeasured.
+- **Lobbies with tick 60:** `tools/run/test_lobby.sh` 6 times with `FANGS_NET_TICK=60`, 6 normal exits. In the 4
+  runs whose logs were kept (`work/logs/nc-lobby-*.result`, local), both players got through hero select into the
+  arena every time: no hero-select drop like the one a 100000 rate cap caused.
+
+**Capacity:** tick 60 costs the match server about 3-5 % of a core more on this machine (26-31 % → 32-34 %). With the
+VPS estimate above (a full match 0.7-1 vCPU), that's about +0.1 vCPU per match. Two matches plus a standby still fit
+the 4 vCPUs; memory is unchanged.
+
+**Switched on:** `FANGS_NET_TICK=60` in `server/netcode.env`. It's committed and the deploy uploads it, and
+docker-compose hands it to every game server. Off switch: empty the value and deploy. Server only, no player update.
+
+**Prepared, off:** `FANGS_POS_ERROR`, `FANGS_NET_RATE` (`server/netcode.env`), `tufts-sync.json` (`"enabled": false`).
+The Tufts change alters how the dash feels and when the server applies it, so a player should try it before it goes
+live. The occlusion setting would go into the players' `FangsCE/Engine.ini` (from `tools/run/config/Engine.ini.template`).

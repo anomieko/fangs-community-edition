@@ -42,6 +42,9 @@ fi
 nsfile=$(mktemp)
 {
   echo 'ip link set lo up; mount -t tmpfs tmpfs /tmp/.X11-unix; pgids=()'
+  # NETEM="delay 25ms 5ms loss 0.5%": latency on this namespace's loopback, i.e. on every packet between the test's
+  # clients, game servers and backend (both directions: an RTT of about twice the delay). Never on the host.
+  [[ -n ${NETEM:-} ]] && echo "tc qdisc add dev lo root netem $NETEM && echo 'netem: $NETEM' >&2"
   echo "readlink /proc/self/ns/net > '$nsfile'"   # the cleanup below only touches processes in this namespace
   if [[ ${RUN_BACKEND:-0} == 1 ]]; then
     # game hosts get their own prefix (never share a wineserver with game hosts of a local play session)
@@ -72,6 +75,12 @@ nsfile=$(mktemp)
       for cfg in "$dir/MOBA/Saved/Config/WindowsNoEditor" "$pfx/drive_c/users/$USER/AppData/Local/MOBA/Saved/Config/WindowsNoEditor"; do
         mkdir -p "$cfg"
         sed "s/@BACKEND@/$BACKEND/g" "$REPO/tools/run/config/Engine.ini.template" > "$cfg/Engine.ini"
+        # CLIENT_ENGINE_INI / CLIENT_GAME_INI: extra ini lines for the test clients (A/B tests), e.g.
+        # CLIENT_ENGINE_INI=$'[SystemSettings]\nr.AllowOcclusionQueries=1'
+        [[ -n ${CLIENT_ENGINE_INI:-} ]] && printf '\n%s\n' "$CLIENT_ENGINE_INI" >> "$cfg/Engine.ini"
+        # CLIENT_NET_RATE: the rate the clients ask for (ConfiguredInternetSpeed/ConfiguredLanSpeed), in place
+        [[ -n ${CLIENT_NET_RATE:-} ]] && sed -i -E "s/^(Configured(Internet|Lan)Speed)=.*/\1=$CLIENT_NET_RATE/" "$cfg/Engine.ini"
+        [[ -n ${CLIENT_GAME_INI:-} ]] && printf '%s\n' "$CLIENT_GAME_INI" > "$cfg/Game.ini"
       done
     fi
     if [[ -n ${SAVES:-} ]]; then
