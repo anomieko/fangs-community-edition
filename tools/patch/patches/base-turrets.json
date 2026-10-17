@@ -1,0 +1,21 @@
+{
+  "name": "base-turrets",
+  "summary": "No base laser: the turrets Feb 2023 put into each base remove themselves when the map starts, as Aug 2022 had none",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": true,
+  "research": "docs/recon/base-blockers.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Environment/MapAssets/Assault/BP_Turret",
+      "why": "The laser turret in each base (Embersong, Stormheart, Crownwatch: two per map, the only maps that have them) shot any enemy who came near, and healed and armoured its own team. Feb 2023 added it when it took the base walls out; with the walls back (you can't walk back into your base), it isn't needed. Now each turret, as it starts: hides, turns its collision off, stops ticking and destroys itself. On the game server that removes it for good (players' games are told to remove their copy); on a player's machine the first three already make it gone.",
+      "edits": [
+        { "op": "insert-code", "function": "ReceiveBeginPlay", "at": "start", "code": [
+          { "do": { "call": "/Script/Engine.Actor:SetActorHiddenInGame", "args": [ { "bool": true } ] } },
+          { "do": { "call": "/Script/Engine.Actor:SetActorEnableCollision", "args": [ { "bool": false } ] } },
+          { "do": { "call": "/Script/Engine.Actor:SetActorTickEnabled", "args": [ { "bool": false } ] } },
+          { "do": { "call": "/Script/Engine.Actor:K2_DestroyActor", "args": [] } }
+        ] }
+      ]
+    }
+  ]
+}

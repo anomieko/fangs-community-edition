@@ -21,7 +21,15 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Branch `cp3-base`. Player update and server update: the patch pak gets `base-turrets` (players and servers), FangsBoot
+and FangsHost get the new `blockers.lua`. Players' notes: `backend/patchnotes/2026-10-17-2300.json`. Research and tests
+(`walls-*` runs, screenshots in `work/logs/walls-*-shots/`): `docs/recon/base-blockers.md`, "Walls" and "No base laser".
+
+| Change | Where | Off switch |
+|---|---|---|
+| Base walls: each base's border shows again, as in Aug 2022 (the user: "theres no visuals about the base"). On players' machines every blocker gets `SM_Sphere`'s own material `M_SphereHit` (a thin white ring at the border; Aug showed Stormheart's and Crownwatch's this way), and a fire wall (`NS_PheonixWall`, a `NiagaraActor`) stands across each base's exit: Aug's places on Stormheart and Crownwatch; on Embersong (Aug's phoenix gate is gone from the Feb pak) the same ring of fire centred on the blocker and scaled to it. Looks only: collision and the game server unchanged | FangsBoot and FangsHost `blockers.lua` (identical; the server places no looks) | `WALLS = false` (fire walls), `SPHERES = false` (rings) in both `blockers.lua` |
+| No base laser (the user: "no laser: since you cant re-enter base its not needed"): the turrets Feb put into each base on Embersong, Stormheart and Crownwatch (`BP_Turret`, two per map) hide, lose their collision, stop ticking and destroy themselves at the map's start; the server's destruction removes them from every player's game. With them go the base heal/armour for the own team and the turret's vision of the base (Aug had none). AI bots (tests only) no longer find the bases' locations | pak `base-turrets.json` (`insert-code` in `BP_Turret.ReceiveBeginPlay`) | `"enabled": false` in `base-turrets.json` |
+| Tests: `tools/run/test_walls.steps` (through `test_base.sh` with `STEPS=`): screenshots from just outside each base with the pointer towards it, the turrets on the server and both players, a hero in the former turret range and on its spot; `test_base.lua` helpers `edge`, `aim`, `walls`, `turrets`, `lane`, `at`, `hp`; `test_base.sh` copies the screenshots to `work/logs/<run>-shots`. The death step of `test_base.steps` (and `test_passives`/`test_shards`' turret deaths) needs the turret: run those without `base-turrets` | `tools/run/` | – |
 
 ## deploy-2026-10-17-2043 (`fab9d5f`, Feb 2023 build)
 

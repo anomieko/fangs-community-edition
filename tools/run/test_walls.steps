@@ -1,0 +1,30 @@
+# Base walls and the base laser (docs/recon/base-blockers.md, "Walls" and "No base laser"), run through
+# tools/run/test_base.sh with STEPS=tools/run/test_walls.steps: alice (team A) and bob (team B) each walk out to just
+# outside their base and take screenshots of it (the wall that marks it), the pointer towards the base so the camera
+# shows it; then the turrets: which are there on the game server and on both players, bob stands in alice's turret's
+# range (outside both bases) and on its spot. Starts in the first augment phase (ROUND_WAIT). Needs both patches:
+# PATCHES="base-blockers base-turrets" CHECK="base-blockers base-turrets" (the control: PATCHES=base-blockers).
+L="lua return dofile(\"Z:$PWD/tools/run/test_base.lua\")"
+host "$L"; echo "$L" >> $A; echo "$L" >> $B
+st() { host "lua return FCE_BASE.state(\"$1\")"; }
+both() { echo "lua return FCE_BASE.$1()" >> $A; echo "lua return FCE_BASE.$1()" >> $B; host "lua return FCE_BASE.$1()"; }
+aim() { echo 'lua return FCE_BASE.aim()' >> $A; echo 'lua return FCE_BASE.aim()' >> $B; }
+host 'lua return FCE_BASE.info()'
+both turrets; both walls
+sleep ${PHASE_WAIT:-70}                                   # the round starts
+st alice; st bob; both turrets
+# 1. each walks out to just outside its base: what the player sees there (the wall)
+host 'lua return FCE_BASE.edge("alice", 300)'; host 'lua return FCE_BASE.edge("bob", 300)'
+sleep 2; aim; sleep 2; echo shot >> $A; echo shot >> $B
+sleep 1; echo 'shot showui' >> $A
+# 2. back towards the spawn: stopped at the border, the wall right in front
+host 'lua return FCE_BASE.back("alice")'; host 'lua return FCE_BASE.back("bob")'
+sleep 2; aim; sleep 2; echo shot >> $A; echo shot >> $B
+both walls
+# 3. the laser: bob in alice's turret's range (outside both bases) for 8 s, then on its spot for 6 s
+host 'lua return FCE_BASE.lane("bob")'
+sleep 4; echo shot >> $B; both turrets
+sleep 4; host 'lua return FCE_BASE.hp("bob")'
+host 'lua return FCE_BASE.at("bob")'
+sleep 6; host 'lua return FCE_BASE.hp("bob")'; echo shot >> $B
+both turrets

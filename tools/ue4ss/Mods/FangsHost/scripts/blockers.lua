@@ -12,6 +12,17 @@
 -- the protection off any hero who still has it outside every blocker. Stormheart's and Crownwatch's blockers now get
 -- their Aug mesh's collision and protection sphere too (below). Off switch: false here (both mods).
 local ENABLED = true
+-- How Aug 2022 showed the bases (docs/recon/base-blockers.md, "Walls"), on players' machines only (nothing renders on
+-- the game server). ENABLED = false takes these off too.
+--   WALLS: a fire wall across each base's exit (NS_PheonixWall, a Niagara system the Aug maps placed at the blocker's
+--          edge; Feb 2023 took it out with the blockers). Off switch: false here (both mods).
+--   SPHERES: the blocker itself, with SM_Sphere's own material (M_SphereHit: only a thin white rim of the sphere
+--          shows, a ring that outlines the base's border). In Aug, Stormheart's and Crownwatch's blockers showed this
+--          way (their mesh is SM_Sphere; the class's material is an invisible one); Embersong's was hidden and a phoenix
+--          gate marked its bases, an effect Feb no longer has, so Embersong's blockers show the ring too. Off switch:
+--          false here (both mods).
+local WALLS = true
+local SPHERES = true
 
 return function(log)
     local CLASS = "/Game/BluePrints/BP_SpawnBlocker.BP_SpawnBlocker_C"
@@ -36,6 +47,29 @@ return function(log)
         },
     }
 
+    -- The walls: map -> { x, y, z, yaw, scale x, y, z } of each base's wall. NS_PheonixWall's mesh (M_MagicFire_v3) is
+    -- a half ring of fire, radius ~456, 280 high, its centre 376 behind the system's origin. Stormheart and Crownwatch:
+    -- the Aug 2022 world transforms (attached to the base floors there, resolved; Aug scaled Stormheart's ring to its
+    -- blocker's width). Aug used this system on Crownwatch, and its GardenMap copy (gone in Feb) on Stormheart. Embersong
+    -- had a phoenix gate (NS_PhoenixGate, gone in Feb with its meshes and materials): its ring here is centred on the
+    -- blocker and scaled to its radius (840 / 456), so it runs along the border.
+    local WALL = "/Game/HiddenLeafVFX/ObjectVFX/Base/NS_PheonixWall.NS_PheonixWall"
+    local SPHERE_MAT = "/Game/VFX_Packs/Stylized_VFX_StPack/Materials/M_SphereHit.M_SphereHit"   -- SM_Sphere's own material
+    local WALL_AT = {
+        LE_Arena02_Map = {     -- Embersong (Aug: NS_PhoenixGate at (-101, 3475, 0) and (2, -3491, -17))
+            { 0.0, 3527.4, 0.0, 180.0, 1.842, 1.842, 1.0 },
+            { 0.0, -3527.9, -17.0, 0.0, 1.842, 1.842, 1.0 },
+        },
+        LE_Arena06_Map = {     -- Stormheart
+            { -151.2, 4063.7, 67.0, 180.0, 1.3125, 1.0, 1.0 },
+            { -151.0, -4139.0, 67.0, 0.0, 1.3125, 1.0, 1.0 },
+        },
+        LE_Payload03_Map = {   -- Crownwatch
+            { -1397.3, 3119.2, 66.0, -123.99, 1.0, 1.0, 1.0 },
+            { -1668.6, -3120.4, 87.8, -42.66, 1.4375, 1.0, 1.0 },
+        },
+    }
+
     local function valid(o) return type(o) == "userdata" and o.IsValid ~= nil and o:IsValid() end
     local KSL, GPS = nil, nil
     local function load(path)
@@ -47,7 +81,51 @@ return function(log)
         return valid(o) and o or nil
     end
 
-    -- Places this map's blockers (once per map, from the arena's game state BeginPlay). Returns how many.
+    -- This map's looks, on a player's machine: the blockers get SM_Sphere's own material (the ring); each wall
+    -- is a NiagaraActor (an actor: the level keeps it, and with it the effect, for the whole match), its system set and
+    -- started. Returns how many walls, how many blockers shown.
+    local function placeLooks(context, map, placed)
+        local okS, server = pcall(function() return context:HasAuthority() end)   -- the game state: only the server's has it
+        if not okS or server then return 0, 0 end
+        local shown = 0
+        if SPHERES then
+            local mat = nil
+            for _, a in ipairs(placed) do
+                mat = mat or load(SPHERE_MAT)
+                if mat and pcall(function() a.StaticMeshComponent:SetMaterial(0, mat) end) then shown = shown + 1 end
+            end
+        end
+        local list = WALL_AT[map]
+        if not (WALLS and list) then return 0, shown end
+        local sys, cls = load(WALL), StaticFindObject("/Script/Niagara.NiagaraActor")
+        if not (sys and valid(cls)) then log("base walls: NS_PheonixWall or NiagaraActor not loaded"); return 0, shown end
+        local n = 0
+        for _, w in ipairs(list) do
+            local h = math.rad(w[4]) / 2
+            local xf = { Translation = { X = w[1], Y = w[2], Z = w[3] }, Rotation = { X = 0, Y = 0, Z = math.sin(h), W = math.cos(h) },
+                         Scale3D = { X = w[5], Y = w[6], Z = w[7] } }
+            local ok, a = pcall(function() return GPS:BeginDeferredActorSpawnFromClass(context, cls, xf, 1, nil) end)
+            if ok and valid(a) then
+                -- the system before the spawn finishes: the component starts by itself then (bAutoActivate)
+                local set, err = pcall(function() a.NiagaraComponent.Asset = sys end)
+                GPS:FinishSpawningActor(a, xf)
+                if set then
+                    local okA, active = pcall(function()
+                        if not a.NiagaraComponent:IsActive() then a.NiagaraComponent:Activate(true) end
+                        return a.NiagaraComponent:IsActive()
+                    end)
+                    if okA and active then n = n + 1 else log("base walls: " .. map .. ": not started: " .. tostring(active)) end
+                else
+                    log("base walls: " .. map .. ": system not set: " .. tostring(err))
+                    pcall(function() a:K2_DestroyActor() end)
+                end
+            end
+        end
+        return n, shown
+    end
+
+    -- Places this map's blockers (once per map, from the arena's game state BeginPlay), and on a player's machine its
+    -- looks. Returns how many blockers.
     return function(context, map)
         if not ENABLED then log("base blockers: off"); return 0 end
         local list = BLOCKERS[map]
@@ -62,7 +140,7 @@ return function(log)
             local r = tmpl.RelativeScale3D
             t = { X = r.X, Y = r.Y, Z = r.Z }
         end)
-        local n = 0
+        local n, placed = 0, {}
         for _, b in ipairs(list) do
             local h = math.rad(b[4]) / 2
             local xf = { Translation = { X = b[1], Y = b[2], Z = b[3] }, Rotation = { X = 0, Y = 0, Z = math.sin(h), W = math.cos(h) },
@@ -81,9 +159,12 @@ return function(log)
                 pcall(function() a.SpawnTrapperCylinder:SetVisibility(false, false) end)   -- Feb's addition: no collision
                 if b[9] then pcall(function() a.Sphere:SetRelativeScale3D({ X = b[9][1], Y = b[9][2], Z = b[9][3] }) end) end
                 n = n + 1
+                placed[#placed + 1] = a
             end
         end
-        log(string.format("base blockers: %s: %d placed (class scale %.2f %.2f %.2f divided out)", map, n, t.X, t.Y, t.Z))
+        local okL, walls, shown = pcall(placeLooks, context, map, placed)
+        log(string.format("base blockers: %s: %d placed (class scale %.2f %.2f %.2f divided out), walls: %s, blockers shown: %s", map, n,
+            t.X, t.Y, t.Z, okL and tostring(walls) or ("failed: " .. tostring(walls)), okL and tostring(shown) or "-"))
         return n
     end
 end

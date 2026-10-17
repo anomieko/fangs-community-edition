@@ -13,7 +13,7 @@ The single place that says what is being worked on, what is done but not shipped
   duplicates it and the results get merged back.
 - Nothing secret here (no join code, keys, server credentials): this repo is public.
 
-Last updated: 2026-10-17.
+Last updated: 2026-10-18.
 
 ## Live on the server
 
@@ -64,7 +64,13 @@ Current deploy: `deploy-2026-10-17-2043` (`fab9d5f`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing right now.
+- **Base walls and no base laser** (branch `cp3-base`; the user after `deploy-2026-10-17-2043`: "theres no visuals about
+  the base" and "no laser: since you cant re-enter base its not needed"). Players see each base's border again as in
+  Aug 2022: a white ring at the blocker's border (the blocker with `SM_Sphere`'s own material) and a fire wall across
+  the exit (`NS_PheonixWall`; on Embersong, whose Aug phoenix gate is gone, the same fire ring sized to the blocker).
+  The base turrets remove themselves at the map's start (patch `base-turrets`). Tested headless on all three maps,
+  before and after, with screenshots (`docs/recon/base-blockers.md`, "Walls" and "No base laser"); `CHANGELOG.md` has
+  the off switches. Players' notes `backend/patchnotes/2026-10-17-2300.json`. Next: deploy with the user's OK.
 
 ## In progress
 
@@ -161,7 +167,8 @@ Nothing right now.
    Follow-ups (Sheepa's order where he gave one):
    1. reconnect to custom games (the game has it built in; about 2 days; `docs/recon/community-build-lobby.md`), after
       the big patch (user, 17 Oct);
-   2. the base blockers: fixed and on, live since `deploy-2026-10-17-2043` (`docs/recon/base-blockers.md`).
+   2. the base blockers: fixed and on, live since `deploy-2026-10-17-2043` (`docs/recon/base-blockers.md`); the walls
+      that show the border and no base laser are done, not deployed (above).
       Feb's spawn protection went to every hero while the first player stood in a base (patch `base-blockers`, plus a
       FangsHost safety net), and Stormheart's and Crownwatch's blockers were too small. Tested headless on all three
       maps (walking, teleport, death, round change). Abilities inside the base in the augment phase stay as the game has
@@ -178,6 +185,10 @@ Nothing right now.
 
 ## Known issues and small ideas
 
+- Test clients crashing in the main menu (seen 17-18 Oct on `cp3-base`): 3 of ~17 client starts in the walls tests
+  died 13-14 s after starting, right after FangsBoot logged `patch notes: tab added`, each with the same call stack
+  inside Blueprint code; 43 other starts across the worktrees' runs got past that point. The PATCH NOTES tab is live,
+  so players might hit it too. Not investigated (`docs/recon/base-blockers.md`, "Tests of the walls and the laser").
 - Ranked (and probably Casual): with a no-show, the others' lobby screen gives up after ~45 s ("Failed to Connect to
   Match.") just as FangsHost would start without the missing player (seen in `NOSHOW=1 tools/run/test_ranked.sh`).
 - Underworld (`LE_UnderWorldArena`, own "stocks" mode: team lives, random spawns; Aug 2022 + Feb 2023 paks) and
@@ -233,6 +244,8 @@ Nothing right now.
 - Reconnect comes after the big patch is deployed (user, 17 Oct).
 - The base in the augment phase stays as the game has it (user, 17 Oct: "keep as is"): abilities are locked inside
   the base in round 1's augment phase, not in later rounds' (`docs/recon/base-blockers.md`).
+- No base laser (user, 17 Oct: "since you cant re-enter base its not needed"), and the base's border visible as in the
+  old version ("a wall spawned you couldnt get into").
 - Tufts' Wing Dive ships with the sync change on (user, 17 Oct: "on"): his screen dashes at once and the server
   follows. Players' feedback decides whether it stays; off switch `"enabled": false` in `tufts-sync.json`.
 - Kept dummies and no augment-phase immunity in a custom lobby launched alone are intended, as Sheepa asked: the
