@@ -19,6 +19,8 @@
 --   caltrops(name)   server: the Dourling Caltrops boxes: where they lie from the hero (ahead/behind), drawn or not.
 --   knockup(n, s, by) server: a knock-up of s seconds on the hero from hero by (the game's DoTargetKnockUp).
 --   stunhold(name)   server: a stun on the hero until unstun(name).
+--   stunondash(n, v, s) server: a held stun of s seconds once the hero moves faster than v (a dash started).
+--   moveto(name, x, y) server: the hero to world position x, y.
 --   equip(path...)   client: once the augment phase is on, the own hero equips these items by tier, then locks in.
 --   key(n)           client: presses and releases ability key n (BP_AC_InputManager.QueueInput: 3 = Space).
 FCE_PATCH = FCE_PATCH or {}
@@ -315,6 +317,40 @@ function T.unstun(name)
     p.AbilitySystemComponent:RemoveActiveGameplayEffectBySourceEffect(cls, nil, -1)
     log("        " .. name .. " stun removed")
     return "unstun: " .. name
+end
+
+-- Server: once the hero moves faster than `speed` (a dash has started), a held stun for `seconds`, then removed.
+function T.stunondash(name, speed, seconds)
+    local p = hero(name)
+    if not valid(p) then return "stunondash: no hero " .. name end
+    local cls = loadClass("/Game/Gameplay/Effects/Shared/BP_GE_Stun.BP_GE_Stun_C")
+    local t0, state = now(p), "waiting"
+    LoopInGameThreadWithDelay(20, function()
+        if state == "done" or not valid(p) then return end
+        local v = p:GetVelocity()
+        local sp = math.sqrt(v.X * v.X + v.Y * v.Y)
+        if state == "waiting" and sp > speed then
+            state = "stunned"
+            pcall(function() p.AbilitySystemComponent:BP_ApplyGameplayEffectToSelf(cls, 1.0, {}) end)
+            log(string.format("        %s stunned mid-dash (speed %.0f, %.2f s after the watch began)", name, sp, now(p) - t0))
+            ExecuteInGameThreadWithDelay(math.floor(seconds * 1000), function()
+                if valid(p) then p.AbilitySystemComponent:RemoveActiveGameplayEffectBySourceEffect(cls, nil, -1) end
+                log("        " .. name .. " stun removed"); state = "done"
+            end)
+        elseif state == "waiting" and now(p) - t0 > 5 then
+            state = "done"; log("        " .. name .. ": no dash within 5 s")
+        end
+    end)
+    return "stunondash: watching " .. name
+end
+
+-- Server: the hero to world position x, y (its height kept), e.g. the middle of a map away from both bases.
+function T.moveto(name, x, y)
+    local p = hero(name)
+    if not valid(p) then return "moveto: no hero " .. name end
+    p:K2_SetActorLocation({ X = x, Y = y, Z = p:K2_GetActorLocation().Z }, false, {}, true)
+    log(string.format("        %s moved to %.0f, %.0f", name, x, y))
+    return string.format("moveto: %s %.0f, %.0f", name, x, y)
 end
 
 -- A knock-up on the hero from hero `by`, through the game's own DoTargetKnockUp (it makes and applies the effect; a
