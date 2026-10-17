@@ -17,6 +17,16 @@
 --   lower(name)      server: health to 30 %, mana to 0.
 --   apply(name, cls) server: a gameplay effect class (full path, e.g. a Shard's buff) applied to the hero.
 --   chain(p, n, ms)  client: fire(p) n times, ms apart (game thread), results to chain.log.
+--   health(name)     server: the hero's health, also to patchwatch.log.
+--   place(n, cls, d) server: the hero onto the newest actor of class path cls (e.g. a Sourblossom), d units ahead of it.
+--   hptrack(n, s, l) server: the hero's health and heal effects every 0.25 s for s seconds, labelled l, to hp.log.
+--   caltrops(name)   server: the Dourling Caltrops boxes: where they lie from the hero (ahead/behind), drawn or not.
+--   knockup(n, s, by) server: a knock-up of s seconds on the hero from hero by (the game's DoTargetKnockUp).
+--   stunhold(name)   server: a stun on the hero until unstun(name).
+--   stunondash(n, v, s) server: a held stun of s seconds once the hero moves faster than v (a dash started).
+--   moveto(name, x, y) server: the hero to world position x, y.
+--   equip(path...)   client: once the augment phase is on, the own hero equips these items by tier, then locks in.
+--   key(n)           client: presses and releases ability key n (BP_AC_InputManager.QueueInput: 3 = Space).
 FCE_PATCH = FCE_PATCH or {}
 local T = FCE_PATCH
 
@@ -52,7 +62,8 @@ end
 local CC = { BP_GE_Stun = "STUN", BP_GE_Root = "ROOT", BP_GE_Charm = "CHARM", BP_GE_BookMage_Skill3_Charm = "CHARM",
              BP_GE_Fear = "FEAR", BP_GE_KnockUp = "KNOCKUP", BP_GE_Incapacitate = "INCAP",
              BP_GE_LockAbilities = "ABILITY-LOCK", BP_GE_LockCastDebuff = "CAST-LOCK",
-             BP_GE_AntiDisplacement_Duration = "ANTI-CC" }
+             BP_GE_AntiDisplacement_Duration = "ANTI-CC", BP_GE_AntiRoot_Duration = "ANTI-ROOT",
+             BP_GE_AntiDisplacementandCC_Duration = "ANTI-CC+DISPLACEMENT" }
 local heroes, lookedUp = {}, -1
 
 local function pname(p) local ok, n = pcall(function() return p.PlayerState:GetPlayerName():ToString() end); return ok and n or "?" end
@@ -258,6 +269,157 @@ function T.regrant(name)
     return string.format("regrant: %s, Bunny Stacks %d", name, st)
 end
 
+
+-- Every actor of one class (class path), through the world's actor list (tests only).
+local function actorsOf(ctx, path)
+    local cls = loadClass(path)
+    if not valid(cls) then return {} end
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local res, out = {}, {}
+    GPS:GetAllActorsOfClass(ctx, cls, res)
+    local function add(o)
+        if not valid(o) then pcall(function() o = o:get() end) end
+        if valid(o) then out[#out + 1] = o end
+    end
+    local list = res.OutActors
+    if list == nil and res[1] ~= nil then list = res end
+    if type(list) == "table" then for _, o in pairs(list) do add(o) end
+    elseif list ~= nil then pcall(function() list:ForEach(function(_, e) add(e) end) end) end
+    return out
+end
+
+function T.health(name)
+    local p = hero(name)
+    if not valid(p) then return "health: no hero " .. name end
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local s = string.format("%s: health %.1f/%.0f", name, set.Health.CurrentValue, set.MaxHealth.CurrentValue)
+    log("        " .. s)
+    return "health: " .. s
+end
+
+function T.place(name, path, ahead)   -- the hero onto the newest actor of a class (ahead: units along its facing)
+    local p = hero(name)
+    if not valid(p) then return "place: no hero " .. name end
+    local list = actorsOf(p, path)
+    local a = list[#list]
+    if not valid(a) then return "place: no " .. path:match("([^.]+)$") end
+    -- ahead > 0: along the actor's facing; < 0: along the hero's own facing (an Earth Rend arc lies ahead of Rowan)
+    local face = (ahead or 0) < 0 and p or a
+    local l, yaw, d = a:K2_GetActorLocation(), math.rad(face:K2_GetActorRotation().Yaw), math.abs(ahead or 0)
+    p:K2_SetActorLocation({ X = l.X + math.cos(yaw) * d, Y = l.Y + math.sin(yaw) * d, Z = p:K2_GetActorLocation().Z }, false, {}, true)
+    log(string.format("        %s placed on %s (%d of them)", name, a:GetClass():GetFName():ToString(), #list))
+    return string.format("place: %s on %s", name, a:GetFName():ToString())
+end
+
+function T.hptrack(name, seconds, label)   -- health and heal effects every 0.25 s, to hp.log
+    local p = hero(name)
+    if not valid(p) then return "hptrack: no hero " .. name end
+    local f = io.open("hp.log", "a")
+    local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+    local t0, n, last = now(p), 0, set.Health.CurrentValue
+    f:write(string.format("== %s %s from %.2f, health %.1f/%.0f\n", name, label or "", t0, last, set.MaxHealth.CurrentValue))
+    LoopInGameThreadWithDelay(250, function()
+        n = n + 1
+        if n > seconds * 4 then
+            if n == seconds * 4 + 1 then f:close() end
+            return
+        end
+        if not valid(p) then return end
+        local e = effectsOf(p)
+        local hp = set.Health.CurrentValue
+        f:write(string.format("%6.2f health %7.1f (%+5.1f)  passive-heal %d overgrowth %d arc-heal %d\n", now(p) - t0, hp, hp - last,
+            e.BP_GE_DotHealFourPerSec or 0, e.BP_GE_WoodenSword_Skill4_Creep or 0, e.BP_GE_WoodenSword_HealingOverTime or 0))
+        last = hp
+        f:flush()
+    end)
+    return "hptrack " .. name .. " " .. (label or "")
+end
+
+function T.caltrops(name)   -- the Dourling Caltrops boxes, measured from the hero along its facing
+    local p = hero(name)
+    if not valid(p) then return "caltrops: no hero " .. name end
+    local list = actorsOf(p, "/Game/Gameplay/Abilities/Player/WoodenSword/Skill1/Items/BP_TA_Woodensword_DourlingCaltrops.BP_TA_Woodensword_DourlingCaltrops_C")
+    local l, yaw = p:K2_GetActorLocation(), math.rad(p:K2_GetActorRotation().Yaw)
+    local out = {}
+    for _, a in ipairs(list) do
+        local c = a:K2_GetActorLocation()
+        local ahead = (c.X - l.X) * math.cos(yaw) + (c.Y - l.Y) * math.sin(yaw)
+        local hidden = "?"
+        pcall(function() hidden = tostring(a.Box.bHiddenInGame) end)
+        out[#out + 1] = string.format("%+.0f ahead, box hidden %s", ahead, hidden)
+    end
+    local s = string.format("%s: %d Dourling Caltrops [%s]", name, #list, table.concat(out, "; "))
+    log("        " .. s)
+    return "caltrops: " .. s
+end
+
+-- A stun that holds until unstun(): the stun effect applied without a duration (none of its SetByCaller is set, so
+-- it gets no expiry timer), then removed. A pure stun: locks movement and casting, no displacement.
+function T.stunhold(name)
+    local p = hero(name)
+    if not valid(p) then return "stunhold: no hero " .. name end
+    local cls = loadClass("/Game/Gameplay/Effects/Shared/BP_GE_Stun.BP_GE_Stun_C")
+    local ok, err = pcall(function() p.AbilitySystemComponent:BP_ApplyGameplayEffectToSelf(cls, 1.0, {}) end)
+    log(string.format("        %s stunned (held)%s", name, ok and "" or (": " .. tostring(err))))
+    return ok and ("stunhold: " .. name) or ("stunhold failed: " .. tostring(err))
+end
+function T.unstun(name)
+    local p = hero(name)
+    if not valid(p) then return "unstun: no hero " .. name end
+    local cls = loadClass("/Game/Gameplay/Effects/Shared/BP_GE_Stun.BP_GE_Stun_C")
+    p.AbilitySystemComponent:RemoveActiveGameplayEffectBySourceEffect(cls, nil, -1)
+    log("        " .. name .. " stun removed")
+    return "unstun: " .. name
+end
+
+-- Server: once the hero moves faster than `speed` (a dash has started), a held stun for `seconds`, then removed.
+function T.stunondash(name, speed, seconds)
+    local p = hero(name)
+    if not valid(p) then return "stunondash: no hero " .. name end
+    local cls = loadClass("/Game/Gameplay/Effects/Shared/BP_GE_Stun.BP_GE_Stun_C")
+    local t0, state = now(p), "waiting"
+    LoopInGameThreadWithDelay(20, function()
+        if state == "done" or not valid(p) then return end
+        local v = p:GetVelocity()
+        local sp = math.sqrt(v.X * v.X + v.Y * v.Y)
+        if state == "waiting" and sp > speed then
+            state = "stunned"
+            pcall(function() p.AbilitySystemComponent:BP_ApplyGameplayEffectToSelf(cls, 1.0, {}) end)
+            log(string.format("        %s stunned mid-dash (speed %.0f, %.2f s after the watch began)", name, sp, now(p) - t0))
+            ExecuteInGameThreadWithDelay(math.floor(seconds * 1000), function()
+                if valid(p) then p.AbilitySystemComponent:RemoveActiveGameplayEffectBySourceEffect(cls, nil, -1) end
+                log("        " .. name .. " stun removed"); state = "done"
+            end)
+        elseif state == "waiting" and now(p) - t0 > 5 then
+            state = "done"; log("        " .. name .. ": no dash within 5 s")
+        end
+    end)
+    return "stunondash: watching " .. name
+end
+
+-- Server: the hero to world position x, y (its height kept), e.g. the middle of a map away from both bases.
+function T.moveto(name, x, y)
+    local p = hero(name)
+    if not valid(p) then return "moveto: no hero " .. name end
+    p:K2_SetActorLocation({ X = x, Y = y, Z = p:K2_GetActorLocation().Z }, false, {}, true)
+    log(string.format("        %s moved to %.0f, %.0f", name, x, y))
+    return string.format("moveto: %s %.0f, %.0f", name, x, y)
+end
+
+-- A knock-up on the hero from hero `by`, through the game's own DoTargetKnockUp (it makes and applies the effect; a
+-- spec handle made from Lua and applied from Lua arrives empty). Like a stun, it locks movement and casting.
+function T.knockup(name, seconds, by)
+    local p, src = hero(name), hero(by or "")
+    if not valid(p) then return "knockup: no hero " .. name end
+    if not valid(src) then src = p end
+    loadClass("/Game/BluePrints/Library/BP_FL_MOBA_FunctionLibrary.BP_FL_MOBA_FunctionLibrary_C")
+    local lib = StaticFindObject("/Game/BluePrints/Library/BP_FL_MOBA_FunctionLibrary.Default__BP_FL_MOBA_FunctionLibrary_C")
+    if not valid(lib) then return "knockup: no function library" end
+    local ok, err = pcall(function() lib:DoTargetKnockUp(p, src, seconds, src) end)
+    log(string.format("        %s knocked up for %.2f s by %s%s", name, seconds, by or name, ok and "" or (": " .. tostring(err))))
+    return ok and string.format("knockup: %s %.2f s", name, seconds) or ("knockup failed: " .. tostring(err))
+end
+
 -- ---------------------------------------------------------------------------------------------- client
 function T.count(className)   -- live objects of a class, e.g. a gameplay cue's actor (an object scan)
     local n = 0
@@ -292,6 +454,57 @@ function T.chain(pattern, n, ms)   -- client: fire(pattern) n times, ms apart, e
         f:write(string.format("%s %d: %s\n", os.date("%H:%M:%S"), i, T.fire(pattern))); f:flush()
     end)
     return string.format("chain: %s x%d, %d ms apart", pattern, n, ms)
+end
+
+function T.equip(...)   -- once the augment phase is on: the own hero equips these items by tier, then locks in
+    local paths, done = { ... }, false
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local f = io.open("equip.log", "a")
+    LoopInGameThreadWithDelay(1000, function()
+        if done then return end
+        local pc = GPS:GetPlayerController(gi, 0)
+        local gs = GPS:GetGameState(gi)
+        if not (valid(pc) and valid(pc.Pawn) and valid(gs)) then return end
+        local okAt, at = pcall(function() return gs:IsAtItemSelection() end)
+        if not (okAt and at) then return end
+        done = true
+        local hud, ps = pc.WB_HUDGamplayRef, pc.PlayerState
+        local pre, taken, out = hud.PreRoundSelection, {}, {}
+        for _, path in ipairs(paths) do
+            local it = loadClass(path) or StaticFindObject(path)
+            local name = path:match("([^.]+)$")
+            if not valid(it) then out[#out + 1] = name .. ": not loaded" else
+                local tier = it.ItemTier
+                local s
+                for _, c in ipairs(({ [2] = { 1, 4 }, [0] = { 2, 4 }, [1] = { 3, 4 }, [4] = { 5 }, [5] = { 6 } })[tier] or {}) do
+                    if not taken[c] then s = c break end
+                end
+                if not s then out[#out + 1] = name .. ": no free slot (tier " .. tier .. ")" else
+                    taken[s] = true
+                    local slot = pre["PlayerItem" .. s]
+                    hud.SelectedSlot = slot; hud.CurrentTierFilter = tier
+                    pcall(function() hud:RefreshItemStash() end)
+                    local ok, err = pcall(function() slot:SetItem(it, true) end)
+                    out[#out + 1] = name .. " -> slot " .. s .. (ok and "" or (" failed: " .. tostring(err)))
+                end
+            end
+        end
+        pcall(function() ps:ReportetFinishedItemSelectOnServer(false) end)
+        pcall(function() pc:PlayerLockedIn() end)
+        f:write(os.date("%H:%M:%S") .. " equipped: " .. table.concat(out, "; ") .. "\n"); f:close()
+    end)
+    return "equip: waiting for the augment phase"
+end
+
+function T.key(n)   -- press and release ability key n, as the player controller does for a key
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local p = GPS:GetPlayerController(gi, 0).Pawn
+    if not valid(p) then return "key: no pawn" end
+    p.BP_AC_InputManager:QueueInput(n, true)
+    ExecuteInGameThreadWithDelay(80, function() if valid(p) then p.BP_AC_InputManager:QueueInput(n, false) end end)
+    return "key " .. n
 end
 
 return "test_patch helpers"

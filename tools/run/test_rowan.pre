@@ -1,0 +1,3 @@
+# Before the round (tools/run/test_rowan.sh): bob equips Dourling Caltrops (combat), Glimmerbranch Hilt (utility,
+# the Space recast), Propagator (flex) and Rush (boon), then locks in.
+echo 'lua return FCE_PATCH.equip("/Game/Items/Characters/WoodenSword/Skill1/Item_WoodenSword_Skill1_DourlingCaltrops.Item_WoodenSword_Skill1_DourlingCaltrops", "/Game/Items/Characters/WoodenSword/Skill1/Item_WoodenSword_Skill1_Recast.Item_WoodenSword_Skill1_Recast", "/Game/Items/Characters/WoodenSword/Passive/Item_WoodenSword_P_CreepSourblosom.Item_WoodenSword_P_CreepSourblosom", "/Game/Items/Characters/Generic/Actives/Flash/ITEM_Generic_Flash.ITEM_Generic_Flash")' >> $B
