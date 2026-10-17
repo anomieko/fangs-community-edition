@@ -85,6 +85,8 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
 - Game servers: no `FindFirstOf`/`FindAllOf` in loops that run during matches. Each walks every object on the game
   thread (10-17 ms in a full arena on a fast PC, several times that on the VPS) and was the source of the ~200 ms
   hitches. Don't cancel UE4SS loops (`CancelDelayedAction`): in this UE4SS build that sometimes stopped another loop.
+  The same holds for players' mods: FangsBoot's cancelled loops stopped its unreleased-heroes loop, so custom hero
+  select lost its toggle (16 Oct). FangsHost and FangsBoot `every()` now leave a finished loop idle.
   Loading a map resets `t.MaxFPS` (`docs/recon/server-performance.md`).
 
 ## Next
