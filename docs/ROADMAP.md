@@ -61,7 +61,11 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing.
+- **PATCH NOTES in the game** (user, 17 Oct: "a patch notes section that shows the patch notes … such as the pdf we
+  already wrote"): branch `cp2-patchnotes`. A PATCH NOTES tab in the main menu lists the updates and shows each one's
+  notes; the newest opens once by itself after an update. From now on every deploy that reaches players gets a notes
+  file in `backend/patchnotes/` in the same commit (`docs/CHANGELOG.md`, "How it works"); the PDF comes from the same
+  file. Test: `tools/run/test_patchnotes.sh`, `backend/tests/test_patchnotes.py`.
 
 ## In progress
 
