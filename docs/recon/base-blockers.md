@@ -77,10 +77,12 @@ spot in its range clear of both blockers).
 
 Results, 17 Oct, Feb 2023 build, Rowan (alice, team A) and Astrada (bob, team B). Runs `base-s2`, `base-c3`
 (`base-c2` before the death fix), `base-e2`. The first round (`base-ctl`, `base-e`, `base-s`, `base-c`, `base-all`)
-found the bugs above; `base-all` (every live patch with this one, old placement) passed the same cases as `base-e`.
-Pending (they wait while the user plays): `base-all3`, every live patch with the final code (`base-all2` never reached
-the arena: the lock-in found no lobby controller, before any blocker code ran), and `base-ctl2`, the control again for
-the safety net's empty-list guard.
+found the bugs above. With the final code:
+- `base-all3` (Embersong, every live patch plus this one): every case as in `base-e2`, and 86/88 patched values loaded
+  on both clients and the server, as at the deploy. (`base-all2` never reached the arena: the lock-in found no lobby
+  controller, before any blocker code ran.)
+- `base-ctl2` (no patch): Feb's bug is back (`ApplyImmunity` on bob outside his base, with alice in hers: protected,
+  locked), and the safety net released him within a second (`base blockers: released …`).
 
 | Case | Embersong | Stormheart | Crownwatch |
 |---|---|---|---|
@@ -94,7 +96,7 @@ the safety net's empty-list guard.
 | Teleported out | protection off at once, LMB works, stopped at 842; ignored: in | stopped at 764; ignored: in | off, LMB works; the straight way back hits the map at 2228 even with the blocker ignored (walls: not a test of the blocker) |
 | Dies in the lane, respawns | at spawn, protected, channel 25 overlap; walks out: off, stopped at 842; ignored: in | same, 789 | same, 888 |
 | Round change | 20 s after the end: at spawn, unprotected (see below); round start: protected; walks out: off, stopped at 842 | same, 771 | same, 873 |
-| Safety net releases | 0 (only the control's) | 0 | 0 |
+| Safety net releases | 0 (the controls': 1 each) | 0 | 0 |
 
 Before the placement fix (`base-s`, `base-c`): heroes walking back stopped at 276 (Stormheart) and 328 (Crownwatch)
 from the centre, and Crownwatch's team A start was outside its blocker.
