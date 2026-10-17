@@ -234,6 +234,9 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
   Pommel +95 after a roster comparison.
 - Ishir's ult sound (user, 16 Oct): ship Sheepa's clip as he asked ("sheepas clip anyway is fine"); it is never committed.
 - Reconnect comes after the big patch is deployed (user, 17 Oct).
+- Kept dummies and no augment-phase immunity in a custom lobby launched alone are intended, as Sheepa asked: the
+  user first called it a bug, then "apparently thats intended" (17 Oct). The change limiting it to TRAINING is unshipped
+  (branch `dropped-cp2-solo`).
 - Gameplay changes to the game's own data are permanent and go into the patch pak, the same file for players and
   servers (`docs/PATCHING.md`). Runtime hooks are not used for them (user, 15 Oct).
 - CC revert scope (user, 15 Oct):
