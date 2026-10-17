@@ -94,3 +94,27 @@ sun light and scene capture. Findings:
   parameter's name; `ExportRenderTarget` writes PNG for RGBA8 targets (EXR for RGBA16f); scene captures honour
   `CustomProjectionMatrix` (tiling); `ReadRenderTargetRawPixel` is fast; a spawned `SkeletalMeshActor` needs
   `VisibilityBasedAnimTickOption = 0` to animate.
+
+## The unreleased toggle went missing (fixed 17 Oct, branch `cp-unreleased`)
+
+Reported by the user on 16 Oct: in a custom lobby's hero select, the filter that shows the unreleased heroes was gone,
+so nobody could pick them.
+
+- **Reproduced** with `tools/run/test_unreleased_pick.sh`. Alice creates a custom lobby through the mode chooser,
+  bob joins from the lobby list, and both are in game mode 4 (custom). Hero select has only the game's 3 class
+  filters. The toggle, the 4th, is never added. With no hero button to click, Ready stays off, and the lobby sends
+  both back ("A player has not locked in a hero").
+- **Cause:** FangsBoot's `every()` ended a loop whose work was done with `CancelDelayedAction`. In this UE4SS build,
+  that now and then stops another loop of the mod for good (`docs/recon/server-performance.md`, finding 7; fixed in
+  FangsHost on 14 Oct). FangsBoot has many loops that end themselves at start-up, from `1995f9c` (14 Oct) on, more
+  since `c49e624`. The unreleased-heroes loop is created after them, and it was stopped: no hooks re-registered, no
+  toggle. Which loop dies varies, so it can also hit others.
+- **Fix:** `every()` keeps a finished loop registered but idle, as FangsHost does. FangsBoot also logs
+  "unreleased heroes: toggle added to hero select".
+- **Test** (`RUN=unrelpick2`, 17 Oct): both clients get 4 filter buttons; the toggle shows Warlock, Priest, WaterBlade,
+  Scythe and Sniper. Clicks give player-state heroes Priest and Warlock with Ready enabled, the server's lobby picks
+  are alice=Priest bob=Warlock, and the arena spawns `BP_Priest_Char_C` and `BP_Warlock_Char_C`. Screenshots in
+  `work/logs/unrelpick2-shots` (local). Matchmade lobbies (Casual, Ranked) still show no toggle: FangsBoot only adds
+  it in game mode 4. That part of the code is unchanged.
+- A player update: players get it through the launcher.
+

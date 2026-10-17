@@ -12,18 +12,21 @@ end
 
 -- Runs fn on the game thread every `ms` milliseconds until it returns true. (LoopAsync + ExecuteInGameThread
 -- ran Lua on two threads at once, which now and then crashed the game inside UE4SS's Lua VM: exit code 3.)
+-- A loop whose work is done (fn returns true) stays registered but idle. Cancelling one (CancelDelayedAction) now
+-- and then stops another loop of this mod for good in this UE4SS build (docs/recon/server-performance.md, finding 7;
+-- in FangsBoot it stopped the unreleased-heroes loop: no toggle in custom hero select, docs/recon/heroes.md).
 local function every(ms, fn)
-    local handle, failures = nil, 0
-    handle = LoopInGameThreadWithDelay(ms, function()
+    local failures, finished = 0, false
+    return LoopInGameThreadWithDelay(ms, function()
+        if finished then return end
         local ok, done = pcall(fn)   -- an error must not end the loop (objects vanish during map changes)
         if not ok then
             failures = failures + 1
             if failures <= 3 then log("loop error (" .. ms .. " ms loop): " .. tostring(done)) end
-        elseif done == true and handle and IsValidDelayedActionHandle(handle) then
-            CancelDelayedAction(handle)
+        elseif done == true then
+            finished = true
         end
     end)
-    return handle
 end
 
 local function commandLine()
@@ -1013,6 +1016,7 @@ if not gameVersion():find("^alpha7") then
                 hs.FilterBtnPanel:AddChild(b)
                 b:SetToolTipText(FText("Unreleased heroes"))
                 toggle = b
+                log("unreleased heroes: toggle added to hero select")
             end
             regroup(hs)
         end
