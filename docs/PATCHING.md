@@ -85,6 +85,8 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `copy-default` | `from` (an asset path), `property`, optional `rename` | Adds a class default copied from the same property of another asset's class defaults, renaming names in it. Example: the ult charm's `GameplayCues` onto the generic charm, with the cue tag renamed. The property must not be set in the target yet, and the copied value must not reference other objects. `build.sh` extracts the `from` asset too. |
 | `insert-call` | `function`, `call`, optional `args`, optional `inherited`, and `at` (`start`, `end`) or `before`/`after` (a call in that function) | Adds a call to one of the Blueprint's own functions as a new statement, e.g. Rowan's `ApplyUnstoppable` at the start of `Lock Pre Dash`. `at: end` puts it before the final return, so it runs on every way out. A parent Blueprint's function (e.g. `Clear Stacks and Listeners` of `BP_GA_Template_Ammo`) needs `"inherited": true` and takes no arguments: its parameters aren't in this asset. `before`/`after` name a call that exactly one statement of the function makes. `args` are literals typed by the called function's parameters (numbers, `true`/`false`, `self`, `nullptr`) or variables the function already uses; no output parameters. Not into an ubergraph yet (see "Rewriting functions"). |
 | `remove-call` | `function`, `call`, `count` | Removes the statements that are a call to `call` (not those that use its result); a jump to a removed statement lands on the next one. |
+| `soundwave-audio` | `media`, `sha256`, `source`, `doc`, optional `gain_db` | Only in a new SoundWave asset (see "New sounds"): puts the audio file `media` into it, encoded to Ogg Vorbis with ffmpeg (the template's channels and sample rate, `gain_db` applied), with its duration and sample count. `sha256` must match the file. |
+| `insert-play-sound` | `function`, `before`, `attach_arg`, `sound`, optional `volume`, `attenuation` | A new statement before the one call to `before` in `function`: `GameplayStatics.SpawnSoundAttached(sound, <argument attach_arg of that call>, …, volume, attenuation)`. Its imports are added, and listed in the function's create-before-serialization dependencies as the cooker does. |
 
 What a patch can't do (yet):
 - Add functions, or code other than a call to one of the Blueprint's own functions (`insert-call`).
@@ -132,6 +134,32 @@ Not done yet:
 - `insert-call` into an ubergraph. The rewrite handles it, but it needs a match test first.
 - Copying code from another asset, e.g. a function as the developers fixed it in the Dec 2023 build. Its names,
   imports and property references have to be re-created in the target, as `copy-default` does for values.
+
+## New sounds
+
+The game plays most sounds through FMOD, and Unreal's own audio next to it: the pak has 678 cooked `SoundWave` assets
+with inline Ogg Vorbis audio, and Blueprints call `GameplayStatics.SpawnSoundAttached` with the attenuation
+`/Game/UI/Audio/Sfx/Atten_Default` (Ishir's cast cue). A patch can add a sound the same way:
+- **A new asset:** an entry in `assets` with `"template": "<one of the game's assets>"` is a new asset at its `path`.
+  - `build.sh` extracts the template.
+  - `AssetPatch` copies it and renames its package and object (`/Game/...` and the asset name), then applies the edits.
+- **`soundwave-audio`** fills a SoundWave copy with an audio file:
+  - The cooked layout after the properties (4.26): `bCooked`, the format count, the format name (e.g.
+    `OGG10000-1-1-1-1-1`), the bulk data header, the Ogg payload and `CompressedDataGuid`.
+  - Flags 0x48 (inline, single use). The offset field counts from the start of the `.uasset`, so `AssetPatch` lays
+    the asset out once to compute it.
+- **The audio file is never in git.** It sits in `work/media/` and the patch states its sha256 and where it came from.
+  - `build.sh` passes `PATCH_MEDIA_ROOT` (the repo).
+  - A missing file fails the build with a message saying where to get it. `server/deploy.sh` runs with `pipefail`, so
+    the deploy stops too.
+  - A deploy needs the file in the deploying checkout's `work/media/`.
+- **`insert-play-sound`** plays the sound where the game already plays one, e.g. next to an FMOD event:
+  `SpawnSoundAttached` attached to the same component.
+- **Testing a sound:** test clients run with `-nosound`, so the engine has no audio device and plays nothing. A client
+  with sound on but every Wine audio driver disabled hung at startup (tried 16 Oct). What a test can show is that the
+  sound loads (the engine reads the cooked audio when it loads the asset, `-nosound` or not) and that the call runs (a
+  UE4SS hook on the native `GameplayStatics:SpawnSoundAttached`): `tools/run/test_ishir.sh`. Hearing it takes a real
+  game.
 
 ## Things learned
 

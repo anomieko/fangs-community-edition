@@ -1,0 +1,28 @@
+{
+  "name": "community-ishir",
+  "summary": "Ishir's ult: a shotgun blast when the mark on the enemy pops (a community member's clip, not in git)",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/community-build-ishir.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/FangsCE/Audio/SFX_Ishir_ShotgunPop",
+      "template": "MOBA/Content/Environment/MapAssets/CTF/CannonFire",
+      "why": "Ishir, Sever Spirit (R): the shotgun blast that plays when the mark pops. A new sound: a copy of the game's own CannonFire SoundWave (48 kHz stereo Ogg) with a community member's clip, 10 dB quieter than the clip (about 3 dB below the game's revolver shots).",
+      "edits": [
+        { "op": "soundwave-audio", "media": "work/media/shotgun-clip/snd-shotgun_blast.mp3",
+          "sha256": "07319952c8a9c37f3a0a09c5b055c877c6426f62ded48d5111bd740af9e7ee58",
+          "source": "https://www.myinstants.com/media/sounds/snd-shotgun_blast.mp3", "doc": "docs/recon/community-build-ishir.md",
+          "gain_db": -10 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BackStab/Skill3/BP_GC_UltimateMark",
+      "why": "Ishir, Sever Spirit (R): when the mark ends (it pops and deals its damage), every player hears the shotgun blast on the marked enemy, next to the mark's own end sound.",
+      "edits": [
+        { "op": "insert-play-sound", "function": "OnRemove", "before": "PlayEventAttached", "attach_arg": 1,
+          "sound": "/Game/FangsCE/Audio/SFX_Ishir_ShotgunPop", "volume": 1.0, "attenuation": "/Game/UI/Audio/Sfx/Atten_Default" }
+      ]
+    }
+  ]
+}
