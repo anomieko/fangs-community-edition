@@ -22,7 +22,7 @@ What each deploy put on the server, so a problem can be traced to a change and u
 ## Next deploy (not deployed yet)
 
 Branch `cp3-base`. Player update and server update: the patch pak gets `base-turrets` (players and servers), FangsBoot
-and FangsHost get the new `blockers.lua`, FangsBoot the main menu crash fix. Players' notes: `backend/patchnotes/2026-10-17-2300.json`. Research and tests
+and FangsHost get the new `blockers.lua`, FangsBoot the main menu crash fix. Players' notes: `backend/patchnotes/2026-10-17-2350.json`. Research and tests
 (`walls-*` runs, screenshots in `work/logs/walls-*-shots/`): `docs/recon/base-blockers.md`, "Walls" and "No base laser".
 
 | Change | Where | Off switch |
