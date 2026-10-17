@@ -2,7 +2,7 @@
   "name": "community-heroes",
   "summary": "Community patch (Sheepa's list, 16 Oct): Ethryn's shield (reflect width, look, Belroth's boulder, reflected Lamblaster) and Rayo's Stormlense ramp",
   "build": "Playtest021523v1_v0_0_02",
-  "enabled": false,
+  "enabled": true,
   "research": "docs/recon/community-build-heroes.md",
   "assets": [
     {

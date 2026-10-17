@@ -2,7 +2,7 @@
   "name": "community-lobby",
   "summary": "Captain vote: teammates' votes count from the first round (FangsHost decides per match whether there is a vote)",
   "build": "Playtest021523v1_v0_0_02",
-  "enabled": false,
+  "enabled": true,
   "research": "docs/recon/community-build-lobby.md",
   "assets": [
     {

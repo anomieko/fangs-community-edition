@@ -2,7 +2,7 @@
   "name": "community-rowan",
   "summary": "Community patch (Sheepa's list, OK'd 16 Oct): Rowan's passive heal and Dourling Caltrops; CC immunity on Rowan's and Belroth's dashes and on the Rush boon, as in Aug 2022",
   "build": "Playtest021523v1_v0_0_02",
-  "enabled": false,
+  "enabled": true,
   "research": "docs/recon/community-patchnotes.md, docs/recon/community-build-rowan.md",
   "assets": [
     {

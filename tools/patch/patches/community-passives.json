@@ -2,7 +2,7 @@
   "name": "community-passives",
   "summary": "Hero passives and Wylde's reload that a death, stun, channel or cast could switch off for a whole match start again (Wylde's ammo, Fiorne's Bunny Stacks, Rowan, Somnia, Zoey)",
   "build": "Playtest021523v1_v0_0_02",
-  "enabled": false,
+  "enabled": true,
   "research": "docs/recon/community-build-passives.md",
   "assets": [
     {

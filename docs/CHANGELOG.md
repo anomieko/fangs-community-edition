@@ -15,7 +15,35 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+**The community patch** (Sheepa's list, OK'd 16 Oct; `docs/recon/community-patchnotes.md`) and **the Fiorne restore**
+(the user's, `docs/recon/fiorne.md`), merged on branch `megapatch`. Each part was tested headless against a control
+run without it (`docs/recon/community-build-*.md`), and then all together on `megapatch` (17 Oct): 86/88 changed
+values loaded on both clients and the server at match start and end (the other two are nested HP values `check()`
+can't read; Brutus shows 1050), lobby settings and the Captain vote, Training on the island and its server freed,
+unreleased picks, queue, a full match with results, and Rowan's dash with its anti-CC in mid-map (the default test
+sequence puts heroes at the enemy base, whose defences kill them). 220 backend tests, ruff, `rewrite-check` 0 failed.
+
+Player update and server update: the patch pak grows from 1 to 8 patches. FangsBoot changes too, so players get both
+through the launcher on their next start. The game servers load the same pak.
+
+Before deploying: the Ishir clip must be at `work/media/shotgun-clip/snd-shotgun_blast.mp3` in the repo that deploys
+(`docs/recon/community-build-ishir.md`). `build.sh` stops if it's missing.
+
+| Change | Where | Off switch |
+|---|---|---|
+| Fiorne restore: the 0 Bunny Stacks fix (the stack system sets itself up whenever it starts); her Aug 2022 damage, reach, passive (+100 % attack speed for 1.25 s, every 7 s), Space (0.3 s between dashes), RMB and E/R values; 11 heirlooms back to Aug (Earthbreaker Pommel +95); 700 HP; all four dashes stop dead; two tooltips | pak `fiorne.json` (merged from `fiorne-restore`) | `"enabled": false` in `fiorne.json` |
+| Numbers and texts: Rose, Wylde (LMB 40; RMB 95, short range, 1 s; Bounty's Reward 30; Speedshine +20 %), Ethryn (LMB 40-40-50; Holy Brazier 4 s / 1 s), Brutus 1050 HP, Zoey (real LMB heal 50; RMB shield 50 / 2 s; Shieldnip 1.5 s; Mentor's Locket +75; ult tooltip 150), Rayo (Pinpoint Spotter +50 %; Blitzhead max 35, no self-damage; LMB draw 0.25 s), Belroth (Angerstone Talons +40; Craterthorns 50); Somnia's ult 4 ticks/s; green Shard heal over 0.5 s (93 % of the 50 %; a single quarter-second tick gave only 63 %); blue Shard instant; Captain wait 18 → 2 s; "Heirlooms" → "Augments"; every knock-up is a stun; Training's "[TAB]" → "[P]" | pak `community.json` (`cp-values`, merge `5f5721e`) | `"enabled": false` in `community.json` |
+| Rowan and dashes: CC immunity during Rowan's Dourling Dive and Belroth's Vicious Lunge (as in Aug); Rush runs to its end when stunned; Dourling Caltrops on the dashed path, without the cube, Iron Thorns look; Rowan's passive heals 2 % of missing HP + 3 HP per second, recomputed every tick (tooltip +3); Propagator's charge bar (FangsBoot) | pak `community-rowan.json`, FangsBoot (`cp-rowan`, merge `29cc88c`) | `"enabled": false` in `community-rowan.json`; the bar: revert the FangsBoot block |
+| Hero code fixes: Ethryn's shield reflects only within her body width (push zone unchanged) and looks smaller; Belroth's boulder is reflected only when it reaches the shield; a reflected Lamblaster deals one hit, not one per pellet; Stormlense rises evenly to +50 % at max range | pak `community-heroes.json` (`cp-heroes`, merge `60432e1`) | `"enabled": false` in `community-heroes.json` |
+| Passives that a death, stun, channel or cast at spawn could switch off for a whole match (Wylde's ammo, Fiorne's stacks, Rowan, Somnia, Zoey; Wylde's reload) can always start. The real-game trigger isn't proven | pak `community-passives.json` (`cp-passives`, merge `ec8e710`) | `"enabled": false` in `community-passives.json` |
+| Ishir's ult: Sheepa's shotgun clip when the mark pops (10 dB down), a new SoundWave asset built from the local clip | pak `community-ishir.json` (`cp-ishir`, merge `0df45ca`) | `"enabled": false` in `community-ishir.json` |
+| Custom lobby settings for the owner: map, teams 1v1-6v6, Bo3-Bo9, Captain vote, shuffle; seats that no longer fit wait and are removed at start; the lobby list follows map and size. Captain vote (custom option): 8 s, never the same Captain twice; off and in Casual/Ranked no vote screen | FangsBoot `lobbyui.lua`, FangsHost `lobby.lua`, backend, pak `community-lobby.json` (`cp-lobby`, merge `5d47a22`) | `"enabled": false` in `community-lobby.json`; revert the merge for the panel |
+| Unreleased heroes pickable again: FangsBoot's finished loops go idle instead of being cancelled (cancelling one killed the loop that adds the unreleased filter) | FangsBoot (`cp-unreleased`, merge `f3ae986`) | revert `12bdc1e` |
+| Training and modes: TRAINING loads the floating island; a Training server stops ~12 s after its player left (was 180 s); dummies stay alive after the round starts and the augment-phase immunity is off in Training/Solo; Wylde gets a full gun in the dummy phase, Bounty's Reward stacks from dummies are removed; presets save and load (FangsHost shim + backend). A player with no saved preset for a hero now starts with its recommended build 1 equipped (the game's own default, which never ran before); Shardseeker and Wing Rush removed. Built but off: the held augment phase and F6 (`HOLD_PHASE = false` in `modes.lua`), and the base blockers (`ENABLED = false` in `blockers.lua`, both mods) | FangsHost `modes.lua`, FangsBoot `blockers.lua`, backend, seed (`cp-modes`, merges `eb760cf`, `439101c`) | revert the merges; seed: `REMOVED` in `make_seed.py` |
+| AssetPatch: `set-export-prop`, `props`; the function rewriter (`insert-call`, `remove-call`, `rewrite-check`); `set-tags`, `set-name-const`, `set-branch`, `insert-copy`, `wrap-call-arg`, `insert-code`, `replace-call-arg`, `rename-prop-ref`, `soundwave-audio`, `insert-play-sound` | tools only (`assetpatch-export-prop`, `assetpatch-rewrite` and the streams) | – |
+
+Known gaps (not in this deploy): the base blockers (in the combined run, heroes who spawn inside them got the game's spawn protection with an ability lock that only walking out removes, so teleported test heroes couldn't cast all match; a blink out of the base might do the same), the held Training augment phase and F6, Astrada's cage colours, Zoey's Hellhound ult
+effect (not reproduced), reconnect, Burning Harvest, Ishir's health preview, the netcode A/B tests.
 
 ## deploy-2026-10-15-2336 (`662f8ea`, Feb 2023 build)
 
