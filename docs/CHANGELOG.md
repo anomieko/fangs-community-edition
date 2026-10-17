@@ -21,6 +21,24 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-17-2043 (`fab9d5f`, Feb 2023 build)
+
+Deployed with the user's OK, forced (`FANGS_DEPLOY_FORCE=1`, "les force deploy even if someones online"), so whether
+anyone was playing wasn't checked. Smoke test passed. Players' notes: `backend/patchnotes/2026-10-17-2045.json`.
+
+The first attempt (from `a31a120`) failed at the server's image build: `deploy.sh` didn't upload
+`backend/patchnotes.py` and `backend/patchnotes/`, which the Dockerfile copies (`cp2-patchnotes` added them there
+only). The old server kept running, but the new player downloads were already up, so for about 3 minutes a player
+starting the launcher got the new pak against the old server. `fab9d5f` adds both to the upload; deployed again.
+
+Tested before, all together on branch `deploy2` (17 Oct): `test_patch` (86/88 changed values loaded on both clients
+and the server; with base blockers on, its default CC casts are refused inside the bases, and those patches are
+unchanged since the last deploy), `test_base` on Crownwatch, `test_patchnotes`, `test_lobbyui` (the real LAUNCH
+button), `test_match` (results, history, mastery), `test_tufts` with and without the change; the pak builds from all
+10 patches. One `test_patch` run stuck in the lobby (the test's own launch shortcut; `docs/recon/server-performance.md`).
+
 Player update and server update: the patch pak grows from 8 to 10 patches (`base-blockers`, `tufts-sync`) and FangsBoot changes
 (the PATCH NOTES tab, `blockers.lua`), so players get both through the launcher on their next start. The game
 servers also get new network settings (`server/netcode.env`).

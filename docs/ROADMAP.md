@@ -17,7 +17,7 @@ Last updated: 2026-10-17.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-17-2043` (`fab9d5f`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -58,20 +58,13 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
   settings and Captain vote, Training on the island, presets, the unreleased-heroes fix, passives that never started
   (`docs/CHANGELOG.md` has every change and its off switch). Base blockers and the held Training phase are built
   but off.
+- since 17 Oct 20:43 UTC (forced: the user's call): the base change (once out, no way back in until death or the
+  round's end), net tick 60 (less rubber-banding), Tufts' Wing Dive lined up with the server, the PATCH NOTES tab,
+  Astrada's cage in team colours, Zoey sees her own ult's landing (`docs/CHANGELOG.md`).
 
 ## Done, not deployed
 
-- **PATCH NOTES in the game** (user, 17 Oct: "a patch notes section that shows the patch notes … such as the pdf we
-  already wrote"): branch `cp2-patchnotes`. A PATCH NOTES tab in the main menu lists the updates and shows each one's
-  notes; the newest opens once by itself after an update. From now on every deploy that reaches players gets a notes
-  file in `backend/patchnotes/` in the same commit (`docs/CHANGELOG.md`, "How it works"); the PDF comes from the same
-  file. Test: `tools/run/test_patchnotes.sh`, `backend/tests/test_patchnotes.py`.
-- **Tufts' Wing Dive lines up with the server** (a community member's list, tigga's report; branch `cp2-tufts`, pak `tufts-sync.json`,
-  on: user, 17 Oct): the server waits for the player's game at the dash's sync points, not the other way round. Half
-  the snap-backs while dashing at ~50 ms; the dash itself unchanged (`tools/run/test_tufts.sh`,
-  `docs/recon/server-performance.md`).
-- **Astrada's Flame Cage in team colours** (a community member's list; branch `cp2-astrada`, pak `community-heroes.json`): her own
-  and her teammates' cage yellow-orange, an enemy Astrada's cage red. `docs/recon/community-build-heroes.md`.
+Nothing right now.
 
 ## In progress
 
@@ -168,7 +161,7 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
    Follow-ups (a community member's order where he gave one):
    1. reconnect to custom games (the game has it built in; about 2 days; `docs/recon/community-build-lobby.md`), after
       the big patch (user, 17 Oct);
-   2. the base blockers: fixed and on, on branch `cp2-base` (not merged, not deployed; `docs/recon/base-blockers.md`).
+   2. the base blockers: fixed and on, live since `deploy-2026-10-17-2043` (`docs/recon/base-blockers.md`).
       Feb's spawn protection went to every hero while the first player stood in a base (patch `base-blockers`, plus a
       FangsHost safety net), and Stormheart's and Crownwatch's blockers were too small. Tested headless on all three
       maps (walking, teleport, death, round change). Abilities inside the base in the augment phase stay as the game has
@@ -177,11 +170,10 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
       (`docs/recon/community-build-modes.md`);
    4. Burning Harvest (Rowan), Ishir's health preview, Training on the player's PC, less laggy dummies, the Loadouts
       tab, DPS numbers, spectating;
-   5. Astrada's cage colours: done, not deployed (branch `cp2-astrada`: the cage effects' own colour curves
-      recoloured, yellow-orange for her team, red for enemies; the colour parameters the game sets are read by no
-      emitter); Zoey's ult effect: fixed, not deployed (branch `cp2-zoey`; only the Zoey player missed it, on every
-      skin);
-   6. netcode A/B tests (Dec 2023 settings) and Crownwatch's rendering.
+   5. Astrada's cage colours and Zoey's ult effect: live since `deploy-2026-10-17-2043` (the cage effects' own
+      colour curves recoloured; only the Zoey player missed her burst, on every skin);
+   6. netcode: net tick 60 and Tufts' sync change live since `deploy-2026-10-17-2043`; still open: the Dec 2023
+      settings and Crownwatch's rendering.
    Players' feedback decides the numbers; each is one line in its patch file.
 
 ## Known issues and small ideas
