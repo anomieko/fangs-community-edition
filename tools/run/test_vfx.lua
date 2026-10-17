@@ -54,6 +54,15 @@ function V.pack(row)
     return "pack " .. row .. " -> " .. (valid(ref) and ref:GetFName():ToString() or "none")
 end
 
+-- the mouse dx, dy pixels from the hero on screen, so that targeted abilities land in view
+function V.aimNear(dx, dy)
+    local pc = GPS:GetPlayerController(FindFirstOf("BP_MOBAInstance_C"), 0)
+    local v = {}
+    pc:ProjectWorldLocationToScreen(pawn():K2_GetActorLocation(), v, false)
+    pc:SetMouseLocation(math.floor(v.X + dx), math.floor(v.Y + dy))
+    return string.format("mouse at %d,%d", math.floor(v.X + dx), math.floor(v.Y + dy))
+end
+
 -- activate the hero's ability whose class name contains `part`
 function V.fire(part)
     local p = pawn()

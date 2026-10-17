@@ -5,23 +5,25 @@
 # it still applies its effects, alice's health before and after.
 #   MODE=boulder     alice = Belroth, Boulder Toss (E)
 #   MODE=lamblaster  alice = Wylde, Lamblaster (E)
+#   MODE=stormlense  alice = Rayo: his Stormlense damage formula run on the server for distances 0 to 1.2 x range
 #   MODE=cage        alice = Astrada drops her Flame Cage on bob (Ethryn); screenshots on both clients (cage colours)
-# Usage: MODE=boulder|lamblaster|cage [PATCHES="ccrevert fiorne community-heroes" | PATCHES=none] [RUN=<name>] tools/run/test_shield.sh
+# Usage: MODE=boulder|lamblaster|cage|stormlense [PATCHES="ccrevert fiorne community-heroes" | PATCHES=none] [RUN=<name>] tools/run/test_shield.sh
 set -u
 cd "$(dirname "$0")/../.."
-MODE=${MODE:?set MODE=boulder, lamblaster or cage}
+MODE=${MODE:?set MODE=boulder, lamblaster, cage or stormlense}
 case $MODE in
-  boulder) HA=BigBoi; SHOT=BigBoi_Skill4; ULT=BigBoi_Skill3 ;;
-  lamblaster) HA=Gunslinger; SHOT=Gunslinger_Skill4; ULT=Gunslinger_R ;;
-  cage) HA=FireMage; SHOT=Firemage_E; ULT=FireMage_R ;;
+  boulder) HA=BigBoi; SHOT=BigBoi_Skill4; ULT=BigBoi_Skill3; FIRST=BigBoi_LMB; TRACK=BP_MOBA_BigBoi_Skill4_Projectile_2 ;;
+  lamblaster) HA=Gunslinger; SHOT=Gunslinger_Skill4; ULT=Gunslinger_R; FIRST=Gunslinger_LMB; TRACK=BP_MOBA_Gunslinger_Skill4_Projectile ;;
+  cage) HA=FireMage; SHOT=Firemage_E; ULT=FireMage_R; FIRST=FireMage_LMB; TRACK=none ;;
+  stormlense) HA=LightningArcher; SHOT=LightningArcher_E_; ULT=LightningArcher_R; FIRST=LightningArcher_LMB; TRACK=none ;;
   *) echo "unknown MODE $MODE"; exit 2 ;;
 esac
 R=${RUN:-shield-$MODE}
-export SHOT
+export SHOT TRACK
 P=${PATCHES:-ccrevert fiorne community-heroes}; [[ $P == none ]] && C=community-heroes || C=$P
-RUN=$R PATCHES=$P CHECK=${CHECK:-$C} HERO_A=$HA CAST_A=$SHOT ULT_A=$ULT \
-  HERO_B=ShieldGirl CAST_B=ShieldGirl_Skill4 LMB_B=ShieldGirl_LMB CUE_A= \
-  STEPS=$PWD/tools/run/test_$([[ $MODE == cage ]] && echo cage || echo shield).steps DURATION=${DURATION:-480} tools/run/test_patch.sh
+RUN=$R PATCHES=$P CHECK=${CHECK:-$C} HERO_A=$HA CAST_A=$FIRST ULT_A=$ULT \
+  HERO_B=ShieldGirl CAST_B=ShieldGirl_LMB LMB_B=ShieldGirl_LMB CUE_A= \
+  STEPS=$PWD/tools/run/test_$(case $MODE in cage) echo cage ;; stormlense) echo storm ;; *) echo shield ;; esac).steps DURATION=${DURATION:-480} tools/run/test_patch.sh
 echo "== the shield's reflects (game server)"
 cat work/run/$R-hosts/host-*/MOBA/Binaries/Win64/shield.log 2>/dev/null
 for n in alice bob; do

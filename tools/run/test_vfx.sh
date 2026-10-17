@@ -3,6 +3,7 @@
 # spawns Niagara systems next to the hero and casts abilities, with a screenshot after each step:
 # work/logs/vfx-<RUN>/. Own backend data and game servers; local play untouched. FANGS_PAKS=<dir> loads patch paks.
 #   MODE=zoey     Zoey's ult systems side by side (default and Hellhound), then her ult with the Hellhound VFX pack
+#                 (PACK=<DT_VFXPacks row>, or PACK=default for her own pack), aimed next to her
 #   MODE=astrada  Astrada's ally and enemy cage systems: no colour, the pack's (0,0,0,1), test colours; then her cage
 #   MODE=shield   Ethryn's shield effect at scale 1 and at the patch's (1, 0.85, 0.9); then her shield (E)
 # Usage: MODE=zoey|astrada|shield [RUN=<name>] [FANGS_PAKS=<dir>] tools/run/test_vfx.sh
@@ -32,9 +33,11 @@ host() { for h in $HOSTS; do echo "$1" >> $h/fangsctl_cmd.txt; done; }
   sleep 2; echo 'shot' >> $A
   if [[ $MODE == zoey ]]; then
     step 'zoey()' 1; sleep 1; echo 'shot' >> $A; step 'clear()' 1
-    step 'pack("HellhoundCatSuppRed")' 1
+    [[ ${PACK:-HellhoundCatSuppRed} != default ]] && step "pack(\"${PACK:-HellhoundCatSuppRed}\")" 1
+    echo "${L}aimNear(260, -40)" >> $A; sleep 0.5
     host 'lua return V.fill()'; sleep 1
-    echo "${L}fire(\"CatSupp_Skill3\")" >> $A; sleep 0.4; echo 'shot' >> $A; sleep 0.6; echo 'shot' >> $A; sleep 1; echo 'shot' >> $A
+    echo "${L}fire(\"CatSupp_Skill3\")" >> $A
+    for i in $(seq 15); do sleep 0.2; echo 'shot' >> $A; done   # Boo's landing burst is short: a shot every 0.2 s
   elif [[ $MODE == shield ]]; then
     step 'shield()' 0.6; sleep 0.6; echo 'shot' >> $A; step 'clear()' 1
     echo "${L}fire(\"ShieldGirl_Skill4\")" >> $A; sleep 0.3; echo 'shot' >> $A; sleep 0.4; echo 'shot' >> $A
