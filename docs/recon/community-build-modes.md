@@ -144,6 +144,9 @@ FangsHost and FangsBoot place them 200 ms after the arena's game state `BeginPla
 (`tools/run/test_modes.sh` checks it). A player with an older FangsBoot than the server would rubber-band at the base
 edge; the launcher updates FangsBoot before the game starts.
 Heroes in their base are also damage-immune until they leave (`BP_AC_SpawnBlocker.ApplyImmunity`), as in Aug.
+**17 Oct, switched on** after the fixes in `docs/recon/base-blockers.md`: Feb's spawn protection asked the first
+player's hero (patch `base-blockers`), and Stormheart's and Crownwatch's blockers had the class sphere's collision
+(radius 50 × the smallest scale) instead of SM_Sphere's, and the class's small protection Sphere.
 Not checked: whether the Aug spheres cut into paths of the re-arted Feb bases (Crownwatch most). Players' feedback.
 
 ## Tests
