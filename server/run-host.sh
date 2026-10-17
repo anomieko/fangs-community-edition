@@ -46,6 +46,18 @@ if [[ -n ${FANGS_BACKEND:-} ]]; then   # server-side AccelByte calls (server log
   sed "s/@BACKEND@/$FANGS_BACKEND/g" "$REPO/tools/run/config/Engine.ini.template" > "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini"
   # FANGS_NET_RATE: other per-player rate cap than the template's (bytes/s)
   [[ -n ${FANGS_NET_RATE:-} ]] && sed -i -E "s/^(Max(Internet)?ClientRate)=.*/\1=$FANGS_NET_RATE/" "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini"
+  # FANGS_NET_TICK=60: the net driver's tick caps (NetServerMaxTickRate, MaxNetTickRate) and no listen-server clamp,
+  # as the Dec 2023 build has them (docs/recon/server-performance.md, "Rubber-banding"). Empty: the Feb build's 30/30.
+  if [[ -n ${FANGS_NET_TICK:-} ]]; then
+    printf '\n[/Script/OnlineSubsystemUtils.IpNetDriver]\nNetServerMaxTickRate=%s\nMaxNetTickRate=%s\nbClampListenServerTickRate=False\n' \
+      "$FANGS_NET_TICK" "$FANGS_NET_TICK" >> "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini"
+  fi
+  # FANGS_POS_ERROR=3.0: how far (squared, uu²) a client's own position may be from the server's before the server
+  # corrects it (GameNetworkManager MAXPOSITIONERRORSQUARED; Feb 0.5, Aug 8.5, UE default 3.0). Empty: the game's.
+  rm -f "$inst/MOBA/Saved/Config/WindowsNoEditor/Game.ini"
+  if [[ -n ${FANGS_POS_ERROR:-} ]]; then
+    printf '[/Script/Engine.GameNetworkManager]\nMAXPOSITIONERRORSQUARED=%s\n' "$FANGS_POS_ERROR" > "$inst/MOBA/Saved/Config/WindowsNoEditor/Game.ini"
+  fi
 fi
 rm -f "$inst/MOBA/Saved/Logs/MOBA.log"
 
@@ -66,6 +78,8 @@ if [[ -n ${FANGS_BACKEND:-} && -n ${WINEPREFIX:-} ]]; then
   for d in "${profiles[@]}"; do
     appcfg=${d}AppData/Local/MOBA/Saved/Config/WindowsNoEditor
     mkdir -p "$appcfg" && cp "$inst/MOBA/Saved/Config/WindowsNoEditor/Engine.ini" "$appcfg/Engine.ini"
+    rm -f "$appcfg/Game.ini"
+    if [[ -f $inst/MOBA/Saved/Config/WindowsNoEditor/Game.ini ]]; then cp "$inst/MOBA/Saved/Config/WindowsNoEditor/Game.ini" "$appcfg/Game.ini"; fi
   done
 fi
 

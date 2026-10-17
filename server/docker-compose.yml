@@ -10,6 +10,7 @@ services:
     network_mode: host          # game servers use a range of UDP ports
     restart: unless-stopped
     init: true                  # reap exited helper processes of game servers (Xvfb, wineserver)
+    env_file: [netcode.env]     # netcode switches for the game servers (committed; see the file)
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST to the address players connect to}
       FANGS_JOIN_CODE: ${FANGS_JOIN_CODE:-}

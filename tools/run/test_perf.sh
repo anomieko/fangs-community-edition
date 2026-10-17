@@ -17,6 +17,13 @@
 #   SERVER_MOVIES=0: the game servers run on a copy of the game without its movies.
 #   RUNHOST: another game-server start script than server/run-host.sh (relative to the repo).
 #   MODS: another tools/ue4ss-like directory for the game servers' mods (e.g. a changed FangsHost to compare).
+#   MAP=LE_Payload03_Map (default LE_Arena02_Map, Embersong): the arena of the match.
+#   FIGHT=1: every hero is put in the middle of the map when the measurement starts (a big team fight), and ACTIVE
+#   clients walk back towards the middle when they are more than 900 away from it.
+#   SNAPS=1: tools/run/net_snaps.lua on every client (rubber-banding: own position snaps, other heroes' jumps, client
+#   frames per second); summary by tools/run/net_snaps_report.py.
+#   NETEM="delay 25ms 5ms loss 0.5%": latency between everything in the test (tools/run/headless.sh).
+#   DASH=1: every client charges and releases Space every 2.5 s (tools/run/net_dash.lua; e.g. HERO=Sidekick).
 set -u
 cd "$(dirname "$0")/../.."
 REPO=$PWD
@@ -24,6 +31,8 @@ REPO=$PWD
 # and the sampler, running inside, may read the game thread's current syscall.
 if [[ -z ${PERF_NS:-} ]]; then exec env PERF_NS=1 unshare -rm --propagation private bash "$0" "$@"; fi
 R=${RUN:-perf}
+MAP=${MAP:-LE_Arena02_Map}
+case $MAP in LE_Arena02_Map) MAPNAME=Embersong ;; LE_Arena06_Map) MAPNAME=Stormheart ;; LE_Payload03_Map) MAPNAME=Crownwatch ;; *) MAPNAME=$MAP ;; esac
 BOTS=${BOTS:-11}; SECS=${SECS:-240}; CLIENTS=${CLIENTS:-1}; HERO=${HERO:-Lancer}; CPUS=${CPUS:-12-15}
 if [[ ${NTSYNC:-0} == 0 ]]; then
   sock=work/run/.$R.nosync; rm -f "$sock"
@@ -86,6 +95,7 @@ PLAY='lua if PERF_PLAY then return "already playing" end local n, dir = 0, 0'\
 ' PERF_PLAY = LoopInGameThreadWithDelay(50, function() pcall(function()'\
 ' local gi=FindFirstOf("BP_MOBAInstance_C") local p=StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0).Pawn'\
 ' if not (p and p:IsValid()) then return end n = n + 1 if n % 40 == 0 then dir = math.random() * 6.283 end'\
+' if FIGHT then local l=p:K2_GetActorLocation() if l.X * l.X + l.Y * l.Y > 810000 then dir = math.atan(-l.Y, -l.X) + (math.random() - 0.5) end end'\
 ' p:AddMovementInput({X=math.cos(dir), Y=math.sin(dir), Z=0}, 1.0, false)'\
 ' if n % 100 == 0 then p.AbilitySystemComponent.ActivatableAbilities.Items:ForEach(function(_, e) local a=e:get().Ability'\
 ' if a and a:IsValid() and not a:GetClass():GetFName():ToString():find("Emote") then p.AbilitySystemComponent:TryActivateAbilityByClass(a:GetClass(), true) end end) end'\
@@ -94,13 +104,13 @@ PLAY='lua if PERF_PLAY then return "already playing" end local n, dir = 0, 0'\
   sleep 40
   if [[ $CLIENTS -le 1 ]]; then
     printf '%s\n' 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi; return "ready"' \
-      'lua FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu:CreateLobbyAndJoin("Perf Test", "Embersong", FText("LE_Arena02_Map"), 1); return "create"' >> $A
+      'lua FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu:CreateLobbyAndJoin("Perf Test", "'$MAPNAME'", FText("'$MAP'"), 1); return "create"' >> $A
     sleep 40; echo "$WHERE" >> $A
     pick $A "$HERO"
     sleep 8; echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartMatch(); return "start"' >> $A
   else   # the others join from the lobby list (test_join.sh), the owner launches, everyone picks and locks in
     echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi;'\
-' pm:CreateLobbyAndJoin("Perf Test", "Embersong", FText("LE_Arena02_Map"), 12); return "create 12-slot lobby"' >> $A
+' pm:CreateLobbyAndJoin("Perf Test", "'$MAPNAME'", FText("'$MAP'"), 12); return "create 12-slot lobby"' >> $A
     sleep 50
     for f in "${CL[@]:1}"; do echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi:ShowChoseGameMode(); gi.WB_ChoseGameModeRef:SetJoinCustomMode(); return "join mode"' >> $f; done
     sleep 2
@@ -122,6 +132,7 @@ PLAY='lua if PERF_PLAY then return "already playing" end local n, dir = 0, 0'\
   LOCKIN='lua local gi=FindFirstOf("BP_MOBAInstance_C"); local pc=StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)'\
 ' pcall(function() pc.PlayerState:ReportetFinishedItemSelectOnServer(false) end) pcall(function() pc:PlayerLockedIn() end) return "locked in"'
   all_clients "$LOCKIN"
+  [[ ${FIGHT:-0} == 1 ]] && all_clients 'lua FIGHT = true return "fight: walk to the middle"'
   [[ ${ACTIVE:-0} == 1 ]] && all_clients "$PLAY"
   match_cmd "$COUNT"
   [[ $BOTS -gt 0 ]] && spawn_bots "$BOTS"
@@ -133,6 +144,20 @@ PLAY='lua if PERF_PLAY then return "already playing" end local n, dir = 0, 0'\
 ' t("FindFirstOf(BP_MOBAInstance_C)", 10, function() return FindFirstOf("BP_MOBAInstance_C") end),'\
 ' t("StaticFindObject", 100, function() return StaticFindObject("/Script/Engine.Default__GameplayStatics") end)}, ", ")'
   sleep 3
+  if [[ ${FIGHT:-0} == 1 ]]; then   # every hero into a ring around the middle of the map (keeps each one's height)
+    match_cmd 'lua local hs={} for _, p in ipairs(FindAllOf("BP_PlayerChar_C") or {}) do if p:IsValid() and not p:GetFullName():find("Default__", 1, true) then hs[#hs+1]=p end end'\
+' for i, p in ipairs(hs) do local a = i * 6.283 / #hs local l=p:K2_GetActorLocation()'\
+' p:K2_SetActorLocation({X=450 * math.cos(a), Y=450 * math.sin(a), Z=l.Z}, false, {}, true) end return "fight: " .. #hs .. " heroes in the middle"'
+    sleep 2
+  fi
+  if [[ ${SNAPS:-0} == 1 ]]; then
+    for f in "${CL[@]}"; do cp tools/run/net_snaps.lua "$(dirname "$f")/"; done
+    all_clients 'lua return dofile("net_snaps.lua")'
+  fi
+  if [[ ${DASH:-0} == 1 ]]; then   # every client charges and releases Space every 2.5 s (tools/run/net_dash.lua)
+    for f in "${CL[@]}"; do cp tools/run/net_dash.lua "$(dirname "$f")/"; done
+    all_clients 'lua return dofile("net_dash.lua")'
+  fi
   for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do cp tools/run/perf_frames.lua $h/; done
   host_cmd 'lua return dofile("perf_frames.lua")'
   if [[ -n ${SERVER_CMDS:-} ]]; then IFS=';' read -ra cmds <<< "$SERVER_CMDS"; for c in "${cmds[@]}"; do host_cmd "$c"; done; fi
@@ -194,5 +219,9 @@ if [[ -n ${GC_PROBE:-} ]]; then   # the frames right after each forced garbage c
 fi
 for h in work/run/$R-hosts/host-*/MOBA/Binaries/Win64; do cp $h/perf_frames.log work/logs/$R-perf/$(basename "$(dirname "$(dirname "$(dirname "$h")")")").frames.log 2>/dev/null; done
 cat work/logs/$R-perf/memory.txt 2>/dev/null
+if [[ ${SNAPS:-0} == 1 ]]; then
+  for ((i = 0; i < CLIENTS; i++)); do cp "$(dirname "${CL[$i]}")/net_snaps.log" work/logs/$R-perf/client$((i + 1)).snaps.log 2>/dev/null; done
+  python3 -I tools/run/net_snaps_report.py work/logs/$R-perf "${SKIP:-10}" | tee work/logs/$R-snaps.txt
+fi
 python3 -I tools/run/perf_sample.py report work/logs/$R-perf work/run/$R-hosts "${SKIP:-10}" "$measure_s" | tee work/logs/$R-report.txt
 rm -rf work/run/.$R.nosync work/run/$R-hosts.cpuprefix work/run/$R-game
