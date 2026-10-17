@@ -186,8 +186,9 @@ return function(env)
             end
         end
         if not ui.selected and list and list[1] then ui.selected = list[1].tag end
-        for _, e in ipairs(p.entries) do
-            if e.tab:IsValid() and e.tab.IsSelected ~= (e.tag == ui.selected) then e.tab:SetSelected(e.tag == ui.selected) end
+        for _, e in ipairs(p.entries) do   -- a new tab looks selected until told otherwise
+            local on = e.tag == ui.selected
+            if e.on ~= on and e.tab:IsValid() then e.tab:SetSelected(on); e.on = on end
         end
         local key, text
         if ui.selected and pages[ui.selected] then
@@ -267,6 +268,7 @@ return function(env)
             slot:SetSize({ Value = size.Value, SizeRule = size.SizeRule })
             slot:SetHorizontalAlignment(m.HorizontalAlignment); slot:SetVerticalAlignment(m.VerticalAlignment)
         end)
+        t:SetSelected(false)   -- a new tab looks selected (the menu only resets its own)
         ui.tab, ui.tabAddr = t, t:GetAddress()
         hook(TAB_CLICK, onTab)
         if loadAsset(BUTTON) then hook(BUTTON_CLICK, onButton) end

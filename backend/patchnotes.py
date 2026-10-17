@@ -63,7 +63,8 @@ def render(note):
             for item in items:
                 lines.append(rich('• ' + item))
             lines.append('')
-        lines.append('')
+        if lines[-1]:
+            lines.append('')
     if note.get('outro'):
         lines.append(rich(note['outro']))
     return '\n'.join(lines).rstrip('\n') + '\n'
