@@ -40,7 +40,7 @@ for line in open(sys.argv[1]):
     if line.startswith('MOBA/Content/'):
         asset = '/Game/' + line.strip()[len('MOBA/Content/'):]
     m = re.match(r'  Default__(.+?)_C\.(.+): (.+) -> (.+)$', line.rstrip('\n'))
-    if m and asset:
+    if m and asset and re.fullmatch(r'-?[0-9.]+', m[4]):   # numbers only (set-tags and the like print lists)
         rows.append('  { "%s", "%s", "%s", %s },' % (asset, m[1], m[2], float(m[4])))
 open(sys.argv[2], 'w').write('FCE_PATCH_WANT = {\n' + '\n'.join(rows) + '\n}\n')
 PY

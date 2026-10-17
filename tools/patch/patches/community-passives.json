@@ -1,0 +1,169 @@
+{
+  "name": "community-passives",
+  "summary": "Hero passives and Wylde's reload that a death, stun, channel or cast could switch off for a whole match start again (Wylde's ammo, Fiorne's Bunny Stacks, Rowan, Somnia, Zoey)",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/community-build-passives.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/Passive/BP_GA_Gunslinger_P",
+      "why": "Wylde, Hunter's Brand: the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/Passive/BP_GA_Gunslinger_Reload",
+      "why": "Wylde's reload, which runs all match and fills his gun (also the fill at each round start): it can start while he is casting, channeling or dead. A refused start left him with 0 ammo for the rest of the match. Reloading itself stays gated inside the ability (Can Reload).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Channeling",
+            "State.Dead",
+            "State.Casting"
+          ],
+          "to": []
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/P/GA_Lancer_P",
+      "why": "Fiorne, Duelist's Momentum (it also grants her Bunny Stacks): the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Passive/BP_GA_WoodenSword_P",
+      "why": "Rowan, Strength of the Wilds: the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BookMage/P/BP_GA_BookMage_P",
+      "why": "Somnia's passive: the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/CatSupp/Passive/BP_GA_CatSupp_P",
+      "why": "Zoey & Boo's passive: the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Priest/Passive/BP_GA_Priest_P",
+      "why": "Priest (unreleased): the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Priestess/Passive/BP_GA_Priestess_P",
+      "why": "Priestess (unreleased): the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Sniper/Passive/BP_GA_Sniper_P",
+      "why": "Sniper (unreleased): the passive can start while the hero is dead, stunned or channeling, like every other hero's passive (Ability.Passive only). A refused start left it off for the rest of the match (Wylde 0 ammo, Fiorne 0 Bunny Stacks).",
+      "edits": [
+        {
+          "op": "set-tags",
+          "property": "ActivationBlockedTags",
+          "from": [
+            "State.Dead",
+            "State.Channeling",
+            "Effect.LockCasts"
+          ],
+          "to": [
+            "Ability.Passive"
+          ]
+        }
+      ]
+    }
+  ]
+}
