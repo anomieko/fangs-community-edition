@@ -71,6 +71,12 @@ Current deploy: `deploy-2026-10-17-2043` (`fab9d5f`); what each deploy changed: 
   The base turrets remove themselves at the map's start (patch `base-turrets`). Tested headless on all three maps,
   before and after, with screenshots (`docs/recon/base-blockers.md`, "Walls" and "No base laser"); `CHANGELOG.md` has
   the off switches. Players' notes `backend/patchnotes/2026-10-17-2300.json`. Next: deploy with the user's OK.
+- **Main menu crash fix** (branch `cp3-base`): the PATCH NOTES tab could be added while the engine was still building
+  the main menu (UE4SS runs our loops inside game events), and the game crashed (3 test clients of ~60 starts). The
+  tab, the menu cleanup, the lobby settings panel and the hero select toggle now wait until their widget was on
+  screen 1-2 s earlier (`settled` in FangsBoot's `main.lua`). Syntax-checked only, as the user asked. Root cause in
+  general: `DefaultExecuteInGameThreadMethod = ProcessEvent` in `tools/ue4ss/UE4SS-settings.ini`; switching it to
+  EngineTick (with `HookEngineTick = 1`) would rule out the whole class, but changes every mod's timing: untested.
 
 ## In progress
 
@@ -185,10 +191,6 @@ Current deploy: `deploy-2026-10-17-2043` (`fab9d5f`); what each deploy changed: 
 
 ## Known issues and small ideas
 
-- Test clients crashing in the main menu (seen 17-18 Oct on `cp3-base`): 3 of ~17 client starts in the walls tests
-  died 13-14 s after starting, right after FangsBoot logged `patch notes: tab added`, each with the same call stack
-  inside Blueprint code; 43 other starts across the worktrees' runs got past that point. The PATCH NOTES tab is live,
-  so players might hit it too. Not investigated (`docs/recon/base-blockers.md`, "Tests of the walls and the laser").
 - Ranked (and probably Casual): with a no-show, the others' lobby screen gives up after ~45 s ("Failed to Connect to
   Match.") just as FangsHost would start without the missing player (seen in `NOSHOW=1 tools/run/test_ranked.sh`).
 - Underworld (`LE_UnderWorldArena`, own "stocks" mode: team lives, random spawns; Aug 2022 + Feb 2023 paks) and
