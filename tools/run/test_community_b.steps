@@ -1,0 +1,10 @@
+# Community patch, match B (tools/run/test_community.sh; alice = Somnia, bob = Brutus): Brutus' health, then Somnia's
+# ult on Brutus with his MoveSpeed attribute every 50 ms (the slow re-applied every 0.25 s with the patch, 0.1 s without).
+sleep 12                                                                # Brutus may still be respawning from the casts above
+host 'lua return FCE_PATCH.attr("bob")'
+host 'lua return FCE_PATCH.face("alice", "bob", 150)'                # close: 300 can put him off the arena's edge
+host 'lua return FCE_PATCH.fill("alice")'
+sleep 1                                                                 # the filled mana reaches alice's client first
+host 'lua return FCE_PATCH.trackms("bob", 6)'
+sleep 0.3; echo 'lua return FCE_PATCH.fire("BookMage_RNEw")' >> $A
+sleep 8; host 'lua return FCE_PATCH.attr("bob")'
