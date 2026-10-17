@@ -8,8 +8,8 @@
 //   assetpatch rewrite-check <dir>                       insert + remove a statement in every function; must write back identical
 //
 // Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default, set-export-prop,
-// insert-call, remove-call, set-tags, soundwave-audio, insert-play-sound (Sound.cs; a patch asset with "template" is a
-// new asset)
+// insert-call, remove-call, set-tags, set-name-const, set-branch, insert-copy, soundwave-audio,
+// insert-play-sound (Sound.cs; a patch asset with "template" is a new asset)
 // (docs/PATCHING.md has the fields).
 // Every edit states what it expects to find ("from", "uses", "count") and fails if the asset differs, so a patch
 // can't silently apply to another build. Edits inside a statement must keep the function's in-memory size; edits
@@ -64,6 +64,7 @@ static partial class Program
         EX_Context c => Render(a, c.ObjectExpression) + "." + Render(a, c.ContextExpression),
         EX_FinalFunction f => Name(a, f.StackNode) + "(...)",
         EX_VirtualFunction f => f.VirtualFunctionName + "(...)",
+        EX_StructConst sc when Name(a, sc.Struct) == "GameplayTag" && sc.Value is [EX_NameConst n, ..] => n.Value.ToString(),
         _ => e.Token.ToString(),
     };
 
@@ -239,8 +240,8 @@ static partial class Program
         if (text == "true") return new EX_True();
         if (text == "false") return new EX_False();
         if (float.TryParse(text, NumberStyles.Float, Inv, out var v)) return new EX_FloatConst { Value = v };
-        var seen = All(a, f).OfType<EX_VariableBase>().FirstOrDefault(e => Render(a, e) == text)
-            ?? throw new PatchError($"'{text}' is not a number, and {f.ObjectName} uses no variable of that name");
+        var seen = All(a, f).OfType<EX_VariableBase>().FirstOrDefault(e => Render(a, e) == text) ?? ClassVariable(a, text)
+            ?? throw new PatchError($"'{text}' is not a number, and {f.ObjectName} uses no variable of that name (nor is it self.<a class variable>)");
         var copy = (EX_VariableBase)Activator.CreateInstance(seen.GetType());
         copy.Variable = seen.Variable;
         return copy;
@@ -273,10 +274,10 @@ static partial class Program
             var seen = string.Join("; ", calls.Select(e => $"{call}({string.Join(", ", Args(e).Select(x => Render(a, x)))})"));
             throw new PatchError($"{f.ObjectName}: {hits.Count} matching calls, patch expects {count}. Calls: {seen}");
         }
-        foreach (var e in hits) Args(e)[arg] = MakeArgLike(a, f, to, Args(e)[arg]);
-        if (Size(a, f) != size)
-            throw new PatchError($"{f.ObjectName}: the edit changes the function's size ({size} -> {Size(a, f)}), which would break its jumps");
-        return $"{f.ObjectName}: {hits.Count}x {call} argument {arg}: {from} -> {to}";
+        // An argument of another size (a variable for a number) moves the code after it: Reshape moves the offsets.
+        Reshape(a, f, () => { foreach (var e in hits) Args(e)[arg] = MakeArgLike(a, f, to, Args(e)[arg]); });
+        string moved = Size(a, f) != size ? $" (function {size} -> {Size(a, f)} bytes, offsets moved)" : "";
+        return $"{f.ObjectName}: {hits.Count}x {call} argument {arg}: {from} -> {to}{moved}";
     }
 
     // Change text in a string table entry (tooltips): "from" must occur "count" times (default 1).
@@ -538,6 +539,9 @@ static partial class Program
         "soundwave-audio" => SoundWaveAudio(a, ed),
         "insert-play-sound" => InsertPlaySound(a, ed),
         "set-tags" => SetTags(a, ed),
+        "set-name-const" => SetNameConst(a, ed),
+        "set-branch" => SetBranch(a, ed),
+        "insert-copy" => InsertCopy(a, ed),
         var op => throw new PatchError($"unknown op '{op}'"),
     };
 
@@ -695,6 +699,7 @@ static partial class Program
                 ["roundtrip", var p, var o] => CmdRoundtrip(p, o),
                 ["apply", var patch, var i, var o] => CmdApply(patch, i, o),
                 ["rewrite-check", var d] => CmdRewriteCheck(d),
+                ["reshape-check", var d] => CmdReshapeCheck(d),
                 ["nop", var p, var fn, var at, var o] => CmdNop(p, fn, int.Parse(at), o),
                 _ => Usage(),
             };

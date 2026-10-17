@@ -1083,3 +1083,63 @@ if not gameVersion():find("^alpha7") then
         end)
     end)
 end
+
+-- Rowan's Propagator (Sourblossom charges faster on Overgrowth) shortens the charge timer every 0.25 s on the game
+-- server with SetGameplayEffectDurationHandle, which restarts the timer effect with the remaining time as its full
+-- length. The ability icon draws 1 - remaining / length, so the charge bar sat near empty, then jumped when the charge
+-- came. After the icon has drawn its bar: draw it against the length the timer had when it started
+-- (docs/recon/community-build-rowan.md).
+do
+    local ICON = "/Game/UI/Hud/WB_AbilityIcon.WB_AbilityIcon_C:UpdateStacksProgress"
+    local TAG = "Effect.WoodenSword.Skill4.Cooldown"
+    local timers = {}   -- icon address -> { full = the timer's length when it started, left = remaining last time }
+    local lib, tagLib, hookedAt, logged = nil, nil, nil, 0
+    local seen = 0   -- the first few icons' stack info, logged once (what the hook looks at)
+    local function redraw(w)
+        local info = w["UIStack Info"]
+        if seen < 6 then
+            seen = seen + 1
+            log(string.format("Propagator bar: icon %s charge type %s tag %s", tostring(w:GetFName():ToString()),
+                tostring(info.ChargeType), tostring(info.EffectTag.TagName:ToString())))
+        end
+        if info.ChargeType ~= 1 or info.EffectTag.TagName:ToString() ~= TAG then return end
+        local box = w.StackPanel:GetChildAt(w.CurrStacks)
+        if not (box and box:IsValid()) then return end
+        local bar = box:GetChildAt(0)
+        if not (bar and bar:IsValid()) then return end
+        local rem, tot = {}, {}
+        local r1, r2 = lib:GetEffectRemainingTime(w:GetOwningASC(), tagLib:MakeGameplayTagContainerFromTag(info.EffectTag), rem, tot)
+        local left = rem.RemainingTime or rem[1] or tot.RemainingTime or (type(r1) == "number" and r1 or nil)
+        local full = tot.TotalTime or tot[1] or rem.TotalTime or (type(r2) == "number" and r2 or nil)
+        if seen < 12 and type(left) ~= "number" then
+            seen = seen + 1
+            local keys = {}
+            for k, v in pairs(rem) do keys[#keys + 1] = "rem." .. tostring(k) .. "=" .. tostring(v) end
+            for k, v in pairs(tot) do keys[#keys + 1] = "tot." .. tostring(k) .. "=" .. tostring(v) end
+            log("Propagator bar: remaining time not read; returned " .. tostring(r1) .. ", " .. tostring(r2) .. "; " .. table.concat(keys, " "))
+        end
+        if type(left) ~= "number" or type(full) ~= "number" or full <= 0 then return end
+        local key = w:GetAddress()
+        local t = timers[key]
+        if not t or left > t.left + 0.05 then t = { full = full }; timers[key] = t end   -- a new charge timer
+        t.left = left
+        local game = bar.Percent
+        bar:SetPercent(math.max(0, math.min(1, 1 - left / t.full)))
+        if logged < 40 and math.abs(game - bar.Percent) > 0.05 then
+            logged = logged + 1
+            log(string.format("Propagator bar: game %.2f -> %.2f (%.2f s left of %.2f)", game, bar.Percent, left, t.full))
+        end
+    end
+    every(2000, function()
+        local f = StaticFindObject(ICON)
+        if not (f and f:IsValid()) or hookedAt == f:GetAddress() then return end
+        hookedAt = f:GetAddress()
+        lib = StaticFindObject("/Script/MOBA.Default__MOBAAbilityLibrary")
+        tagLib = StaticFindObject("/Script/GameplayTags.Default__BlueprintGameplayTagLibrary")
+        local ok, e = pcall(RegisterHook, ICON, function(ctx)   -- runs after the body
+            local s, err = pcall(redraw, ctx:get())
+            if not s and logged < 40 then logged = logged + 1; log("Propagator bar: " .. tostring(err)) end
+        end)
+        log(ok and "Propagator bar: hooked" or ("Propagator bar: can't hook: " .. tostring(e)))
+    end)
+end

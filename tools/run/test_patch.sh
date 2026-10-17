@@ -14,6 +14,7 @@
 #        CHECK="<patch> ..." (whose values check() expects; default PATCHES, or ccrevert in a control run),
 #        AIM_A=<range>: CAST_A lands at alice's pointer (e.g. Brutus' Earthquake, 1350): bob is put there instead.
 #        STEPS=<file>: bash steps run after the CC casts (helpers host, \$A, \$B as in this script).
+#        PRE_STEPS=<file>: bash steps run in the arena before the round (e.g. equip items).
 #        CUE_A=<class>: the gameplay cue actor CAST_A's hit spawns on the clients, counted after each cast
 #        (default Allure's charm visual, BP_GC_BookMage_Skill4CharmVFX_C; CUE_A= to skip).
 #   e.g. Brutus' Earthquake centre (root -> stun): HERO_A=Berserker CAST_A=Berserker_Skill2 AIM_A=1350 ULT_A=Berserker_Skill3
@@ -82,6 +83,7 @@ pick() {
   sleep 2
   echo 'lua return FCE_PATCH.check()' >> $A; echo 'lua return FCE_PATCH.check()' >> $B; host 'lua return FCE_PATCH.check()'
   host 'lua return FCE_PATCH.watch()'
+  [[ -n ${PRE_STEPS:-} ]] && source "$PRE_STEPS"   # before the round, e.g. equip items (tools/run/test_rowan.pre)
   sleep "${ROUND_WAIT:-90}"   # until the round is on: no casts before it
   # CC: the target in the caster's line of fire (far along it, then right next to the caster)
   for d in 300 60; do
