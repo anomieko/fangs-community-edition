@@ -1,0 +1,9 @@
+# Ishir's steps for tools/run/test_patch.sh (alice = Ishir, run through tools/run/test_ishir.sh). Both clients hook
+# SpawnSoundAttached and watch the mark cue, then run the mark cue's OnRemove for bob directly: the function the patch
+# edits, which the end of a real mark runs. Not scripted here: the ult itself (it searches enemies around the pointer
+# and waits for recasts; fired from a script it didn't mark bob), nor the mark effect applied from Lua on the server
+# (BP_GE_ShadowMark through MakeOutgoingSpec + SetSpecDuration + BP_ApplyGameplayEffectSpecToSelf: 0 effects afterwards).
+for f in "$A" "$B"; do echo "lua dofile(\"Z:$PWD/tools/run/test_ishir.lua\") return FCE_ISHIR.hook() .. \"; \" .. FCE_ISHIR.watch(60)" >> "$f"; done
+sleep 5
+for f in "$A" "$B"; do echo 'lua return FCE_ISHIR.pop("bob")' >> "$f"; done
+sleep 5
