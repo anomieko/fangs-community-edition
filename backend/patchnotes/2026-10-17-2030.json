@@ -1,0 +1,50 @@
+{
+  "tag": "deploy-2026-10-17-2030",
+  "date": "2026-10-17",
+  "title": "Patch notes: the base, less rubber-banding, and fixes",
+  "subtitle": "FANGS Community Edition · 17 October 2026, evening",
+  "intro": [
+    "A follow-up to this morning’s Community Patch: the base change from the community’s list, smoother movement in big fights, a new patch notes tab, and two hero fixes.",
+    "<b>To get it:</b> start the game through the launcher as usual; it updates itself."
+  ],
+  "sections": [
+    {
+      "name": "Highlights",
+      "items": [
+        "<b>No more running back into your base:</b> once you leave it, you can’t walk back in until you die or the round ends, like in the old version.",
+        "<b>Less rubber-banding:</b> the game servers now send updates twice as often. In our tests, players were snapped back about half as often in big team fights.",
+        "<b>PATCH NOTES tab</b> in the main menu, where you’re reading this.",
+        "<b>Astrada’s cage in team colours</b>, and <b>Zoey</b> sees her own ult’s landing again."
+      ]
+    },
+    {
+      "name": "General",
+      "items": [
+        "<b>The base:</b> at spawn you’re protected inside your base, as before. The moment you step out, the protection ends and the way back in is blocked until you die or the round ends.",
+        "<b>Smoother movement:</b> the servers send updates 60 times a second instead of 30, so your game and the server disagree less about where everyone is.",
+        "<b>PATCH NOTES:</b> every update’s notes are in the main menu. After an update, the newest notes open once by themselves."
+      ]
+    },
+    {
+      "name": "Heroes",
+      "heroes": [
+        ["Astrada", [
+          "<b>Flame Cage:</b> your own cage and your teammates’ cages are yellow-orange, an enemy’s cage is red, so you can tell them apart at a glance."
+        ]],
+        ["Zoey", [
+          "<b>Ult:</b> the Zoey player now sees the landing burst too (it only showed on other players’ screens, on every skin)."
+        ]]
+      ]
+    },
+    {
+      "name": "Coming next",
+      "items": [
+        "Reconnecting to a custom game after a crash or disconnect.",
+        "Training: stay in the augment phase as long as you like and start the round with F6.",
+        "Rowan’s new augment Burning Harvest, and Ishir’s ult showing the health the enemy is about to lose.",
+        "More work on rubber-banding, including Tufts’ dash."
+      ]
+    }
+  ],
+  "outro": "Thanks for all the reports! Keep them coming."
+}
