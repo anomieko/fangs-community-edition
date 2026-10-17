@@ -282,6 +282,7 @@ return function(env)
         if not (menu and menu:IsValid() and menu:IsInViewport()) then return end
         if not (ui and ui.addr == menu:GetAddress()) then
             if broken == menu:GetAddress() then return end
+            if not env.settled("patch notes", menu) then return end   -- not while the engine may still be building it
             local ok, e = pcall(addTab, menu)
             if not ok then
                 broken, ui = menu:GetAddress(), nil

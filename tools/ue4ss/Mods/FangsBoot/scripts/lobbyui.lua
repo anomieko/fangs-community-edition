@@ -259,6 +259,7 @@ return function(env)
             ui = nil
         end
         if not (ui and ui.addr == menu:GetAddress() and ui.menu:IsValid()) then
+            if not env.settled("lobby settings", menu) then return end   -- not while the engine may still be building it
             if not loadClass(COMBO) or not loadClass(TOGGLE) or not loadClass(BUTTON) then return end
             hook(COMBO .. ":BndEvt__OptionDropDown_K2Node_ComponentBoundEvent_0_OnSelectionChangedEvent__DelegateSignature", onCombo)
             hook(TOGGLE .. ":BndEvt__ToggleBtn_K2Node_ComponentBoundEvent_1_OnButtonClickedEvent__DelegateSignature", onToggle)

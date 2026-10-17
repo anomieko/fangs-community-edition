@@ -28,6 +28,17 @@ local function every(ms, fn)
         end
     end)
 end
+-- UE4SS runs these loops inside game events (DefaultExecuteInGameThreadMethod = ProcessEvent), so a loop can run while
+-- the engine is still building a widget it has just put on screen (UE 4.26 sets IsInViewport before the build). A child
+-- added then changes a panel the engine is walking: the PATCH NOTES tab crashed test clients that way (17 Oct,
+-- UHorizontalBox::RebuildWidget read a freed slot of the main menu's tab row, ~1 start in 20). settled(key, w): true once
+-- the same widget was already seen on an earlier pass, 1-2 s ago, so its build is long done. Call it on every pass.
+local seenWidgets = {}   -- key -> { address, os.time() when first seen }
+local function settled(key, w)
+    local a, s = w:GetAddress(), seenWidgets[key]
+    if not s or s[1] ~= a then seenWidgets[key] = { a, os.time() }; return false end
+    return os.time() - s[2] >= 2
+end
 
 local function commandLine()
     local ok, cl = pcall(function() return UEHelpers.GetKismetSystemLibrary():GetCommandLine():ToString() end)
@@ -636,6 +647,7 @@ if not gameVersion():find("^alpha7") then
         local menu = gi and gi:IsValid() and gi.WB_MainMenuRef
         if not (menu and menu:IsValid() and menu:IsInViewport()) then return end
         if cleaned ~= menu:GetAddress() then   -- a new main menu after every game
+            if not settled("menu", menu) then return end   -- not while the engine may still be building it
             cleaned, asked, shownAt, bkgFixed = menu:GetAddress(), 0, os.time(), false
             cleanMenu(menu)
         end
@@ -1007,7 +1019,8 @@ if not gameVersion():find("^alpha7") then
         -- a lobby's hero select: the toggle (custom lobbies only), released heroes first
         local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
         local ok, hs = pcall(function() return pc.WB_LobbyHeroSelectRef end)
-        if ok and hs and hs:IsValid() and not (lobby and lobby:IsValid() and lobby:GetAddress() == hs:GetAddress()) then
+        if ok and hs and hs:IsValid() and not (lobby and lobby:IsValid() and lobby:GetAddress() == hs:GetAddress())
+            and settled("hero select", hs) then   -- not while the engine may still be building it
             lobby, mode, warned, toggle = hs, "released", {}, nil
             if gi.MapGameMode == CUSTOM then
                 local b = WBL:Create(hs, StaticFindObject(LOBBY .. "WB_FilterClassButton.WB_FilterClassButton_C"), nil)
@@ -1040,7 +1053,7 @@ end
 -- Custom lobby settings in the lobby screen (map, size, rounds, Captain vote, shuffle; FangsHost's lobby.lua applies
 -- them) and the Captain vote in matches: lobbyui.lua. Feb 2023 build only.
 if not gameVersion():find("^alpha7") then
-    lobbyEnv.log, lobbyEnv.every, lobbyEnv.gameInstance = log, every, gameInstance
+    lobbyEnv.log, lobbyEnv.every, lobbyEnv.gameInstance, lobbyEnv.settled = log, every, gameInstance, settled
     function lobbyEnv.lobbyState()   -- the lobby's game state (through the world: no object scan)
         local gi = gameInstance()
         local ok, gs = pcall(function() return gi:GetWorld().GameState end)
@@ -1054,7 +1067,7 @@ end
 -- The PATCH NOTES tab in the main menu (each update's notes, from the backend; opens once by itself after a new
 -- update): patchnotes.lua. Feb 2023 build only.
 if not gameVersion():find("^alpha7") then
-    local env = { log = log, every = every, gameInstance = gameInstance, backendBase = backendBase }
+    local env = { log = log, every = every, gameInstance = gameInstance, backendBase = backendBase, settled = settled }
     local ok, err = pcall(function() require("patchnotes")(env) end)
     if not ok then log("patch notes: not loaded: " .. tostring(err)) end
 end
