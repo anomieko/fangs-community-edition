@@ -1,0 +1,47 @@
+{
+  "name": "community-heroes",
+  "summary": "Community patch (Sheepa's list, 16 Oct): Ethryn's shield (reflect width, look, Belroth's boulder, reflected Lamblaster) and Rayo's Stormlense ramp",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/community-build-heroes.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BigBoi/Skill4/BP_MOBA_BigBoi_Skill4_Projectile_2",
+      "why": "Belroth, Boulder Toss (E): Ethryn's shield reflected the boulder as soon as its big hit sphere (radius 170) touched the shield, far before the boulder reached it. That sphere now ignores shields and other ability objects (PhysicsBody); the shield reacts to the boulder's small interaction sphere (radius 60) instead. The boulder hits heroes as before.",
+      "edits": [
+        { "op": "set-export-prop", "export": "ProjectileSphereCollision", "path": "BodyInstance.CollisionResponses.ResponseArray[3].Response", "from": "ECR_Overlap", "to": "ECR_Ignore" }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/TargetTypes/ShieldGirl/BP_TA_ShieldGirl_Skill4",
+      "why": "Ethryn, Stalwart Aegis (E): the shield reflects projectiles only within her body's width (the box was 480 wide; its push on enemies walking through keeps today's size); the shield looks 15 % narrower and 10 % lower; a reflected Lamblaster (Wylde's E) deals one pellet's damage, like a normal Lamblaster hit, instead of full damage per pellet.",
+      "edits": [
+        { "op": "set-export-prop", "export": "wer_GEN_VARIABLE", "path": "BoxExtent.Y", "from": 240.0612, "to": 85.0 },
+        { "op": "replace-call-arg", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "call": "MOBAAreaOfEffectBoxContainerSpec", "arg": 1, "from": "self.wer.self.BoxExtent", "to": { "vec": [5.0, 240.0612, 161.8148] }, "count": 1 },
+        { "op": "insert-code", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "after": "SpawnSystemAttached", "code": [
+          { "do": { "on": { "local": "CallFunc_SpawnSystemAttached_ReturnValue" }, "call": "/Script/Engine.SceneComponent:SetRelativeScale3D", "args": [ { "vec": [1.0, 0.85, 0.9] } ] } }
+        ] },
+        { "op": "insert-code", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "before": "CloneDeferred", "code": [
+          { "let-obj": "CallFunc_Array_Get_Item", "value": { "local": "CallFunc_CloneDeferred_ReturnValue" } }
+        ] },
+        { "op": "insert-code", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "after": "CloneDeferred", "code": [
+          { "if": { "math": "/Script/Engine.KismetMathLibrary:BooleanAND", "args": [
+              { "math": "/Script/Engine.KismetStringLibrary:Contains", "args": [ { "math": "/Script/Engine.KismetSystemLibrary:GetObjectName", "args": [ { "local": "K2Node_Event_projectile" } ] }, { "str": "Gunslinger_Skill4_Projectile" }, { "bool": false }, { "bool": false } ] },
+              { "math": "/Script/Engine.KismetStringLibrary:Contains", "args": [ { "math": "/Script/Engine.KismetSystemLibrary:GetObjectName", "args": [ { "local": "CallFunc_Array_Get_Item" } ] }, { "str": "Gunslinger_Skill4_Projectile" }, { "bool": false }, { "bool": false } ] }
+            ] },
+            "then": [ { "set-bool": { "on": { "local": "CallFunc_CloneDeferred_ReturnValue" }, "prop": "bShouldApplyEffects" }, "value": false } ] }
+        ] }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/LightningArcher/E/BP_GA_LightningArcher_E_",
+      "why": "Rayo, Stormlense Scope (Shift heirloom): the damage bonus rises smoothly with distance, from 0 % at the start of the range to +50 % at max range (Feb: nothing up to a third, then +33 % rising to +85 %).",
+      "edits": [
+        { "op": "set-call-arg", "function": "Range Damage Amp Calculate Damage", "call": "Less_FloatFloat", "arg": 1, "from": "0.3333", "to": "0.0", "count": 1 },
+        { "op": "wrap-call-arg", "function": "Range Damage Amp Calculate Damage", "call": "Add_FloatFloat", "arg": 0, "from": "CallFunc_Divide_FloatFloat_ReturnValue", "with": "Multiply_FloatFloat", "args": ["0.5"], "count": 1 },
+        { "op": "set-call-arg", "function": "Range Damage Amp Calculate Damage", "call": "Less_FloatFloat", "arg": 1, "from": "0.85", "to": "1.0", "count": 1 },
+        { "op": "set-default", "property": "EagleEyeMaxDamageMultiplier", "from": 1.85, "to": 1.5 }
+      ]
+    }
+  ]
+}

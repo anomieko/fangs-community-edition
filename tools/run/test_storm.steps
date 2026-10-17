@@ -1,0 +1,6 @@
+# Rayo's Stormlense steps for tools/run/test_patch.sh (run through tools/run/test_shield.sh MODE=stormlense): the
+# game server runs the patched formula on alice's (Rayo's) own Lightning Strike for distances 0 to 1.2 x its range.
+LOADS="lua return dofile(\"Z:$PWD/tools/run/test_shield.lua\")"
+host "$LOADS"
+sleep 1; host 'lua return S.storm()'
+sleep 2
