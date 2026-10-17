@@ -1,0 +1,48 @@
+# Base blocker steps for tools/run/test_patch.sh (run through tools/run/test_base.sh; alice = HERO_A on team A and the
+# first player, so Feb's HasRespawnedInsideBase reads her hero; bob = HERO_B on team B). FCE_BASE (test_base.lua) logs
+# each hero against its base to base.log on the game server. Starts in the first augment phase (ROUND_WAIT).
+L="lua return dofile(\"Z:$PWD/tools/run/test_base.lua\")"
+P="lua return dofile(\"Z:$PWD/tools/run/test_passives.lua\")"
+host "$L"; host "$P"
+st() { host "lua return FCE_BASE.state(\"$1\")"; }
+# 0. the augment phase, both at their spawn: protection on, and can they still use abilities on the dummies?
+host 'lua return FCE_BASE.info()'
+st alice; st bob
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_A\")" >> $A; host "lua return FCE_BASE.fire(\"alice\", \"$BASE_LMB_A\")"
+# 0b. bob walks out to the dummies (they stand just outside the base): abilities there, no way back in; the round start
+#     puts every hero back at its spawn (RefreshPlayersAfterPreRound), so bob starts the round in his base, protected
+host 'lua return FCE_BASE.walkout("bob")'; sleep 1.5; st bob
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_B\")" >> $B
+sleep 1; host 'lua return FCE_BASE.back("bob")'; st bob
+sleep ${PHASE_WAIT:-70}                                   # the round starts
+# 1. the round is on, both in their base: protected, no abilities (Aug 2022)
+st alice; st bob
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_A\")" >> $A
+# 2. bob walks out: protection off, abilities work, and he can't walk back in
+host 'lua return FCE_BASE.walkout("bob")'; sleep 1.5; st bob
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_B\")" >> $B
+sleep 2; host 'lua return FCE_BASE.back("bob")'; st bob
+host 'lua return FCE_BASE.free("bob")'                    # without the blocker he gets in: the walls didn't stop him
+# 3. Feb's bug: bob outside, alice (the first player) still in her base, bob's own ApplyImmunity runs
+host 'lua return FCE_BASE.protect("bob")'
+sleep 2.5; st bob                                         # FangsHost's safety net: off within a second
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_B\")" >> $B
+# 4. alice is teleported out (as a script or the game could): protection off, abilities work, no way back
+host 'lua return FCE_BASE.tpout("alice")'; sleep 0.3; st alice; sleep 2; st alice
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_A\")" >> $A
+sleep 2; host 'lua return FCE_BASE.back("alice")'; st alice
+host 'lua return FCE_BASE.free("alice")'
+# 5. death and respawn: bob dies out in the lane (the enemy turret), respawns in his base protected, walks out: off
+host 'lua return FCE_BASE.die("bob")'
+sleep ${DEATH_WAIT:-18}; st bob
+host 'lua return FCE_BASE.walkout("bob")'; sleep 1.5; st bob
+sleep 1; host 'lua return FCE_BASE.back("bob")'; host 'lua return FCE_BASE.free("bob")'
+# 6. round change: the next round's augment phase and start, both in their base; alice walks out
+host 'lua return FCE_PASSIVES.endround(1)'
+sleep 20; st alice; st bob
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_A\")" >> $A
+sleep ${ROUND_GAP:-60}; st alice; st bob
+host 'lua return FCE_BASE.walkout("alice")'; sleep 1.5; st alice
+echo "lua return FCE_PATCH.fire(\"$BASE_LMB_A\")" >> $A
+sleep 1; host 'lua return FCE_BASE.back("alice")'; st alice
+host 'lua return FCE_BASE.free("alice")'

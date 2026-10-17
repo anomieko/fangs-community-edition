@@ -6,8 +6,8 @@
 --   * Presets: the in-match preset panel loads and saves through server CloudSave calls compiled out of this build.
 --   * Base blockers (blockers.lua, also in FangsBoot): leave your base and you can't walk back in, as in Aug 2022.
 return function(env)
-    local log, every, readRecord, hook, later, gameInstance = env.log, env.every, env.readRecord, env.hook, env.later,
-        env.gameInstance
+    local log, every, readRecord, hook, later, gameInstance, gameState = env.log, env.every, env.readRecord, env.hook,
+        env.later, env.gameInstance, env.gameState
     local GSB = "/Game/BluePrints/Gameplay/GS_MOBA_Battle.GS_MOBA_Battle_C"
     local PCM = "/Game/BluePrints/Gameplay/BP_PC_MOBA_PlayerController.BP_PC_MOBA_PlayerController_C"
     local placeBlockers = require("blockers")(log)
@@ -242,13 +242,49 @@ return function(env)
     end)
 
     -- -------------------------------------------------------------------------------- arena start
+    local blockersOn = nil   -- the address of the arena game state whose map got blockers
     RegisterBeginPlayPreHook(function(ctx)
         local gs = ctx:get()
         if not valid(gs) or not className(gs):find("^GS_MOBA_Battle") then return end   -- and its per-map subclasses
         local map = gs:GetFullName():match("Maps/([%w_]+)%.") or "?"
+        blockersOn = nil
         ExecuteInGameThreadWithDelay(200, function()
-            local ok, err = pcall(placeBlockers, gs, map)
-            if not ok then log("base blockers: " .. tostring(err)) end
+            local ok, n = pcall(placeBlockers, gs, map)
+            if not ok then log("base blockers: " .. tostring(n)) elseif n > 0 then blockersOn = gs:GetAddress() end
         end)
+    end)
+
+    -- Base blockers' safety net (docs/recon/base-blockers.md). A hero who spawns in a base gets spawn protection
+    -- (BP_AC_SpawnBlocker.ApplyImmunity: BP_GE_Immunity_All, no end, Effect.SpawnBlocker, Systems.Input.LockAbilities);
+    -- the game takes it off when the hero is seen leaving the blocker (OnActorEndOverlap) and at round start. Once a
+    -- second, a hero who still has it while touching none of the map's blockers gets the component's own
+    -- BlockSpawnServer (here) and BlockSpawnClient (on its player): protection off, the way back blocked, as if it had
+    -- walked out. No object scans: GameState.PlayerArray and the component's own blocker list.
+    local SPAWN_TAG, released = nil, 0
+    every(1000, function()
+        if not blockersOn then return end
+        local gs = gameState()
+        if not valid(gs) or gs:GetAddress() ~= blockersOn then return end
+        SPAWN_TAG = SPAWN_TAG or { TagName = FName("Effect.SpawnBlocker") }
+        for _, p in ipairs(pawns(gs)) do
+            pcall(function()
+                if not p.AbilitySystemComponent:HasMatchingGameplayTag(SPAWN_TAG) then return end
+                local comp = p.BP_AC_SpawnBlocker
+                if not valid(comp) then return end
+                local inside, known = false, 0
+                comp.SpawnBlockers:ForEach(function(_, e)
+                    local b = e:get()
+                    if valid(b) then
+                        known = known + 1
+                        if p:IsOverlappingActor(b) then inside = true end
+                    end
+                end)
+                if inside or known == 0 then return end   -- no list (its component started before the blockers): leave it
+                comp:BlockSpawnServer()
+                comp:BlockSpawnClient()
+                released = released + 1
+                if released <= 20 then log("base blockers: released " .. p:GetFName():ToString() .. " (protected outside its base)") end
+            end)
+        end
     end)
 end

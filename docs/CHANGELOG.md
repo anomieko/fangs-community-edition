@@ -15,7 +15,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Player update and server update: the patch pak grows from 8 to 9 patches and FangsBoot changes (`blockers.lua`), so
+players get both through the launcher on their next start.
+
+| Change | Where | Off switch |
+|---|---|---|
+| Base blockers on (the community's "Mickey Mouse fountain": once out of your base you can't walk back in until you die or the round ends, as in Aug 2022). Spawn protection now checks the hero itself, not the first player's hero (Feb bug); FangsHost takes the protection off any hero who still has it outside every blocker; Stormheart's and Crownwatch's blockers get their Aug collision (it was the class sphere's, too small) and protection sphere. Tested on all three maps (`docs/recon/base-blockers.md`) | pak `base-blockers.json`, FangsHost `blockers.lua` + `modes.lua`, FangsBoot `blockers.lua` (`cp2-base`) | `ENABLED = false` in both `blockers.lua` (FangsHost and FangsBoot); the patch alone: `"enabled": false` in `base-blockers.json` |
 
 ## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
 
