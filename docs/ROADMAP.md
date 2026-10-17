@@ -66,6 +66,8 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
   notes; the newest opens once by itself after an update. From now on every deploy that reaches players gets a notes
   file in `backend/patchnotes/` in the same commit (`docs/CHANGELOG.md`, "How it works"); the PDF comes from the same
   file. Test: `tools/run/test_patchnotes.sh`, `backend/tests/test_patchnotes.py`.
+- **Astrada's Flame Cage in team colours** (a community member's list; branch `cp2-astrada`, pak `community-heroes.json`): her own
+  and her teammates' cage yellow-orange, an enemy Astrada's cage red. `docs/recon/community-build-heroes.md`.
 
 ## In progress
 
@@ -168,8 +170,10 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
       (`docs/recon/community-build-modes.md`);
    4. Burning Harvest (Rowan), Ishir's health preview, Training on the player's PC, less laggy dummies, the Loadouts
       tab, DPS numbers, spectating;
-   5. Astrada's cage colours (needs the cage's second colour parameter); Zoey's ult effect: fixed, not deployed (branch
-      `cp2-zoey`; only the Zoey player missed it, on every skin);
+   5. Astrada's cage colours: done, not deployed (branch `cp2-astrada`: the cage effects' own colour curves
+      recoloured, yellow-orange for her team, red for enemies; the colour parameters the game sets are read by no
+      emitter); Zoey's ult effect: fixed, not deployed (branch `cp2-zoey`; only the Zoey player missed it, on every
+      skin);
    6. netcode A/B tests (Dec 2023 settings) and Crownwatch's rendering.
    Players' feedback decides the numbers; each is one line in its patch file.
 
