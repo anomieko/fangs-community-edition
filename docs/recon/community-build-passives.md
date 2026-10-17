@@ -19,10 +19,14 @@ and the evidence. Branch `cp-passives`, on top of `fiorne-restore`.
   - Wylde's ammo goes through `BP_GA_Gunslinger_Reload`, which listens for the reload events. The passive's round-start
     fill sends one of them.
   - Fiorne's Bunny Stacks are `BP_GA_Lancer_Ammo` (`Shared/BP_GA_Template_Ammo`), granted by her passive.
-- **Measured** (`tools/run/test_passives.sh`, 17 Oct): the passives of Fiorne and Wylde stay running through a death,
-  a respawn and two round changes, with the hero dead when the round ended. The game server's ability spec showed
-  `ActiveCount` 1 the whole time, sampled every 250 ms. So a passive that stops, or never starts, stays off for the
-  rest of the match. That fits all three reports.
+- **Measured** (`tools/run/test_passives.sh`, 17 Oct, four matches). These abilities keep the same spec handle and
+  `ActiveCount` 1 all match, sampled every 250 ms by the game server:
+  - Wylde's passive (`#73`) and reload (`#77`), Fiorne's passive (`#4`) and stack system (`#110`);
+  - through a death and respawn, three round changes (one with the hero dead), and an augment lock-in while Wylde was
+    shooting the dummies, which also equipped an heirloom (Ammo Sprite: max ammo 6 → 9).
+
+  So each is granted and started **once per match**, at spawn, and nothing starts it again. A first start that fails,
+  or a later stop, leaves it off for the rest of the match. That fits all three reports.
 
 ## What stops one for good
 
@@ -44,17 +48,26 @@ passive at such a moment, the passive stays off until the match ends. Candidates
 - a Health Shrine;
 - a stun.
 
-**Not reproduced.** In the tests, deaths and round changes never restarted a passive. A refused start of the
-passive alone would leave Wylde with his ammo and no Hunter's Brand, but his empty gun points at the reload ability. That
-ability ends itself only through the second way (no player state or a failed commit), for every hero alike. Which
-native moment starts them is still open (`docs/recon/battlerite-kit.md`, `tools/re/decomp.sh`).
+Wylde's ammo goes through his **reload** ability (`BP_GA_Gunslinger_Reload`). It also starts once and refuses to start
+while he is channeling, dead or **casting** (`ActivationBlockedTags` [`State.Channeling`, `State.Dead`,
+`State.Casting`]). Without it no fill or reload reaches his gun: 0 ammo all match.
+
+**Not reproduced.** The first start at spawn didn't fail in any test, and the tests found no moment that starts these
+abilities again. What makes the first start fail in real games remains open. Candidates:
+- a hero who is cast-locked, dead, channeling or (for the reload) casting at that moment;
+- a pawn without a player state yet (late or slow loaders, reconnects);
+- a failed commit.
+
+The second way would hit every hero alike, while the reports name only heroes with the restriction.
 
 ## The fix (patch pak)
 
 `tools/patch/patches/community-passives.json`, `"enabled": false`, new AssetPatch edit `set-tags`
 (`tools/patch/AssetPatch/Tags.cs`, `docs/PATCHING.md`):
-- `ActivationBlockedTags` [`State.Dead`, `State.Channeling`, `Effect.LockCasts`] → [`Ability.Passive`];
-- on the passives of Wylde, Fiorne, Rowan, Somnia and Zoey, and of the unreleased Priest, Priestess and Sniper.
+- `ActivationBlockedTags` [`State.Dead`, `State.Channeling`, `Effect.LockCasts`] → [`Ability.Passive`] on the passives of
+  Wylde, Fiorne, Rowan, Somnia and Zoey, and of the unreleased Priest, Priestess and Sniper;
+- Wylde's reload: [`State.Channeling`, `State.Dead`, `State.Casting`] → [] (none). The reload itself stays gated
+  inside the running ability (`Can Reload`, the reload events), so a reload still can't happen mid-cast.
 
 They behave like every other hero's passive: a start can't be refused because the hero is dead, channeling or
 stunned. A passive only listens, so it never needed those blocks. Abilities you cast keep theirs.
@@ -86,7 +99,9 @@ round change.
 | Run | Patch | Result |
 |---|---|---|
 | `pas-obs2` | none (control) | blocked tags `State.Dead,State.Channeling,Effect.LockCasts` on both passives. Alice (Fiorne) died to the turret at 327 s, and the round ended at 333 s with her dead. Round 0+1: her passive still running, stacks 3. Bob (Wylde): passive running and ammo 6 → 5 → 6 across both rounds. |
-| `pas-fix2` | `community-passives` | see below |
+| `pas-fix2` | `community-passives` | the server loaded the patched tags (`[Ability.Passive]` on both). Same as the control: alice dead at the round change, still running, stacks 3; bob's ammo fine. No change in behaviour where nothing failed |
+| `pas-obs3` | none (control) | a round change; then on the augment screen bob shoots the dummies (6 s) while he equips Ammo Sprite and locks in, and alice locks in with an heirloom; then bob dies at the turret before the next round change. Every spec handle and `ActiveCount` unchanged all match (passive `#73`, reload `#77`, alice `#4`, `#110`). Ammo 6 → 9 max with Ammo Sprite, fills and reloads normally |
+| `pas-fix3` | `community-passives` incl. the reload | same as `pas-obs3`, same handles, ammo and stacks normal: the patch changes nothing where nothing failed |
 
 Earlier runs (`pas-obs`, `pas-fix`) had helpers that did nothing: a damage or stun spec applied through UE4SS from
 Lua didn't land. Their only use: the patch is loaded (blocked tags read `[Ability.Passive]` on the server), and the
