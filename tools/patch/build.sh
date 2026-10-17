@@ -45,7 +45,8 @@ dotnet build "$REPO/tools/patch/AssetPatch/AssetPatch.csproj" -c Release -o "$RE
 for p in "${patches[@]}"; do
   python3 -I -c 'import json,sys
 for a in json.load(open(sys.argv[1]))["assets"]:
-    for path in [a["path"]] + [e["from"] for e in a["edits"] if e["op"] == "copy-default"]:
+    # a new asset ("template") comes from its template, the others from the game copy
+    for path in [a.get("template", a["path"])] + [e["from"] for e in a["edits"] if e["op"] == "copy-default"]:
         print(path + ".uasset"); print(path + ".uexp")' "$patchdir/$p.json"
 done | sort -u > "$stage/files.txt"
 for pak in "$game"/MOBA/Content/Paks/*.pak; do   # in load order; never our own pak
@@ -57,7 +58,8 @@ missing=$(cd "$stage/in" 2>/dev/null && comm -23 "$stage/files.txt" <(find . -ty
 
 for p in "${patches[@]}"; do
   echo "== patch $p"
-  "$REPO/work/bin/assetpatch/AssetPatch" apply "$patchdir/$p.json" "$stage/in" "$stage/out"
+  # media files a patch puts into new assets (e.g. sounds) are local, never in git: relative to the repo
+  PATCH_MEDIA_ROOT=$REPO "$REPO/work/bin/assetpatch/AssetPatch" apply "$patchdir/$p.json" "$stage/in" "$stage/out"
   cp -a "$stage/out/." "$stage/in/"   # a later patch builds on this one's changes
 done
 

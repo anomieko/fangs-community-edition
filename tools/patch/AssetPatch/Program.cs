@@ -8,7 +8,7 @@
 //   assetpatch rewrite-check <dir>                       insert + remove a statement in every function; must write back identical
 //
 // Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default, set-export-prop,
-// insert-call, remove-call
+// insert-call, remove-call, soundwave-audio, insert-play-sound (Sound.cs; a patch asset with "template" is a new asset)
 // (docs/PATCHING.md has the fields).
 // Every edit states what it expects to find ("from", "uses", "count") and fails if the asset differs, so a patch
 // can't silently apply to another build. Edits inside a statement must keep the function's in-memory size; edits
@@ -534,6 +534,8 @@ static partial class Program
         "set-export-prop" => SetExportProp(a, ed),
         "insert-call" => InsertCall(a, ed),
         "remove-call" => RemoveCall(a, ed),
+        "soundwave-audio" => SoundWaveAudio(a, ed),
+        "insert-play-sound" => InsertPlaySound(a, ed),
         var op => throw new PatchError($"unknown op '{op}'"),
     };
 
@@ -549,7 +551,7 @@ static partial class Program
             Console.WriteLine(rel);
             try
             {
-                var a = Load(Path.Combine(inRoot, rel + ".uasset"));
+                var a = LoadForPatch(asset, inRoot, rel);
                 foreach (JObject ed in (JArray)asset["edits"])
                     Console.WriteLine("  " + Apply(a, ed, inRoot));
                 string dst = Path.Combine(outRoot, rel + ".uasset");
