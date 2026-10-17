@@ -17,7 +17,7 @@ Last updated: 2026-10-18.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-17-2043` (`fab9d5f`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -61,22 +61,12 @@ Current deploy: `deploy-2026-10-17-2043` (`fab9d5f`); what each deploy changed: 
 - since 17 Oct 20:43 UTC (forced: the user's call): the base change (once out, no way back in until death or the
   round's end), net tick 60 (less rubber-banding), Tufts' Wing Dive lined up with the server, the PATCH NOTES tab,
   Astrada's cage in team colours, Zoey sees her own ult's landing (`docs/CHANGELOG.md`).
+- since 17 Oct 23:47 UTC: base walls (a white ring at each base's border and a fire wall across its exit, as in Aug
+  2022), no base turrets (patch `base-turrets`), the main menu crash fix (`settled` in FangsBoot).
 
 ## Done, not deployed
 
-- **Base walls and no base laser** (branch `cp3-base`; the user after `deploy-2026-10-17-2043`: "theres no visuals about
-  the base" and "no laser: since you cant re-enter base its not needed"). Players see each base's border again as in
-  Aug 2022: a white ring at the blocker's border (the blocker with `SM_Sphere`'s own material) and a fire wall across
-  the exit (`NS_PheonixWall`; on Embersong, whose Aug phoenix gate is gone, the same fire ring sized to the blocker).
-  The base turrets remove themselves at the map's start (patch `base-turrets`). Tested headless on all three maps,
-  before and after, with screenshots (`docs/recon/base-blockers.md`, "Walls" and "No base laser"); `CHANGELOG.md` has
-  the off switches. Players' notes `backend/patchnotes/2026-10-17-2350.json`. Next: deploy with the user's OK.
-- **Main menu crash fix** (branch `cp3-base`): the PATCH NOTES tab could be added while the engine was still building
-  the main menu (UE4SS runs our loops inside game events), and the game crashed (3 test clients of ~60 starts). The
-  tab, the menu cleanup, the lobby settings panel and the hero select toggle now wait until their widget was on
-  screen 1-2 s earlier (`settled` in FangsBoot's `main.lua`). Syntax-checked only, as the user asked. Root cause in
-  general: `DefaultExecuteInGameThreadMethod = ProcessEvent` in `tools/ue4ss/UE4SS-settings.ini`; switching it to
-  EngineTick (with `HookEngineTick = 1`) would rule out the whole class, but changes every mod's timing: untested.
+Nothing right now.
 
 ## In progress
 
