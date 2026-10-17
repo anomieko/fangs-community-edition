@@ -113,16 +113,6 @@ static partial class Program
         return $"{f.ObjectName}: {hits.Count}x branch before {call}{(match.Count > 0 ? " (" + string.Join(", ", match.Values) + ")" : "")}: {(from ? "true" : "false")} -> {(to ? "true" : "false")}";
     }
 
-    // A deep copy of an expression, through its bytes (names and references stay this asset's).
-    static KismetExpression Clone(UAsset a, KismetExpression e)
-    {
-        using var ms = new MemoryStream();
-        var w = new AssetBinaryWriter(ms, a);
-        ExpressionSerializer.WriteExpression(e, w);
-        ms.Position = 0;
-        return ExpressionSerializer.ReadExpression(new AssetBinaryReader(ms, a));
-    }
-
     // A new argument in place of `old`: a gameplay tag literal gets its tag swapped (text = the new tag); everything
     // else as set-call-arg makes it (a number, true/false, a variable, self.<class variable>).
     static KismetExpression NewArg(UAsset a, FunctionExport f, string text, KismetExpression old)
