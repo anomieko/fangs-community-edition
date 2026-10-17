@@ -13,7 +13,7 @@ The single place that says what is being worked on, what is done but not shipped
   duplicates it and the results get merged back.
 - Nothing secret here (no join code, keys, server credentials): this repo is public.
 
-Last updated: 2026-10-16.
+Last updated: 2026-10-17.
 
 ## Live on the server
 
@@ -56,7 +56,8 @@ Current deploy: `deploy-2026-10-15-2336` (`662f8ea`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing.
+- **The big patch: the community patch and the Fiorne restore** (branch `megapatch`, all 8 patches enabled;
+  `docs/CHANGELOG.md` "Next deploy" lists every change with its off switch). Waiting for the user's OK to deploy.
 
 ## In progress
 
@@ -85,8 +86,8 @@ Nothing.
    typical gaps 12-15 ms, one single 75-240 ms frame every 1-3 minutes (`docs/recon/server-performance.md`).
    Next: find what those single frames are (GC? wineserver?), and a 6v6 when enough people are on. Open: ntsync on the VPS (capacity, needs kernel + Wine change);
    replication runs at ~20-25 Hz whatever `NetServerMaxTickRate` says, so no 60 Hz net tick from config.
-   FangsBoot (players' mod) still cancels finished loops the way that sometimes stopped other loops in FangsHost:
-   switch it to idling too (needs a player update; watch for menu lists that stop refreshing).
+   FangsBoot's finished loops go idle too now (on `megapatch`): cancelling one had killed the loop that adds the
+   unreleased-heroes filter.
 3. **Old Shard system** (live since `deploy-2026-10-14-2306`; `docs/recon/shards.md`). The round-2 bug is closed:
    a test artifact, 45 round-2 pickups in nine runs all kept the HoldingOrb tag and were turned in; the fix to the
    leave safety net is in "Done, not deployed" (branch `shards`). Next: the user's multiplayer test (not triggered
@@ -133,37 +134,35 @@ Nothing.
 
 9. **Fiorne restore** (user, 16 Oct: "she's my favourite champion, but she's not really playable in this patch"; plan
    approved; rebalanced the same day to 700 HP, the Aug passive cooldown and a smaller Earthbreaker Pommel, the
-   user's choice after a roster comparison). Research and evidence: `docs/recon/fiorne.md`. **Built and tested, not enabled**: patch
-   `tools/patch/patches/fiorne.json` (`"enabled": false`) on branch `fiorne-restore` (worktree `../fangs-fiorne-restore`,
-   on top of the patch-tool branches `assetpatch-export-prop` and `assetpatch-rewrite`, none merged).
+   user's choice after a roster comparison). Research and evidence: `docs/recon/fiorne.md`. **Done, not deployed**:
+   `tools/patch/patches/fiorne.json`, enabled on `megapatch`.
    - What it does: the Bunny Stacks fix (the stack system sets itself up whenever it starts), Aug 2022 numbers for LMB,
      passive (7 s cooldown), Space, RMB, E, R and 11 heirlooms (Earthbreaker Pommel +95; Feb's move speed and buffed
-     heirlooms kept), 700 base HP, all four dashes stop dead, two
-     tooltips. It builds alone and after `ccrevert`.
-   - Tested 16 Oct, `tools/run/test_fiorne.sh` with and without the pak: max HP 800 (900); Space dashes 0.6 s apart
-     3 of 3 (1 of 3); dash end 2750 → 0 within 50 ms (2325 → 338 → 0); after a mid-round restart of the stack system
-     the stacks refill (stay at 0 with nothing refilling).
-   - Next: the user's OK to enable it and deploy (merge order: `assetpatch-export-prop` → `assetpatch-rewrite` →
-     `fiorne-restore`), then players' feedback. a community member (Q40): once broken, her stacks stay broken all match. The
-     patch fixes the restart case; another trigger is possible.
-10. **The community patch list** (a community member's list, 16 Oct, about 60 items: general, artifacts, custom lobby, training,
-   optimization, 12 heroes). State: researched, nothing built. `docs/recon/community-patchnotes.md` has every item with
-   its cause in the Feb build, the plan, the size and the open question.
-   - Questions out (16 Oct): 42 to a community member as a fillable PDF (Q1-Q42, listed in the recon file). The "Michael Mouse
-     fountain" was cleared up through swagnaros: block re-entering the base, as in Aug (the base blockers).
-   - Blocked on a community member's answers for most hero, lobby and training choices.
-   - Ready without answers (the community's numbers match the Feb build):
-     - patch-pak values: Rose's Puzzlebox, Wylde's LMB, Bounty's Reward, Speedshine, Holy Brazier, Mentor's Locket,
-       Blitzhead Arrows, Angerstone Talons, Craterthorns;
-     - backend: the short grace for Training servers.
-   - Next:
-     - `tools/patch/patches/balance.json` with those values, and `test_patch.sh` runs;
-     - AssetPatch `set-export-prop` (Brutus' HP, Ethryn's shield, Belroth's boulder, Astrada's cage colour, the
-       Caltrops box);
-     - A/B tests of the Dec netcode settings, never while people play.
-   - Needs the user's call: several items need new logic the pak can't express (Rowan's heal, Wylde's ammo in the
-     dummy phase, Fiorne's stacks, the training phase and timer, Bo5+, team shuffle, the base blockers). Do them through
-     FangsHost/FangsBoot, against the 15 Oct "pak, not hooks" decision, or through a heavier AssetPatch op?
+     heirlooms kept), 700 base HP, all four dashes stop dead, two tooltips.
+   - Tested with and without the pak (`tools/run/test_fiorne.sh`): 700/700 HP; Space dashes 0.6 s apart 3 of 3 (1 of
+     3); dash end 2750 → 0 within 50 ms; after a mid-round restart of the stack system the stacks refill. In the
+     combined run she starts with her recommended build (presets now load): Wanderer's Travelpack gives 5 stacks and a
+     longer Space cooldown, as its tooltip says.
+   - Next: players' feedback. a community member (Q40): once broken, her stacks stayed broken all match; `community-passives`
+     covers the "never started" case too.
+10. **The community patch list** (a community member's list, 16 Oct): researched (`docs/recon/community-patchnotes.md`), answered
+   (42 questions), proposed and OK'd by a community member (second PDF), built in eight streams (`docs/recon/community-build-*.md`)
+   and merged on `megapatch`. **Done, not deployed** (see Done, not deployed). In it: numbers and texts, knock-ups as
+   stuns, Rowan, the CC-immune dashes, Ethryn's shield, Lamblaster, Stormlense, passives that never started, Ishir's
+   sound, the lobby settings and Captain vote, Training on the island, the Training server grace, presets, Wylde's
+   dummy-phase ammo, the artifacts, and the unreleased-heroes filter fix.
+   Follow-ups (a community member's order where he gave one):
+   1. reconnect to custom games (the game has it built in; about 2 days; `docs/recon/community-build-lobby.md`), after
+      the big patch (user, 17 Oct);
+   2. the base blockers: built, off (`ENABLED` in `blockers.lua`); the game's spawn protection locks abilities until a
+      hero is seen walking out. Test walking and blinking out on all three maps first;
+   3. the held Training augment phase and F6: built, off (`HOLD_PHASE`); a lock-in still sets a game-state flag
+      (`docs/recon/community-build-modes.md`);
+   4. Burning Harvest (Rowan), Ishir's health preview, Training on the player's PC, less laggy dummies, the Loadouts
+      tab, DPS numbers, spectating;
+   5. Astrada's cage colours (needs the cage's second colour parameter), Zoey's Hellhound ult effect (not reproduced);
+   6. netcode A/B tests (Dec 2023 settings) and Crownwatch's rendering.
+   Players' feedback decides the numbers; each is one line in its patch file.
 
 ## Known issues and small ideas
 
@@ -212,6 +211,14 @@ Nothing.
 - Unreleased heroes: separated from released ones, with a disclaimer.
 - Old Shard system (carry-and-turn-in, channeled Health Shrines): in, behind one switch, on by default (user, 14 Oct);
   the user tests it in multiplayer before it is deployed.
+- Proper patches over hooks (user, 16 Oct: "making proper patches is the proper way"): new game logic goes into the
+  patch pak through AssetPatch's function rewriter; FangsHost/FangsBoot are for sessions, lobby and UI.
+- The community list (16 Oct): a community member answers, then a "now → after" proposal for his OK, then build (user). a community member
+  OK'd it the same day, with his changes (`docs/recon/community-patchnotes.md`, "a community member's OK").
+- Fiorne (user, 16 Oct): the restore plan, rebalanced to 700 HP, the Aug passive cooldown (7 s) and Earthbreaker
+  Pommel +95 after a roster comparison.
+- Ishir's ult sound (user, 16 Oct): ship a community member's clip as he asked ("a community member's clip anyway is fine"); it is never committed.
+- Reconnect comes after the big patch is deployed (user, 17 Oct).
 - Gameplay changes to the game's own data are permanent and go into the patch pak, the same file for players and
   servers (`docs/PATCHING.md`). Runtime hooks are not used for them (user, 15 Oct).
 - CC revert scope (user, 15 Oct):

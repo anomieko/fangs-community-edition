@@ -2,7 +2,7 @@
   "name": "community",
   "summary": "The community patch list (a community member, 16 Oct), part 1: numbers, texts and knock-ups as stuns",
   "build": "Playtest021523v1_v0_0_02",
-  "enabled": false,
+  "enabled": true,
   "research": "docs/recon/community-patchnotes.md, docs/recon/community-build-values.md",
   "assets": [
     {

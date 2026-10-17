@@ -2,7 +2,7 @@
   "name": "fiorne",
   "summary": "Fiorne restore: the 0 Bunny Stacks fix, her Aug 2022 damage and speed with 700 HP and the Aug passive cooldown (Feb move speed and buffed heirlooms kept), dashes that stop dead",
   "build": "Playtest021523v1_v0_0_02",
-  "enabled": false,
+  "enabled": true,
   "research": "docs/recon/fiorne.md",
   "assets": [
     {

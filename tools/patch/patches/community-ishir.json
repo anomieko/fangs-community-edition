@@ -2,7 +2,7 @@
   "name": "community-ishir",
   "summary": "Ishir's ult: a shotgun blast when the mark on the enemy pops (a community member's clip, not in git)",
   "build": "Playtest021523v1_v0_0_02",
-  "enabled": false,
+  "enabled": true,
   "research": "docs/recon/community-build-ishir.md",
   "assets": [
     {
