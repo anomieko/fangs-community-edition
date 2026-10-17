@@ -6,6 +6,13 @@
 -- 2022 places (world transforms from the Aug maps, attach parents resolved), on the game server (FangsHost) and on
 -- every player (FangsBoot): the actor doesn't replicate, and a hero's movement is predicted on its player's machine, so
 -- both must have the same collision. The same file is in both mods (tools/run/test_modes.sh checks they are equal).
+-- OFF for now (17 Oct): with blockers on a map, a hero who spawns inside them gets BP_AC_SpawnBlocker's
+-- ApplyImmunity: BP_GE_Immunity_All with no end and Systems.Input.LockAbilities, removed only when the hero is seen
+-- leaving the blocker (OnActorEndOverlap). Teleported test heroes kept it all match (no abilities), and a blink or
+-- teleport out of the base might do the same in play; round end doesn't remove it. Test walking and blinking out on all
+-- three maps before switching this on.
+local ENABLED = false
+
 return function(log)
     local CLASS = "/Game/BluePrints/BP_SpawnBlocker.BP_SpawnBlocker_C"
     local CDO = "/Game/BluePrints/BP_SpawnBlocker.Default__BP_SpawnBlocker_C"
@@ -41,6 +48,7 @@ return function(log)
 
     -- Places this map's blockers (once per map, from the arena's game state BeginPlay). Returns how many.
     return function(context, map)
+        if not ENABLED then log("base blockers: off"); return 0 end
         local list = BLOCKERS[map]
         if not list then return 0 end
         local class = load(CLASS)
