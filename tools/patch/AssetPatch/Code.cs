@@ -6,6 +6,7 @@
 //         {"str": s} | {"bool": b} | {"float": f} | {"int": n} | {"vec": [x, y, z]}
 //         {"math": "/Script/<Module>.<Class>:<Function>", "args": [expr...]}   static pure call (EX_CallMath)
 //         {"on": expr, "call": "/Script/<Module>.<Class>:<Function>", "args": [...]}   member call on an object
+//         {"anchor-arg": i}                                  a copy of argument i of the anchor call (before/after)
 //   stmt: {"do": expr} | {"let-obj": localName, "value": expr}
 //         {"set-bool": {"on": expr, "prop": name}, "value": bool}   a bool property of that object
 //         {"if": expr, "then": [stmt...]}                            skips "then" unless expr is true
@@ -77,6 +78,12 @@ static partial class Program
         if (o["float"] != null) return new EX_FloatConst { Value = (float)o["float"] };
         if (o["int"] != null) return new EX_IntConst { Value = (int)o["int"] };
         if (o["vec"] is JArray v) return new EX_VectorConst { Value = new FVector((float)v[0], (float)v[1], (float)v[2]) };
+        if (o["anchor-arg"] != null)
+        {
+            int i = (int)o["anchor-arg"];
+            if (anchorCall == null || i >= Args(anchorCall).Length) throw new PatchError($"insert-code: no anchor argument {i}");
+            return Clone(a, Args(anchorCall)[i]);
+        }
         var args = ((JArray)o["args"])?.Select(x => Expr(a, f, x)).ToArray() ?? [];
         if (o["math"] != null) return new EX_CallMath { StackNode = ScriptFunction(a, (string)o["math"]), Parameters = args };
         if (o["call"] != null)
@@ -121,9 +128,14 @@ static partial class Program
         return list;
     }
 
-    // {"op": "insert-code", "function", "before"|"after": <call name, exactly one statement>, or "at": "start"|"end", "code": [...]}
+    static KismetExpression anchorCall;   // the call `before`/`after` names, for {"anchor-arg": i}
+
+    // {"op": "insert-code", "function", "before"|"after": <call name, exactly one statement>, or "at": "start"|"end",
+    //  optional "anchor-match": {"<arg index>": "<text>"} (the anchor call's arguments as AssetPatch calls prints them),
+    //  "code": [...]}
     static string InsertCode(UAsset a, JObject ed)
     {
+        anchorCall = null;
         var f = Function(a, Req(ed, "function"));
         int index;
         string where;
@@ -137,8 +149,13 @@ static partial class Program
         {
             bool before = ed["before"] != null;
             string anchor = (string)(ed["before"] ?? ed["after"]) ?? throw new PatchError("insert-code needs \"at\", \"before\" or \"after\"");
-            var hits = StatementsCalling(a, f, anchor);
-            if (hits.Count != 1) throw new PatchError($"insert-code: {hits.Count} statements of {f.ObjectName} call {anchor}, need exactly 1");
+            var match = ((JObject)ed["anchor-match"])?.Properties().ToDictionary(x => int.Parse(x.Name), x => (string)x.Value) ?? [];
+            bool Fits(KismetExpression e) => CallName(a, e) == anchor
+                && match.All(m => m.Key < Args(e).Length && Render(a, Args(e)[m.Key]) == m.Value);
+            var hits = Enumerable.Range(0, f.ScriptBytecode.Length).Where(i => Statement(a, f.ScriptBytecode[i]).Any(Fits)).ToList();
+            if (hits.Count != 1) throw new PatchError($"insert-code: {hits.Count} statements of {f.ObjectName} call {anchor}"
+                                                      + (match.Count > 0 ? " with those arguments" : "") + ", need exactly 1");
+            anchorCall = Statement(a, f.ScriptBytecode[hits[0]]).First(Fits);
             index = before ? hits[0] : hits[0] + 1;
             where = $"{(before ? "before" : "after")} the call to {anchor}";
         }

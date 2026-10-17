@@ -1,4 +1,4 @@
-# Community patch, part 3: Ethryn's shield, Lamblaster, Stormlense (built 16-17 Oct); Zoey's ult, Astrada's cage (not yet)
+# Community patch, part 3: Ethryn's shield, Lamblaster, Stormlense (built 16-17 Oct), Zoey's ult (17 Oct); Astrada's cage (not yet)
 
 The code-level hero fixes Sheepa OK'd (`docs/recon/community-patchnotes.md`, proposal Q-cards Ethryn, Rayo, Zoey,
 Astrada). Patch `tools/patch/patches/community-heroes.json` (`"enabled": false`), branch `cp-heroes` (on top of
@@ -95,21 +95,41 @@ plate, with and without the pak.
     spawn (`insert-code` can't call Blueprint library functions with out parameters yet);
   - a test where both clients are alive to compare both views.
 
-## Zoey: ult effect invisible on Hellhound skins
+## Zoey: ult effect invisible to the Zoey player (every skin; fixed 17 Oct, branch `cp2-zoey`)
 
-Not reproduced, no fix in the patch.
-- **Checked statically:**
-  - the Hellhound skins' IDs match `DT_VFXPacks` rows (Red, Blue, Green, Purple, White, Rainbow), all to
-    `DA_VFXPack_Hellhound_CatSupp`;
-  - its `Skill3AOEVFX` slot is `NS_Hellhound_CatSupp_Skill3_ULT`;
-  - all 24 packages that system references are in the pak;
-  - neither pack stores a colour for that slot.
-- **Lab:**
-  - spawned directly, both ult systems render (default purple, Hellhound an orange star with rings);
-  - with the Hellhound pack set on the client (`Load VFXPack`), the pawn's pack is the Hellhound one.
-  - Zoey's real ult couldn't be watched in the solo lab: from her base, Boo stops at the base's edge, and no landing
-    burst shows for the default skin either.
-- **Next:** a 2-player match with a Hellhound skin on one client, ult cast mid-map.
+The report was "Zoey's ult effect is missing on Hellhound skins". In a 2-player match (Feb build,
+`tools/run/test_shield.sh MODE=zoey`, alice's Zoey in mid-map, ult cast twice at bob) the landing burst
+(`GameplayCue.CatSupp.Skill3.CastVFX`, which spawns the pack's `Skill3AOEVFX`) was missing **only on Zoey's own
+screen**, on the Hellhound skin and on the default skin alike. Bob saw it every time. Live Niagara systems on each
+client about 1 and 2 s after each cast (`S.vfx`; the cast effect itself showed on both):
+
+| Run | alice (Zoey) | bob |
+|---|---|---|
+| Hellhound Red, no fix (`zoey-hh`) | cast effect only, 0 `…Skill3_ULT` | `NS_Hellhound_CatSupp_Skill3_ULT` x1 |
+| Default, no fix (`zoey-def2`) | cast effect only, 0 `…Skill3_ULT` | `NS_CatSupp_Skill3_ULT` x1 |
+| Hellhound Red, with the fix (`zoey-hh-fix`) | `NS_Hellhound_CatSupp_Skill3_ULT` x1 | x1 (no doubles) |
+| Default, with the fix (`zoey-def-fix`) | `NS_CatSupp_Skill3_ULT` x1 | x1 |
+
+Screenshots: `work/logs/zoey-{hh,def2,hh-fix,def-fix}-{alice,bob}-shots/` (ScreenShot00000-00002 at 0.5 / 1.0 / 1.7 s
+after the first cast, 00003-00005 after the second), and alice's ScreenShot00002 without and with the fix side by side
+in `work/logs/zoey-before-after.png`; local only, as all of `work/`.
+
+**Cause.** `BP_GA_CatSupp_Skill3` waits in `WaitNetSync` with type 2 (OnlyClientWait) before it plays the landing cue
+(`ListenForTotoLand` → `Play Cast VFX` → `K2_ExecuteGameplayCueWithParams`). The server doesn't wait: it runs the cue
+inside the activation's prediction window and multicasts it with Zoey's prediction key, so Zoey's own client skips it
+(GAS assumes she predicted it). Her client resumes after the sync without a prediction key and doesn't run the cue
+either. The skin plays no part; Hellhound players probably noticed because the Hellhound burst is the larger one.
+
+**Fix** (`community-heroes.json`, first entry): after that cue call, `if (Player.IsLocallyControlled())
+GetAbilitySystemComponent(Player).ExecuteGameplayCueLocal(<same tag>, <same parameters>)`. Only the Zoey player's
+machine runs it; the server and the other players don't (the server's Zoey isn't locally controlled). It needed two
+new `insert-code` options: `anchor-match` (pick the one cue call with that tag, as the graph has several) and
+`{"anchor-arg": i}` (copy the anchor call's argument). The pack choice stays the game's
+(`Generic Spawn System At Location` takes the instigator's pack), so each skin gets its own effect.
+Built with all 8 live patches; `rewrite-check` 0 failed.
+
+Sheepa's "hit effect on knock-up" isn't a separate effect: the ult's GenericAOE has no hit effect, and knock-ups are
+stuns now (`ccrevert`).
 
 ## New AssetPatch edits (docs/PATCHING.md)
 

@@ -26,6 +26,7 @@ Player update (FangsBoot) and server update (backend).
 | Change | Where | Off switch |
 |---|---|---|
 | PATCH NOTES tab in the main menu: the updates (newest first) and each one's notes, scrollable, in the game's rich-text styles; opens once by itself on the first start after a new update (`patchnotes_seen.txt` next to `fangsboot.log`). Backend `GET /fangsapi/prod/patch-notes` from `backend/patchnotes/` (first file: the 17 Oct notes); PDF builder `tools/patchnotes/build_pdf.py` (`cp2-patchnotes`) | FangsBoot `patchnotes.lua`, backend `patchnotes.py`, `server/Dockerfile` | revert the `require("patchnotes")` block in FangsBoot's `main.lua` |
+| Zoey's ult: the Zoey player sees the landing burst again, on every skin (only her own screen missed it: a GAS prediction key made her client skip the server's cue; `docs/recon/community-build-heroes.md`). Her client now plays it locally too. Player update (pak) | pak `community-heroes.json`, first entry (branch `cp2-zoey`) | remove the `BP_GA_CatSupp_Skill3` entry from `community-heroes.json` (`"enabled": false` would also switch off Ethryn's shield, Lamblaster and Stormlense) |
 
 ## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
 
