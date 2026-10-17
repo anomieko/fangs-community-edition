@@ -1,12 +1,11 @@
-# Astrada's cage steps for tools/run/test_patch.sh (run through tools/run/test_shield.sh MODE=cage): alice (Astrada)
-# drops her Flame Cage on bob; both clients take screenshots: alice sees her own cage (the ally colour), bob an
-# enemy's. Screenshots: work/logs/<run>-{alice,bob}-shots/.
+# Astrada's cage steps for tools/run/test_patch.sh (run through tools/run/test_shield.sh MODE=cage): in the middle of
+# the map, alice (Astrada) drops her Flame Cage on bob; both clients take screenshots: alice sees her own cage (the
+# ally colour), bob an enemy's. Screenshots: work/logs/<run>-{alice,bob}-shots/.
 LOADS="lua return dofile(\"Z:$PWD/tools/run/test_shield.lua\")"
-echo "$LOADS" >> $A; echo "$LOADS" >> $B
+host "$LOADS"; echo "$LOADS" >> $A; echo "$LOADS" >> $B
 for round in 1 2; do
-  host 'lua return FCE_PATCH.fill("alice")'
-  host 'lua return FCE_PATCH.face("alice", "bob", 450)'
-  sleep 0.5; echo 'lua return S.aimAt("bob")' >> $A
+  host "lua return S.stage(600)"
+  sleep 1; host 'lua return FCE_PATCH.aim("alice", "bob", 1135)'   # bob where the cage lands (Flame Cage range 1135)
   sleep 0.6; echo 'lua return FCE_PATCH.fire("Firemage_E")' >> $A
   sleep 0.8; echo 'shot' >> $A; echo 'shot' >> $B
   sleep 0.8; echo 'shot' >> $A; echo 'shot' >> $B

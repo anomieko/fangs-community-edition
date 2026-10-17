@@ -1,32 +1,26 @@
 {
   "name": "community-heroes",
-  "summary": "Community patch (a community member's list, 16 Oct): Ethryn's shield, a reflected Lamblaster, Rayo's Stormlense ramp, Zoey's Hellhound ult, Astrada's cage colours",
+  "summary": "Community patch (a community member's list, 16 Oct): Ethryn's shield (reflect width, look, Belroth's boulder, reflected Lamblaster) and Rayo's Stormlense ramp",
   "build": "Playtest021523v1_v0_0_02",
   "enabled": false,
   "research": "docs/recon/community-build-heroes.md",
   "assets": [
     {
-      "path": "MOBA/Content/DataContent/Cosmetics/VFXPacks/FireMage/DA_VFXPack_AstradaDefault",
-      "why": "Astrada, Flame Cage (Shift): her own and her teammates' cages are yellow-orange, enemies' cages red. Both stored colours were black (0, 0, 0, 1), which the game applies to the cage effect, so ally and enemy cages looked the same.",
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BigBoi/Skill4/BP_MOBA_BigBoi_Skill4_Projectile_2",
+      "why": "Belroth, Boulder Toss (E): Ethryn's shield reflected the boulder as soon as its big hit sphere (radius 170) touched the shield, far before the boulder reached it. That sphere now ignores shields and other ability objects (PhysicsBody); the shield reacts to the boulder's small interaction sphere (radius 60) instead. The boulder hits heroes as before.",
       "edits": [
-        { "op": "set-export-prop", "export": "DA_VFXPack_AstradaDefault", "path": "Skill2VFX[0].DefaultVFX.ColorOptions.Color.R", "from": 0.0, "to": 15.0 },
-        { "op": "set-export-prop", "export": "DA_VFXPack_AstradaDefault", "path": "Skill2VFX[0].DefaultVFX.ColorOptions.Color.G", "from": 0.0, "to": 6.5 },
-        { "op": "set-export-prop", "export": "DA_VFXPack_AstradaDefault", "path": "Skill2VFX[0].DefaultVFX.ColorOptions.Color.B", "from": 0.0, "to": 0.4 },
-        { "op": "set-export-prop", "export": "DA_VFXPack_AstradaDefault", "path": "Skill2VFX[0].EnemyVFX.ColorOptions.Color.R", "from": 0.0, "to": 15.0 },
-        { "op": "set-export-prop", "export": "DA_VFXPack_AstradaDefault", "path": "Skill2VFX[0].EnemyVFX.ColorOptions.Color.G", "from": 0.0, "to": 0.35 },
-        { "op": "set-export-prop", "export": "DA_VFXPack_AstradaDefault", "path": "Skill2VFX[0].EnemyVFX.ColorOptions.Color.B", "from": 0.0, "to": 0.1 }
+        { "op": "set-export-prop", "export": "ProjectileSphereCollision", "path": "BodyInstance.CollisionResponses.ResponseArray[3].Response", "from": "ECR_Overlap", "to": "ECR_Ignore" }
       ]
     },
     {
       "path": "MOBA/Content/Gameplay/TargetTypes/ShieldGirl/BP_TA_ShieldGirl_Skill4",
-      "why": "Ethryn, Stalwart Aegis (E): the shield reflects projectiles only within her body's width (the box was 480 wide; its push on enemies walking through keeps today's size); the shield looks 15 % narrower and 10 % lower; a reflected projectile restarts where it hit the shield instead of up to 220 units further out (Belroth's boulder seemed to bounce long before reaching her); a reflected Lamblaster (Wylde's E) deals one pellet's damage, like a normal Lamblaster hit, instead of full damage per pellet.",
+      "why": "Ethryn, Stalwart Aegis (E): the shield reflects projectiles only within her body's width (the box was 480 wide; its push on enemies walking through keeps today's size); the shield looks 15 % narrower and 10 % lower; a reflected Lamblaster (Wylde's E) deals one pellet's damage, like a normal Lamblaster hit, instead of full damage per pellet.",
       "edits": [
         { "op": "set-export-prop", "export": "wer_GEN_VARIABLE", "path": "BoxExtent.Y", "from": 240.0612, "to": 85.0 },
         { "op": "replace-call-arg", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "call": "MOBAAreaOfEffectBoxContainerSpec", "arg": 1, "from": "self.wer.self.BoxExtent", "to": { "vec": [5.0, 240.0612, 161.8148] }, "count": 1 },
         { "op": "insert-code", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "after": "SpawnSystemAttached", "code": [
           { "do": { "on": { "local": "CallFunc_SpawnSystemAttached_ReturnValue" }, "call": "/Script/Engine.SceneComponent:SetRelativeScale3D", "args": [ { "vec": [1.0, 0.85, 0.9] } ] } }
         ] },
-        { "op": "rename-prop-ref", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "call": "GetScaledSphereRadius", "from": "ProjectileSphere", "to": "ProjectileInteractionsSphere", "count": 2 },
         { "op": "insert-code", "function": "ExecuteUbergraph_BP_TA_ShieldGirl_Skill4", "before": "CloneDeferred", "code": [
           { "let-obj": "CallFunc_Array_Get_Item", "value": { "local": "CallFunc_CloneDeferred_ReturnValue" } }
         ] },

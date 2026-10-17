@@ -39,6 +39,16 @@ function S.aimAt(name)
     return string.format("aimAt %s: mouse %d,%d (%s)", name, math.floor(x), math.floor(y), tostring(ok))
 end
 
+-- client: keep the mouse on that player's hero for a while (heroes turn toward the cursor gradually)
+function S.aimLoop(name, seconds)
+    local n = 0
+    LoopInGameThreadWithDelay(50, function()
+        n = n + 1
+        if n <= seconds * 20 then pcall(S.aimAt, name) end
+    end)
+    return "aiming at " .. name .. " for " .. seconds .. " s"
+end
+
 function S.hp(name)
     local p = heroes()[name]
     if not valid(p) then return "hp: no hero " .. name end
@@ -77,6 +87,89 @@ function S.watch()
     end)
     S.watching = true
     return "watching the shield"
+end
+
+-- server: alice and bob to the middle of the map (the midpoint of all player starts), d apart along the line between
+-- the two teams' starts, full health and mana; away from the bases (their lasers kill enemies)
+function S.stage(d)
+    local starts = FindAllOf("PlayerStart") or {}
+    if #starts < 2 then return "stage: no player starts" end
+    local sx, sy, sz, n = 0, 0, 0, 0
+    local a0, b0
+    for _, ps in ipairs(starts) do
+        local l = ps:K2_GetActorLocation()
+        sx, sy, sz, n = sx + l.X, sy + l.Y, sz + l.Z, n + 1
+        if not a0 then a0 = l elseif not b0 or (l.X - a0.X) ^ 2 + (l.Y - a0.Y) ^ 2 > (b0.X - a0.X) ^ 2 + (b0.Y - a0.Y) ^ 2 then b0 = l end
+    end
+    local mx, my, mz = sx / n, sy / n, sz / n
+    local ux, uy = b0.X - a0.X, b0.Y - a0.Y
+    local un = math.sqrt(ux * ux + uy * uy); ux, uy = ux / un, uy / un
+    local h = heroes()
+    local pa, pb = h.alice, h.bob
+    if not (valid(pa) and valid(pb)) then return "stage: no heroes" end
+    pa:K2_SetActorLocation({ X = mx - ux * d / 2, Y = my - uy * d / 2, Z = pa:K2_GetActorLocation().Z }, false, {}, true)
+    pb:K2_SetActorLocation({ X = mx + ux * d / 2, Y = my + uy * d / 2, Z = pb:K2_GetActorLocation().Z }, false, {}, true)
+    for _, p in ipairs({ pa, pb }) do
+        local set = p.AbilitySystemComponent.SpawnedAttributes[1]
+        set.Health.BaseValue = set.MaxHealth.CurrentValue; set.Health.CurrentValue = set.MaxHealth.CurrentValue
+        set.Mana.BaseValue = set.MaxMana.CurrentValue; set.Mana.CurrentValue = set.MaxMana.CurrentValue
+    end
+    log(string.format("staged %d apart around %.0f,%.0f (%d player starts)", d, mx, my, n))
+    return "staged"
+end
+
+-- server, for `seconds`: every 20 ms, each projectile of class `cls` (no _C) relative to the raised shield's plate:
+-- depth along its facing (negative: in front of it), side offset, distance to Ethryn; logged when it changes much
+function S.track(cls, seconds)
+    local t0, last = GPS:GetTimeSeconds(FindFirstOf("GameStateBase")), {}
+    local n = 0
+    LoopInGameThreadWithDelay(20, function()
+        n = n + 1
+        if n > seconds * 50 then return end
+        local ta = FindFirstOf("BP_TA_ShieldGirl_Skill4_C")
+        if not valid(ta) then return end
+        local box = ta.wer
+        local c, f, r = box:K2_GetComponentLocation(), box:GetForwardVector(), box:GetRightVector()
+        local e = ta:GetOwner()
+        for _, pr in ipairs(FindAllOf(cls .. "_C") or {}) do
+            if valid(pr) then
+                local d = sub(pr:K2_GetActorLocation(), c)
+                local k = pr:GetFName():ToString()
+                local depth = dot(d, f)
+                if not last[k] or math.abs(last[k] - depth) > 15 then
+                    last[k] = depth
+                    local el = valid(e) and e:K2_GetActorLocation() or c
+                    local de = sub(pr:K2_GetActorLocation(), el)
+                    log(string.format("  %s depth %.0f side %.0f to Ethryn %.0f", k, depth, dot(d, r), math.sqrt(de.X * de.X + de.Y * de.Y)))
+                end
+            end
+        end
+    end)
+    return "tracking " .. cls
+end
+
+-- server: Rayo's Stormlense formula (BP_GA_LightningArcher_E_ "Range Damage Amp Calculate Damage") run on his own
+-- ability instance with the distance set to r x range and 100 base damage; logs the damage it leaves for each r
+function S.storm()
+    local inst
+    for _, a in ipairs(FindAllOf("BP_GA_LightningArcher_E__C") or {}) do
+        if valid(a) and valid(a.Player) then inst = a end
+    end
+    if not inst then return "storm: no Lightning Strike instance with a player" end
+    local l, out = inst.Player:K2_GetActorLocation(), {}
+    local keep, keepRange = inst.ModifiedAbilityDamage, inst.ModifiedRange
+    local range = inst.ModifiedRange > 0 and inst.ModifiedRange or inst.Range   -- set at cast time; 0 before
+    inst.ModifiedRange = range
+    for _, r in ipairs({ 0, 0.2, 0.3333, 0.5, 0.8, 0.95, 1.0, 1.2 }) do
+        inst.SpawnLocation = { X = l.X + r * range, Y = l.Y, Z = l.Z }
+        inst.ModifiedAbilityDamage = 100
+        inst["Range Damage Amp Calculate Damage"](inst)
+        out[#out + 1] = string.format("r=%.2f: %.1f", r, inst.ModifiedAbilityDamage)
+    end
+    inst.ModifiedAbilityDamage, inst.ModifiedRange = keep, keepRange
+    local s = string.format("stormlense (range %.0f): %s", range, table.concat(out, ", "))
+    log(s)
+    return s
 end
 
 return "test_shield helpers"
