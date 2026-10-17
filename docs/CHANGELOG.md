@@ -22,7 +22,8 @@ What each deploy put on the server, so a problem can be traced to a change and u
 ## Next deploy (not deployed yet)
 
 Player update and server update: the patch pak grows from 8 to 9 patches (`base-blockers`) and FangsBoot changes
-(the PATCH NOTES tab, `blockers.lua`), so players get both through the launcher on their next start.
+(the PATCH NOTES tab, `blockers.lua`), so players get both through the launcher on their next start. The game
+servers also get new network settings (`server/netcode.env`).
 
 | Change | Where | Off switch |
 |---|---|---|
@@ -30,6 +31,7 @@ Player update and server update: the patch pak grows from 8 to 9 patches (`base-
 | Zoey's ult: the Zoey player sees the landing burst again, on every skin (only her own screen missed it: a GAS prediction key made her client skip the server's cue; `docs/recon/community-build-heroes.md`). Her client now plays it locally too. Player update (pak) | pak `community-heroes.json`, first entry (branch `cp2-zoey`) | remove the `BP_GA_CatSupp_Skill3` entry from `community-heroes.json` (`"enabled": false` would also switch off Ethryn's shield, Lamblaster and Stormlense) |
 | Astrada's Flame Cage in team colours (Sheepa's list): her own and her teammates' cage yellow-orange (its blue and purple waves and flashes recoloured), an enemy Astrada's cage red (ring, waves, flashes, swords, embers, flames). Player update (pak). AssetPatch: `recolor-curve`, export paths of any length | pak `community-heroes.json` (`cp2-astrada`) | the two `NS_Astrada_Shift_System_*` entries out of `community-heroes.json`, then deploy |
 | Base blockers on (the community's "Mickey Mouse fountain": once out of your base you can't walk back in until you die or the round ends, as in Aug 2022). Spawn protection now checks the hero itself, not the first player's hero (Feb bug); FangsHost takes the protection off any hero who still has it outside every blocker; Stormheart's and Crownwatch's blockers get their Aug collision (it was the class sphere's, too small) and protection sphere. Tested on all three maps (`docs/recon/base-blockers.md`) | pak `base-blockers.json`, FangsHost `blockers.lua` + `modes.lua`, FangsBoot `blockers.lua` (`cp2-base`) | `ENABLED = false` in both `blockers.lua` (FangsHost and FangsBoot); the patch alone: `"enabled": false` in `base-blockers.json` |
+| Game servers tick the network at 60 without the listen-server clamp (was 30, clamped): in a measured 6v6 fight at 50 ms latency, half the small position corrections and half the visible jumps of other players, with the same bandwidth and about +0.1 vCPU per match; 2-player lobbies got through hero select 4 of 4 times (`docs/recon/server-performance.md`, "Rubber-banding") | branch `cp2-netcode` | `FANGS_NET_TICK=` (empty) in `server/netcode.env`, deploy |
 
 ## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
 

@@ -1,0 +1,16 @@
+{
+  "name": "tufts-sync",
+  "summary": "Experiment: Tufts' Wing Dive dashes on the player's own screen at once and the server follows (WaitNetSync OnlyServerWait), instead of the screen waiting for the server",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/community-patchnotes.md (Tufts), docs/recon/server-performance.md (Rubber-banding)",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/SideKick/Skill1/BP_GA_Sidekick_Skill1",
+      "why": "Tufts, Wing Dive (Space): the two sync points before the dash were OnlyClientWait (the player's screen waits a round trip for the server, then both dash at different times); OnlyServerWait lets the player's screen dash at once and the server catch up, the usual predicted pattern.",
+      "edits": [
+        { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_Sidekick_Skill1", "call": "MakeLiteralByte", "arg": 0, "from": "2", "to": "1", "count": 2 }
+      ]
+    }
+  ]
+}
