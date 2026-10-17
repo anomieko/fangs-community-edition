@@ -54,7 +54,8 @@ nsfile=$(mktemp)
     name=${s%%:*}; rest=${s#*:}; delay=${rest%%:*}; margs=${rest#*:}
     dir=$REPO/work/run/$name
     rm -rf "$dir"; cp -a --reflink=always "$client" "$dir"
-    "$REPO/server/install-paks.sh" "$client" "$dir"   # FANGS_PAKS (game servers of RUN_BACKEND get them too)
+    "$REPO/server/install-paks.sh" "$client" "$dir" >&2   # FANGS_PAKS (game servers of RUN_BACKEND get them too);
+    # to stderr: this loop's stdout is the script that starts the instances ("patch pak: …" ran GNU patch)
     bin=$dir/MOBA/Binaries/Win64
     [[ ${NOMOVIES:-0} == 1 ]] && find "$dir/MOBA/Content/Movies" -name '*.mp4' -delete
     if [[ ${UE4SS:-0} == 1 ]]; then
