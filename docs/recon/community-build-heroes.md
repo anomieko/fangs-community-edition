@@ -1,4 +1,4 @@
-# Community patch, part 3: Ethryn's shield, Lamblaster, Stormlense (built 16-17 Oct), Zoey's ult (17 Oct); Astrada's cage (not yet)
+# Community patch, part 3: Ethryn's shield, Lamblaster, Stormlense (built 16-17 Oct), Zoey's ult and Astrada's cage (17 Oct)
 
 The code-level hero fixes Sheepa OK'd (`docs/recon/community-patchnotes.md`, proposal Q-cards Ethryn, Rayo, Zoey,
 Astrada). Patch `tools/patch/patches/community-heroes.json` (`"enabled": false`), branch `cp-heroes` (on top of
@@ -77,23 +77,33 @@ plate, with and without the pak.
   - The imports `KismetStringLibrary:Contains` and `KismetSystemLibrary:GetObjectName` are added (`/Script` only).
 - In a match: see "Results".
 
-## Astrada: Flame Cage colours
+## Astrada: Flame Cage colours (built 17 Oct, branch `cp2-astrada`)
 
-- **Cause** (code): `SetCageColor` spawns the cage through `Generic Spawn System Attached` with `UseVFXPackColor`. The
-  pack's colour counts as "set" unless it is (0, 0, 0, 0). `DA_VFXPack_AstradaDefault` stores (0, 0, 0, 1) for the
-  ally/default and enemy slots, so the game sets the effect's `Color` to black on both cages.
-- **Edit:**
-  - `Skill2VFX[0].DefaultVFX.ColorOptions.Color` (her own and teammates' cages: the Caster and Ally slots are empty,
-    so Default is used) = (15, 6.5, 0.4) yellow-orange;
-  - `EnemyVFX` = (15, 0.35, 0.1) red. HDR values, like the cage actor's old unused defaults.
-- **Not in the patch.** Screenshots (`MODE=cage`, Astrada's own view, with and without the pak) show the colour reaches
-  only part of the effect: the cage's opening ring turns yellow-orange, but the burning ring stays purple-blue. That
-  colour is the systems' other parameter, `User.CircleColor`, which the game never sets per team. The enemy's view
-  couldn't be captured: the test's opening moves leave bob in Astrada's base, where the base laser kills him.
-- **Next:**
-  - set `CircleColor` per team too, by calling `Get Niagara VFX with Tag Based on Team` in `SetCageColor` after the
-    spawn (`insert-code` can't call Blueprint library functions with out parameters yet);
-  - a test where both clients are alive to compare both views.
+- **Which effect** (code and matches): the cage picks its effect per viewer from `DA_VFXPack_AstradaDefault`
+  (`Get Team Filtered Niagara From Team Structure`): `NS_Astrada_Shift_System_Ally` for Astrada and her teammates (the
+  pack's Caster and Ally slots are empty, so its Default), `NS_Astrada_Shift_System_Enemy` for her enemies. Seen in
+  matches: Astrada's client spawns the first, the enemy's the second.
+- **Cause** (assets): `SetCageColor` then sets the effect's `Color` from the pack, but no emitter reads it. Both systems
+  expose `User.Color` and `User.CircleColor`, and no emitter script lists either among its parameters
+  (`AssetPatch props <asset> <script>`: each script's `SortedParameterOffsets`). Each emitter's colour is a curve
+  baked into the asset. The ally system mixes yellow and orange with blue and purple: two waves magenta and
+  blue-violet (`NE_MidBright_Slash_A003`, `A004`), a blue torus (`NE_MidBright_Slash_A`), a blue flash
+  (`NE_FlashStar001`); the orange wave and the swords fade to blue and purple. The enemy system is the same effect
+  plus a red-orange floor disc (`NE_AOE`), with a red flash and an orange torus instead of the blue ones. So both cages
+  looked alike, yellow-orange with purple.
+- The first try (pack colours, then `CircleColor` defaults) changed nothing on screen; a match that set both
+  parameters to green (Astrada's client) at runtime showed no green (`cage-p3`).
+- **Edit** (`recolor-curve`, a new AssetPatch edit: a curve's baked table gets one new hue and keeps its fade):
+  - ally system: the blue and purple parts orange and yellow; the orange wave and the swords keep their colour to the
+    end (8 emitters);
+  - enemy system: all red: ring, waves, flashes, swords, embers, flames (21 emitters). `NE_AOE`'s disc keeps its
+    colour (a value in its script's bytecode, already red-orange).
+  - Each emitter keeps three copies of each curve (spawn script, update script twice); all three are edited.
+- **Tested** (17 Oct, the steps now in `tools/run/test_cage.steps`, run by `tools/run/test_shield.sh MODE=cage`: both
+  heroes mid-map, one cast on bob, screenshots from both clients at +0.6, +1.3, +2.0 s; `cage-v1` with the pak,
+  `cage-p3` without): Astrada's own view yellow-orange throughout (was a purple-blue ring from +1.3 s; a faint blue
+  fringe stays at the ring's lower edge), the enemy's view red, swords and flames included (was orange with purple).
+  A teammate's view uses the same system as Astrada's own (pack code), not seen with a third client.
 
 ## Zoey: ult effect invisible to the Zoey player (every skin; fixed 17 Oct, branch `cp2-zoey`)
 
@@ -145,7 +155,7 @@ finding), and `insert-code`: new statements from a JSON form, with engine functi
 | Boulder vs shield, last tracked boulder centre in front of the plate before the reflect (`MODE=boulder`, 20 ms samples, ~80 units apart) | 94: reflected within ~65 of the plate (the 60 sphere) | 195: reflected between 195 and ~115 (the 170 sphere) |
 | Lamblaster into the shield (`MODE=lamblaster`) | 8 pellets reflected, only the first keeps its effects; Wylde 850 → 800 | 12 pellets reflected, all with effects; Wylde 850 → 250 |
 | Shield look (`test_vfx.sh MODE=shield`, raised shield's yellow arc on screen) | 208 / 199 px | 227 / 219 px |
-| Astrada's own cage (`MODE=cage`) | opening ring yellow-orange, burning ring purple-blue | white-purple, purple-blue |
+| Astrada's cage, her view / the enemy's (`cage-v1` / `cage-p3`, one cast mid-map) | yellow-orange / red | yellow ring turning purple-blue / orange with purple |
 
 In every pak run the patched class defaults loaded on both clients and the server (51/52; the 52nd is Fiorne's nested
 health value, which `check()` can't read). One end-of-match server check found `BP_GA_Lancer_Skill4.Projectile Speed`

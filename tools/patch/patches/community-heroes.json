@@ -1,6 +1,6 @@
 {
   "name": "community-heroes",
-  "summary": "Community patch (Sheepa's list, 16 Oct): Ethryn's shield (reflect width, look, Belroth's boulder, reflected Lamblaster) and Rayo's Stormlense ramp",
+  "summary": "Community patch (Sheepa's list, 16 Oct): Ethryn's shield (reflect width, look, Belroth's boulder, reflected Lamblaster), Rayo's Stormlense ramp, Astrada's Flame Cage in team colours",
   "build": "Playtest021523v1_v0_0_02",
   "enabled": true,
   "research": "docs/recon/community-build-heroes.md",
@@ -59,6 +59,47 @@
         { "op": "wrap-call-arg", "function": "Range Damage Amp Calculate Damage", "call": "Add_FloatFloat", "arg": 0, "from": "CallFunc_Divide_FloatFloat_ReturnValue", "with": "Multiply_FloatFloat", "args": ["0.5"], "count": 1 },
         { "op": "set-call-arg", "function": "Range Damage Amp Calculate Damage", "call": "Less_FloatFloat", "arg": 1, "from": "0.85", "to": "1.0", "count": 1 },
         { "op": "set-default", "property": "EagleEyeMaxDamageMultiplier", "from": 1.85, "to": 1.5 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/HiddenLeafVFX/Champions/Astrada/Skills/Shift/NS_Astrada_Shift_System_Ally",
+      "why": "Astrada, Flame Cage (Shift): her own and her teammates' cage (the game shows this system to the caster and her team) all yellow-orange. Its waves and flashes were partly blue and purple, so it looked much like an enemy's cage. The colours are curves in each emitter; the system's Color and CircleColor settings, which the game sets per team, are read by no emitter. Blue and purple parts made orange and yellow; the orange wave and the swords, which fade to blue and purple, keep their colour.",
+      "edits": [
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A003_6", "from": [7, 0.8051, 5.7468], "to": [7, 3, 0.3] },
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A004_8", "from": [1.517, 0.2897, 7], "to": [7, 4.6, 0.5] },
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A_5", "from": [0.0029, 0.0394, 1], "to": [1, 0.55, 0.05] },
+        { "op": "recolor-curve", "export": "NE_FlashStar001_2", "from": [0, 0.2362, 1], "to": [1, 0.62, 0.08] },
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A001_19", "from": [7, 3.4596, 0.469], "to": [7, 3.4596, 0.469] },
+        { "op": "recolor-curve", "export": "NE_Astrada_Sword_15", "from": [2, 1.82, 0.1497], "to": [2, 1.82, 0.1497] },
+        { "op": "recolor-curve", "export": "NE_Astrada_Sword001_23", "from": [2, 1.82, 0.1497], "to": [2, 1.82, 0.1497] },
+        { "op": "recolor-curve", "export": "NE_Astrada_Sword002_25", "from": [2, 1.82, 0.1497], "to": [2, 1.82, 0.1497] }
+      ]
+    },
+    {
+      "path": "MOBA/Content/HiddenLeafVFX/Champions/Astrada/Skills/Shift/NS_Astrada_Shift_System_Enemy",
+      "why": "Astrada, Flame Cage (Shift): an enemy Astrada's cage (the system the game shows to her enemies) all red: the ring, waves, flashes, swords, embers and flames, which were yellow, orange, blue and purple.",
+      "edits": [
+        { "op": "recolor-curve", "export": "NiagaraEmitter_8", "from": [1, 0.8228, 0.1], "to": [1, 0.1, 0.03] },
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A003_6", "from": [7, 0.8051, 5.7468], "to": [7, 0.25, 0.1] },
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A004_8", "from": [1.517, 0.2897, 7], "to": [7, 0.4, 0.15] },
+        { "op": "recolor-curve", "export": "NiagaraEmitter_15", "from": [1, 0.3519, 0.0029], "to": [1, 0.04, 0.02] },
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A001_19", "from": [7, 3.4596, 0.469], "to": [7, 0.5, 0.12] },
+        { "op": "recolor-curve", "export": "NE_MidBright_Slash_A002_4", "from": [100, 31.2801, 0], "to": [100, 5, 0] },
+        { "op": "recolor-curve", "export": "NE_FlashStar_0", "from": [1, 0.7686, 0.1307], "to": [1, 0.1, 0.04] },
+        { "op": "recolor-curve", "export": "NE_Astrada_Sword_15", "from": [2, 1.82, 0.1497], "to": [2, 0.3, 0.08] },
+        { "op": "recolor-curve", "export": "NE_Astrada_Sword001_23", "from": [2, 1.82, 0.1497], "to": [2, 0.3, 0.08] },
+        { "op": "recolor-curve", "export": "NE_Astrada_Sword002_25", "from": [2, 1.82, 0.1497], "to": [2, 0.3, 0.08] },
+        { "op": "recolor-curve", "export": "NiagaraEmitter_9", "from": [1, 0.88, 0], "to": [1, 0.15, 0] },
+        { "op": "recolor-curve", "export": "NiagaraEmitter_10", "from": [1, 0.88, 0], "to": [1, 0.15, 0] },
+        { "op": "recolor-curve", "export": "NiagaraEmitter_11", "from": [5, 5, 1.276], "to": [5, 0.9, 0.2] },
+        { "op": "recolor-curve", "export": "NiagaraEmitter_12", "from": [5, 5, 1.276], "to": [5, 0.9, 0.2] },
+        { "op": "recolor-curve", "export": "NiagaraEmitter_13", "from": [5, 5, 1.276], "to": [5, 0.9, 0.2] },
+        { "op": "recolor-curve", "export": "NE_Flame_Ball003_4", "from": [5, 2.2792, 0], "to": [5, 0.5, 0] },
+        { "op": "recolor-curve", "export": "NE_Flame_Ball004_6", "from": [5, 2.2792, 0], "to": [5, 0.5, 0] },
+        { "op": "recolor-curve", "export": "NE_Flame_Ball005_8", "from": [5, 2.2792, 0], "to": [5, 0.5, 0] },
+        { "op": "recolor-curve", "export": "NE_Flame_Ball006_10", "from": [4.3005, 5, 0], "to": [5, 0.8, 0] },
+        { "op": "recolor-curve", "export": "NE_Flame_Ball007_12", "from": [4.4332, 5, 0], "to": [5, 0.8, 0] },
+        { "op": "recolor-curve", "export": "NE_Flame_Ball008_14", "from": [5, 4.7599, 0], "to": [5, 0.8, 0] }
       ]
     }
   ]

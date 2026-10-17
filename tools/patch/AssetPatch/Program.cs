@@ -10,7 +10,7 @@
 // Edits ("op"): set-default, rename-call, rename-import, set-call-arg, replace-text, copy-default, set-export-prop,
 // insert-call, remove-call, set-tags, set-name-const, set-branch, insert-copy, wrap-call-arg, insert-code,
 // replace-call-arg, rename-prop-ref, soundwave-audio, insert-play-sound (Sound.cs; a patch asset with "template"
-// is a new asset)
+// is a new asset), recolor-curve (Niagara.cs)
 // (docs/PATCHING.md has the fields).
 // Every edit states what it expects to find ("from", "uses", "count") and fails if the asset differs, so a patch
 // can't silently apply to another build. Edits inside a statement must keep the function's in-memory size; edits
@@ -353,12 +353,19 @@ static partial class Program
     static string ExportName(UAsset a, Export e) =>
         (e.OuterIndex == null || e.OuterIndex.IsNull() ? "" : Name(a, e.OuterIndex) + ".") + e.ObjectName;
 
+    // The export's outers up to the package, joined by dots: NE_Astrada_Shift.UpdateScript_17.NiagaraDataInterfaceVectorCurve_1.
+    static string ExportPath(UAsset a, Export e) =>
+        (e.OuterIndex == null || !e.OuterIndex.IsExport() ? "" : ExportPath(a, e.OuterIndex.ToExport(a)) + ".") + e.ObjectName;
+
+    // An export by its name, <outer>.<name>, or any longer tail of its path (a Niagara system nests scripts with the same
+    // names in each emitter, and their data interfaces again).
     static NormalExport FindExport(UAsset a, string name)
     {
-        var hits = a.Exports.Where(e => e.ObjectName.ToString() == name || ExportName(a, e) == name).ToList();
+        var hits = a.Exports.Where(e => e.ObjectName.ToString() == name || ExportName(a, e) == name
+                                        || ("." + ExportPath(a, e)).EndsWith("." + name)).ToList();
         if (hits.Count != 1)
             throw new PatchError($"export '{name}': found {hits.Count}" + (hits.Count > 1
-                ? $" ({string.Join(", ", hits.Select(e => ExportName(a, e)))}; name one as <outer>.<name>)" : ""));
+                ? $" ({string.Join(", ", hits.Select(e => ExportPath(a, e)))}; name one by a longer path)" : ""));
         return hits[0] as NormalExport ?? throw new PatchError($"export '{name}' holds no property values");
     }
 
@@ -535,6 +542,7 @@ static partial class Program
         "replace-text" => ReplaceText(a, ed),
         "copy-default" => CopyDefault(a, ed, inRoot),
         "set-export-prop" => SetExportProp(a, ed),
+        "recolor-curve" => RecolorCurve(a, ed),
         "insert-call" => InsertCall(a, ed),
         "remove-call" => RemoveCall(a, ed),
         "soundwave-audio" => SoundWaveAudio(a, ed),
@@ -615,7 +623,7 @@ static partial class Program
         if (export == null)
         {
             foreach (var e in a.Exports)
-                Console.WriteLine($"  {ExportName(a, e)}  ({Name(a, e.ClassIndex)}{(e is NormalExport n ? $", {n.Data.Count} values" : "")})");
+                Console.WriteLine($"  {ExportPath(a, e)}  ({Name(a, e.ClassIndex)}{(e is NormalExport n ? $", {n.Data.Count} values" : "")})");
             return 0;
         }
         foreach (var line in Flatten(a, FindExport(a, export).Data, "")) Console.WriteLine("  " + line);
@@ -637,6 +645,8 @@ static partial class Program
         p = Unwrap(p);
         if (Components.TryGetValue(p.GetType(), out var comps))
             foreach (var c in comps) yield return $"{path}.{c} = {Show(GetValue(p, c))}";
+        else if (p is NiagaraVariableWithOffsetPropertyData nv)   // a Niagara parameter: its name and byte offset in ParameterData
+            yield return $"{path} = '{nv.VariableName}' @{nv.VariableOffset}";
         else if (p is StructPropertyData s)
             foreach (var line in Flatten(a, s.Value, path + ".")) yield return line;
         else if (p is ArrayPropertyData arr)
