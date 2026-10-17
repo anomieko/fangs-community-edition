@@ -159,15 +159,6 @@ static partial class Program
     static FPackageIndex EnsureAsset(UAsset a, string path, string cls) =>
         EnsureImport(a, "/Script/Engine", cls, EnsurePackage(a, path), path[(path.LastIndexOf('/') + 1)..]);
 
-    static KismetExpression Clone(UAsset a, KismetExpression e)
-    {
-        using var ms = new MemoryStream();
-        var w = new AssetBinaryWriter(ms, a);
-        ExpressionSerializer.WriteExpression(e, w);
-        ms.Position = 0;
-        return ExpressionSerializer.ReadExpression(new AssetBinaryReader(ms, a));
-    }
-
     // Insert GameplayStatics.SpawnSoundAttached(sound, <attach>, None, 0, 0, KeepRelativeOffset, false, volume, 1, 0,
     // attenuation, nullptr, true) before the one statement of `function` that calls `before`; <attach> is that call's
     // argument `attach_arg` (e.g. the component an FMOD event is attached to).
