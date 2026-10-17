@@ -1005,6 +1005,15 @@ Dec 2023 playtest (the developers' later build) changed exactly these settings:
   - In this version Tufts keeps sliding a little after the dash ends; in the older version (Aug 2022) the dash stopped
     dead. Would stopping dead feel OK, or is the slide part of how Tufts should feel?
 
+### Measured (17 Oct): see `docs/recon/server-performance.md`, "Rubber-banding"
+
+- With a 6v6 fight at 50 ms latency, **net tick 60 without the listen-server clamp halved the small position
+  corrections and other heroes' visible jumps**. It is switched on (`server/netcode.env`).
+- The correction tolerance (3.0) added nothing on top; Aug's 8.5 made large snaps worse; higher rate caps changed
+  nothing.
+- **Tufts' Wing Dive with `OnlyServerWait`** (`tools/patch/patches/tufts-sync.json`, off) more than halved his snaps
+  while dashing. It needs a player's try before it goes live.
+
 ### Measurement plan (to run later, never while people play; tests stay in their own network namespace and data)
 
 1. **Client fps per map** (Crownwatch, "maps below"): a per-second frame logger for clients (the `perf_frames.lua`

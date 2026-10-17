@@ -15,7 +15,9 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Commits | Off switch |
+|---|---|---|
+| Game servers tick the network at 60 without the listen-server clamp (was 30, clamped): in a measured 6v6 fight at 50 ms latency, half the small position corrections and half the visible jumps of other players, with the same bandwidth and about +0.1 vCPU per match; 2-player lobbies got through hero select 4 of 4 times (`docs/recon/server-performance.md`, "Rubber-banding") | branch `cp2-netcode` | `FANGS_NET_TICK=` (empty) in `server/netcode.env`, deploy |
 
 ## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
 
