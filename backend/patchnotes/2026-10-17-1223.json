@@ -1,0 +1,163 @@
+{
+  "tag": "deploy-2026-10-17-1223",
+  "date": "2026-10-17",
+  "title": "Patch notes: the Community Patch",
+  "subtitle": "FANGS Community Edition · 17 October 2026",
+  "intro": [
+    "Our biggest update yet. It brings the community’s patch list (put together by a community member and everyone who chipped in), a Fiorne rework, custom lobby settings, and a pile of fixes.",
+    "<b>To get it:</b> start the game through the launcher as usual; it updates itself."
+  ],
+  "sections": [
+    {
+      "name": "Highlights",
+      "items": [
+        "<b>Fiorne is back</b> to her old pre-nerf self, with her Bunny Stacks bug fixed.",
+        "<b>Custom lobby settings:</b> change the map, team size and number of rounds, turn on a captain vote, or shuffle teams, all without making a new lobby.",
+        "<b>Unreleased heroes</b> can be picked again in custom lobbies.",
+        "<b>Passives that switched off for a whole match</b> (Wylde stuck at 0 ammo, Fiorne at 0 Bunny Stacks): we fixed the most likely cause."
+      ]
+    },
+    {
+      "name": "General",
+      "items": [
+        "<b>No more blank “choosing captain” wait.</b> The captain is picked in about 2 seconds. Custom lobbies can turn on a captain vote instead (see below).",
+        "<b>Knock-ups are now stuns.</b> No more “MISSING STRING TABLE ENTRY” over heads. Enemies are stunned where they stand instead of flying up, and Cleanse and “unstoppable” effects block it like any stun.",
+        "<b>Shards:</b> the green Shard heals within half a second, the blue Shard fills mana instantly (both used to take 5 seconds).",
+        "<b>Heirlooms are now called Augments:</b> Combat, Utility and Ultimate Augments.",
+        "<b>Presets work:</b> save and load them on the augment screen, and they’re kept between matches. Without a saved preset, you start with the hero’s recommended build equipped; change it as you like.",
+        "<b>Rush (boon):</b> a stun no longer stops the dash.",
+        "<b>Passives:</b> some heroes’ passives (Wylde, Fiorne, Rowan, Somnia, Zoey) could fail to start at spawn and stay off the whole match. They now always start. If it still happens to you, please tell us.",
+        "<b>Removed artifacts:</b> Shardseeker and Wing Rush."
+      ]
+    },
+    {
+      "name": "Custom lobbies",
+      "items": [
+        "The lobby owner gets a <b>LOBBY SETTINGS</b> panel: map, team size (1v1 to 6v6), rounds (Best of 3 to Best of 9), captain vote, and a <b>Shuffle teams</b> button. Everyone else sees the settings.",
+        "Making the teams smaller moves the extra players to “Users in lobby”. Anyone still waiting there when the game starts is removed.",
+        "<b>Captain vote</b> (optional): teammates vote for their captain every round, with 8 seconds to vote. The same captain can’t be picked twice in a row."
+      ]
+    },
+    {
+      "name": "Training",
+      "items": [
+        "The <b>TRAINING</b> tile loads the floating island again.",
+        "Training servers are freed right after you leave (it used to take 3 minutes), so making a lobby after training fails less often.",
+        "In Training and Solo lobbies, the practice dummies stay after the round starts, and you can take damage during the augment phase.",
+        "Wylde starts the dummy phase with a loaded gun, and Bounty’s Reward no longer stacks on dummies.",
+        "The training tip now says <b>P</b> (not Tab) to reopen augments."
+      ]
+    },
+    {
+      "name": "Heroes",
+      "heroes": [
+        [
+          "Belroth",
+          [
+            "<b>Vicious Lunge (Space):</b> immune to stun, root, charm, fear and knockbacks during the lunge, like the old version.",
+            "<b>Angerstone Talons:</b> now adds +40 damage to Slam (it was −10 by mistake). Still no heal.",
+            "<b>Craterthorns:</b> 40 → 50 damage."
+          ]
+        ],
+        [
+          "Brutus",
+          [
+            "<b>Health:</b> 950 → 1050."
+          ]
+        ],
+        [
+          "Ethryn",
+          [
+            "<b>LMB:</b> 50 / 50 / 55 → 40 / 40 / 50.",
+            "<b>Holy Brazier:</b> cooldown 2 → 4 s, shield 0.75 → 1 s.",
+            "<b>Shield:</b> reflects only within her body’s width, so no more reflecting shots that pass beside her. Walking through it still slows and pushes enemies as before. The shield also looks a bit smaller.",
+            "<b>Belroth’s boulder</b> is reflected only when it actually reaches the shield.",
+            "<b>A reflected Lamblaster</b> (Wylde’s E) deals one normal hit, not full damage per pellet."
+          ]
+        ],
+        [
+          "Fiorne",
+          [
+            "Back to her old (pre-nerf) numbers, with a bit more health than back then. What the last version improved stays (Shift’s damage, move speed, the augments that got stronger).",
+            "<b>Health:</b> 900 → 700.",
+            "<b>LMB:</b> 30 → 45 damage, reach 425 → 550.",
+            "<b>Passive:</b> +100% attack speed for 1.25 s (was +50% for 0.7 s), every 7 s.",
+            "<b>Space:</b> 1.0 → 0.3 s between dashes, and a faster dash.",
+            "<b>RMB (parry stance):</b> 20 → 40 damage per parry, 5 parries (was 4), 0.85 s in the stance (was 1.5 s), and its larger catch area is back.",
+            "<b>E:</b> 70 → 85 damage, faster and slightly longer spear throw.",
+            "<b>R:</b> about 180 → 365 total damage.",
+            "<b>Augments:</b> 11 back to their old values, e.g. Warrior’s Bounty, Fifi’s Little Helper, Dreadborn Artifact; Earthbreaker Pommel +95.",
+            "<b>Dashes</b> stop cleanly at the end (less rubber-banding).",
+            "<b>Fixed:</b> Bunny Stacks stuck at 0, and two wrong tooltips."
+          ]
+        ],
+        [
+          "Ishir",
+          [
+            "<b>Ult:</b> a shotgun blast when the mark on the enemy pops."
+          ]
+        ],
+        [
+          "Rayo",
+          [
+            "<b>Pinpoint Spotter:</b> +75% → +50% damage.",
+            "<b>Stormlense Scope:</b> the bonus now rises smoothly from 0% to +50% at max range (was nothing up close, then up to +85%).",
+            "<b>Blitzhead Arrows:</b> at most +35 damage (was +60), and no more self-damage on a miss.",
+            "<b>LMB:</b> stand still 0.45 → 0.25 s per shot, with the same shots per second."
+          ]
+        ],
+        [
+          "Rose",
+          [
+            "<b>Klaive’s Puzzlebox:</b> 50 → 75 damage."
+          ]
+        ],
+        [
+          "Rowan",
+          [
+            "<b>Dourling Dive (Space):</b> immune to stun, root, charm and fear during the dash, like the old version.",
+            "<b>Passive:</b> on Overgrowth, heals 2% of missing health plus 3 health per second, recalculated all the time. Before, it was fixed by how hurt you were when you stepped on, so it could heal almost nothing.",
+            "<b>Dourling Caltrops:</b> the vines now lie on the path you dashed (also after the recast), with a thorny look. The stray cube and the second Space effect are gone.",
+            "<b>Propagator:</b> the charge bar shows the faster charging instead of jumping."
+          ]
+        ],
+        [
+          "Somnia",
+          [
+            "<b>Ult:</b> ticks 4 times a second instead of 10. Same damage and slow, but much less rubber-banding when it hits many players."
+          ]
+        ],
+        [
+          "Wylde",
+          [
+            "<b>LMB:</b> 35 → 40 damage.",
+            "<b>RMB:</b> 65 → 95 damage, short range again, 1 s cooldown (shared with LMB), and you can still hold it to keep firing.",
+            "<b>Bounty’s Reward:</b> 35 → 30 bullets needed.",
+            "<b>Speedshine:</b> +10% → +20% move speed."
+          ]
+        ],
+        [
+          "Zoey",
+          [
+            "<b>LMB heal:</b> about 40 → 50 over 2 s, and the tooltip now shows the real number.",
+            "<b>RMB shield:</b> 45 → 50, lasting 1.5 → 2 s (Cursed Candle, Bloom’s Brew and Haste Chimes last 2 s too).",
+            "<b>Shieldnip:</b> 0.75 → 1.5 s.",
+            "<b>Mentor’s Locket:</b> +35 → +75 heal per enemy hit.",
+            "<b>Ult tooltip:</b> shows the real heal (150)."
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "Coming next",
+      "items": [
+        "Reconnecting to a custom game after a crash or disconnect.",
+        "The base change: once you leave your base, you can’t walk back in.",
+        "Training: stay in the augment phase as long as you like and start the round with F6.",
+        "Rowan’s new augment Burning Harvest, and Ishir’s ult showing the health the enemy is about to lose.",
+        "Astrada’s cage in team colours, Zoey’s ult effect on Hellhound skins, and work on rubber-banding."
+      ]
+    }
+  ],
+  "outro": "Thanks to a community member and everyone who helped with the list. Tell us how it plays!"
+}

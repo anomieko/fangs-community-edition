@@ -12,10 +12,20 @@ What each deploy put on the server, so a problem can be traced to a change and u
   usually needs only a server deploy (no player update).
 - **Data**: player data (`store.json` in the server's `fangs-data` volume) is only ever added to. Older backend
   versions ignore keys they don't know, so rolling back keeps profiles, friends and history.
+- **Players' notes**: every deploy that reaches players also gets a notes file for players in `backend/patchnotes/`,
+  written in the same commit as its "Next deploy" lines, so the server ships it (format in `backend/patchnotes.py`).
+  Players read it in the game under PATCH NOTES (it opens once by itself after an update); the PDF to post comes from
+  the same file (`tools/patchnotes/build_pdf.py`). Name it `<UTC date>-<HHMM>.json` for about when you deploy, with
+  `"tag": "deploy-<the same>"`: that is its id for good (the game remembers it as read), even if the deploy's own tag
+  ends up a few minutes off. Plain words, what players notice; no internals.
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Player update (FangsBoot) and server update (backend).
+
+| Change | Where | Off switch |
+|---|---|---|
+| PATCH NOTES tab in the main menu: the updates (newest first) and each one's notes, scrollable, in the game's rich-text styles; opens once by itself on the first start after a new update (`patchnotes_seen.txt` next to `fangsboot.log`). Backend `GET /fangsapi/prod/patch-notes` from `backend/patchnotes/` (first file: the 17 Oct notes); PDF builder `tools/patchnotes/build_pdf.py` (`cp2-patchnotes`) | FangsBoot `patchnotes.lua`, backend `patchnotes.py`, `server/Dockerfile` | revert the `require("patchnotes")` block in FangsBoot's `main.lua` |
 
 ## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
 

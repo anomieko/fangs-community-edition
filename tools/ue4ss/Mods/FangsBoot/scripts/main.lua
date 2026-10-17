@@ -1051,6 +1051,14 @@ if not gameVersion():find("^alpha7") then
     if not ok then log("lobby settings: not loaded: " .. tostring(err)) end
 end
 
+-- The PATCH NOTES tab in the main menu (each update's notes, from the backend; opens once by itself after a new
+-- update): patchnotes.lua. Feb 2023 build only.
+if not gameVersion():find("^alpha7") then
+    local env = { log = log, every = every, gameInstance = gameInstance, backendBase = backendBase }
+    local ok, err = pcall(function() require("patchnotes")(env) end)
+    if not ok then log("patch notes: not loaded: " .. tostring(err)) end
+end
+
 -- The community patch's game-mode changes (docs/recon/community-build-modes.md; the server side is FangsHost's
 -- modes.lua), Feb 2023 build:
 --  * base blockers (blockers.lua, the same file as FangsHost's): this player's copy of the server's, for movement

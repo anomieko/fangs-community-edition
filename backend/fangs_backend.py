@@ -14,6 +14,7 @@ from aiohttp import web, WSMsgType
 from hosts import HostManager
 from matchmaker import Matchmaker
 from social import Social
+import patchnotes
 import ranked
 
 NAMESPACE = 'fangs'
@@ -1175,6 +1176,22 @@ async def fangs_unreleased_heroes(request):
     return web.Response(text=''.join(f'{row}\t{name}\n' for row, name in rows), content_type='text/plain')
 
 
+# Players' patch notes (backend/patchnotes/*.json, newest first; FangsBoot's PATCH NOTES tab). Public like the login
+# screen's data. No tag: one "<tag>\t<date>\t<title>" line per update. ?tag=<tag>: that update as the game's rich text
+# (patchnotes.render). ?format=json: the files as they are (tools, a web page).
+@route('GET', r'/fangsapi/[^/]+/patch-notes')
+async def fangs_patch_notes(request):
+    notes = patchnotes.load(request.app['cfg'].patchnotes)
+    if request.query.get('format') == 'json':
+        return web.json_response(notes)
+    if tag := request.query.get('tag'):
+        note = next((n for n in notes if n['tag'] == tag), None)
+        if note is None:
+            return web.Response(status=404, text='no such update\n', content_type='text/plain')
+        return web.Response(text=patchnotes.render(note), content_type='text/plain')
+    return web.Response(text=patchnotes.index_text(notes), content_type='text/plain')
+
+
 # Main-menu "players online" (FangsBoot, in place of the missions list): players with an open lobby connection,
 # which the game keeps from login to quit, or who lost it less than a minute ago (map changes, reconnects).
 # Public like the rest of the login screen's data; it is just a number.
@@ -1308,6 +1325,8 @@ def parse_args(argv=None):
     ap.add_argument('--match-wait', type=float, default=0,
                     help='if > 0: seconds the first queued player waits before a match starts with whoever is queued '
                          '(at least 2); by default matches only start full')
+    ap.add_argument('--patchnotes', default=str(Path(__file__).parent / 'patchnotes'),
+                    help="players' patch notes, one JSON file per update (backend/patchnotes.py)")
     ap.add_argument('--log', default=str(Path(__file__).parent.parent / 'work' / 'logs' / 'backend.jsonl'))
     return ap.parse_args(argv)
 
