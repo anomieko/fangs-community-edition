@@ -117,6 +117,20 @@ function T.watch()
     return "watching"
 end
 
+-- server: which of the given tags (default: what blocks a dash) the hero has right now
+function T.tags(name, list)
+    local p = hero(name)
+    if not valid(p) then return "tags: no hero " .. name end
+    list = list or { "Effect.Grounded", "Effect.LockCasts", "HoldingOrb.Grounded", "State.Dead", "State.Grounded",
+                     "State.Rooted", "State.Stun", "Systems.Input.LockAbilities", "Effect.SpawnBlocker" }
+    local have = {}
+    for _, t in ipairs(list) do
+        local ok, r = pcall(function() return p.AbilitySystemComponent:HasMatchingGameplayTag({ TagName = FName(t) }) end)
+        if ok and r then have[#have + 1] = t end
+    end
+    return "tags " .. name .. ": " .. (#have > 0 and table.concat(have, ", ") or "none of " .. #list)
+end
+
 function T.face(a, b, d)
     local pa, pb = hero(a), hero(b)
     if not (valid(pa) and valid(pb)) then return "face: no hero " .. (valid(pa) and b or a) end
