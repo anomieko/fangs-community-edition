@@ -17,7 +17,7 @@ Last updated: 2026-10-17.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-15-2336` (`662f8ea`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -54,10 +54,14 @@ Current deploy: `deploy-2026-10-15-2336` (`662f8ea`); what each deploy changed: 
   `docs/recon/items.md`). To confirm in play: a Somnia player's `fangsboot.log` says
   `restored items: 21 added to BP_BookMage_Char2_C`.
 
+- since 17 Oct 12:23 UTC: the community patch (Sheepa's list) and the Fiorne restore: 8 patches in the pak, the lobby
+  settings and Captain vote, Training on the island, presets, the unreleased-heroes fix, passives that never started
+  (`docs/CHANGELOG.md` has every change and its off switch). Base blockers and the held Training phase are built
+  but off.
+
 ## Done, not deployed
 
-- **The big patch: the community patch and the Fiorne restore** (branch `megapatch`, all 8 patches enabled;
-  `docs/CHANGELOG.md` "Next deploy" lists every change with its off switch). Waiting for the user's OK to deploy.
+Nothing.
 
 ## In progress
 
@@ -134,11 +138,11 @@ Current deploy: `deploy-2026-10-15-2336` (`662f8ea`); what each deploy changed: 
 
 9. **Fiorne restore** (user, 16 Oct: "she's my favourite champion, but she's not really playable in this patch"; plan
    approved; rebalanced the same day to 700 HP, the Aug passive cooldown and a smaller Earthbreaker Pommel, the
-   user's choice after a roster comparison). Research and evidence: `docs/recon/fiorne.md`. **Done, not deployed**:
-   `tools/patch/patches/fiorne.json`, enabled on `megapatch`.
+   user's choice after a roster comparison). Research and evidence: `docs/recon/fiorne.md`. **Live** since `deploy-2026-10-17-1223`:
+   `tools/patch/patches/fiorne.json`.
    - What it does: the Bunny Stacks fix (the stack system sets itself up whenever it starts), Aug 2022 numbers for LMB,
      passive (7 s cooldown), Space, RMB, E, R and 11 heirlooms (Earthbreaker Pommel +95; Feb's move speed and buffed
-     heirlooms kept), 700 base HP, all four dashes stop dead, two tooltips.
+     heirlooms kept), 700 base HP, all four dashes stop dead, two tooltips. **Live** since `deploy-2026-10-17-1223`.
    - Tested with and without the pak (`tools/run/test_fiorne.sh`): 700/700 HP; Space dashes 0.6 s apart 3 of 3 (1 of
      3); dash end 2750 → 0 within 50 ms; after a mid-round restart of the stack system the stacks refill. In the
      combined run she starts with her recommended build (presets now load): Wanderer's Travelpack gives 5 stacks and a
@@ -147,7 +151,7 @@ Current deploy: `deploy-2026-10-15-2336` (`662f8ea`); what each deploy changed: 
      covers the "never started" case too.
 10. **The community patch list** (Sheepa's list, 16 Oct): researched (`docs/recon/community-patchnotes.md`), answered
    (42 questions), proposed and OK'd by Sheepa (second PDF), built in eight streams (`docs/recon/community-build-*.md`)
-   and merged on `megapatch`. **Done, not deployed** (see Done, not deployed). In it: numbers and texts, knock-ups as
+   and merged on `megapatch`. **Live** since `deploy-2026-10-17-1223`. In it: numbers and texts, knock-ups as
    stuns, Rowan, the CC-immune dashes, Ethryn's shield, Lamblaster, Stormlense, passives that never started, Ishir's
    sound, the lobby settings and Captain vote, Training on the island, the Training server grace, presets, Wylde's
    dummy-phase ammo, the artifacts, and the unreleased-heroes filter fix.
