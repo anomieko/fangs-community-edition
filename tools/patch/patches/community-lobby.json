@@ -1,0 +1,16 @@
+{
+  "name": "community-lobby",
+  "summary": "Captain vote: teammates' votes count from the first round (FangsHost decides per match whether there is a vote)",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": false,
+  "research": "docs/recon/community-build-lobby.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/BluePrints/Gameplay/GameRules/King/BP_RS_King",
+      "why": "Captain vote: the game counted teammates' Captain votes only from round 4 on (before that the Captain was random). Now from round 1: with the custom-lobby option Captain vote on, teammates vote every round; with it off, and in Casual and Ranked, the game server votes at random for everyone, so the Captain stays random.",
+      "edits": [
+        { "op": "set-call-arg", "function": "GetClientVotes", "call": "GreaterEqual_IntInt", "arg": 1, "from": "4", "to": "1", "count": 1 }
+      ]
+    }
+  ]
+}

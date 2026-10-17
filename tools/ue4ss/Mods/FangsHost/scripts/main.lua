@@ -141,6 +141,7 @@ end)
 -- has its server config (FANGSConfig): the lobby picks a matchmade game's random map when the first player
 -- joins, from that config, so players must not be sent here before it is loaded.
 configLoaded = false
+local lobbyEnv = {}   -- filled by lobby.lua (custom lobby settings, Captain vote), loaded at the end
 launched = false   -- the lobby started its match (LaunchGame); the backend stops abandoned lobbies quickly
 
 -- Server frame rate and hitches for the heartbeat, in real time (world time stops while a match is paused):
@@ -215,11 +216,13 @@ every(3000, function()
     pcall(capFps, gs, map, players)
     local ok, fps, hitch, longest, slow = pcall(frameStats)
     if not ok then fps, hitch, longest, slow = nil, 0, 0, 0 end
+    local lobbyOk, lobbyJson = pcall(function() return lobbyEnv.lobbyStatus and lobbyEnv.lobbyStatus() end)
     local f = io.open("fangshost_status.json.tmp", "w")
     if f then
         f:write(string.format('{"map": "%s", "players": %d, "ready": %s, "launched": %s, "fps_cap": %d, '
-            .. '"fps": %.1f, "hitch_ms": %.0f, "frame_ms": %.0f, "slow": %d, "time": %d}', map, players, tostring(configLoaded),
-            tostring(launched), fpsCap or 0, fps or 0, hitch or 0, longest or 0, slow or 0, os.time()))
+            .. '"fps": %.1f, "hitch_ms": %.0f, "frame_ms": %.0f, "slow": %d, "time": %d%s}', map, players, tostring(configLoaded),
+            tostring(launched), fpsCap or 0, fps or 0, hitch or 0, longest or 0, slow or 0, os.time(),
+            (lobbyOk and lobbyJson) and (', "lobby": ' .. lobbyJson) or ""))
         f:close(); os.remove("fangshost_status.json"); os.rename("fangshost_status.json.tmp", "fangshost_status.json")
     end
 end)
@@ -329,6 +332,13 @@ local function installShim()
     end) and all
     all = hook(LOBBY_PC .. ":RefreshPlayerInfoOnServer", function(ctx, userId)
         local pc, uid = ctx:get(), str(userId)
+        if uid:sub(1, 4) == "fce:" then   -- a lobby command from a player's FangsBoot, not a user id (lobby.lua)
+            return later(function()
+                if not lobbyEnv.lobbyCommand then return end
+                local ok, e = pcall(lobbyEnv.lobbyCommand, pc, uid)
+                if not ok then log("lobby command " .. uid .. ": " .. tostring(e)) end
+            end)
+        end
         later(function()
             local json = readRecord("players/" .. uid .. "/PROFILE_INFO_KEY") or "{}"
             pc:OnRefreshPlayerInfoOnServerSuccess(true, {}, json); log("refreshed profile " .. uid)
@@ -553,4 +563,15 @@ end)
 if not IS_AUG2022 then
     local ok, err = pcall(function() require("shards")({ log = log, every = every, readRecord = readRecord }) end)
     if not ok then log("old shards: not loaded: " .. tostring(err)) end
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Custom lobby settings (map, size, rounds, Captain vote, shuffle; the owner's buttons are FangsBoot's) and the Captain
+-- vote in every match: lobby.lua. Feb 2023 build only.
+if not IS_AUG2022 then
+    lobbyEnv.log, lobbyEnv.every, lobbyEnv.later, lobbyEnv.hook = log, every, later, hook
+    lobbyEnv.readRecord, lobbyEnv.gameInstance, lobbyEnv.gameState = readRecord, gameInstance, gameState
+    lobbyEnv.isLocal, lobbyEnv.gameMode, lobbyEnv.notOnLobby = isLocal, gameMode, notOnLobby
+    local ok, err = pcall(function() require("lobby")(lobbyEnv) end)
+    if not ok then log("lobby settings: not loaded: " .. tostring(err)) end
 end
