@@ -1026,3 +1026,36 @@ if not gameVersion():find("^alpha7") then
         end
     end)
 end
+
+-- The community patch's game-mode changes (docs/recon/community-build-modes.md; the server side is FangsHost's
+-- modes.lua), Feb 2023 build:
+--  * base blockers (blockers.lua, the same file as FangsHost's): this player's copy of the server's, for movement
+--    prediction (the actor doesn't replicate);
+--  * F6 in Training (TRAINING tile, custom Solo lobbies) starts the round: the server holds the augment phase until
+--    then. Sent through DebugSpawnBot, a server RPC that does nothing in Shipping builds; the server ignores it
+--    outside a solo game's augment phase.
+if not gameVersion():find("^alpha7") then
+    local placeBlockers = require("blockers")(log)
+    RegisterBeginPlayPreHook(function(ctx)
+        local gs = ctx:get()
+        if not (gs and gs:IsValid()) then return end
+        local ok, name = pcall(function() return gs:GetClass():GetFName():ToString() end)
+        if not ok or not name:find("^GS_MOBA_Battle") then return end   -- and its per-map subclasses
+        local map = gs:GetFullName():match("Maps/([%w_]+)%.") or "?"
+        ExecuteInGameThreadWithDelay(200, function()
+            local placed, err = pcall(placeBlockers, gs, map)
+            if not placed then log("base blockers: " .. tostring(err)) end
+        end)
+    end)
+    RegisterKeyBind(Key.F6, function()
+        ExecuteInGameThread(function()
+            local gi = gameInstance()
+            if not (gi and gi:IsValid()) then return end
+            local pc = StaticFindObject("/Script/Engine.Default__GameplayStatics"):GetPlayerController(gi, 0)
+            if pc and pc:IsValid() and pc:GetClass():GetFName():ToString() == "BP_PC_MOBA_PlayerController_C" then
+                pc:DebugSpawnBot(FName("FangsStartRound"), 0)
+                log("F6: start the round (training)")
+            end
+        end)
+    end)
+end
