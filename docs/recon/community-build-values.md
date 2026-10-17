@@ -75,7 +75,25 @@ Results (16 Oct, `RUN=cpv` with the pak, `RUN=cpv-ctl` without):
 | Green Shard on Belroth at 315/1050 | +53 after 0.7 s, +263 after 2.7 s, **+525** (840) after 6.7 s | first try (`Duration` 0.25, one tick of 525): only **+331** (646), then nothing |
 | Brutus' health | 950 | **1050/1050** |
 
-**The Green Shard's single tick fell short.** One 0.25 s tick of 525 healed 331. Feb's 20 ticks of 26 healed the full
-525. Something in the native heal execution limits one big heal; it isn't the Blueprint (`GetHealPerTick` =
-MaxHealth × 0.5 / 4 / `Duration`; the listener only stops the heal at full health). So `Duration` is **0.5**: two ticks
-of 262.5 within half a second.
+**The Green Shard can't be a single quarter-second tick.** The proposal says it lands "within a quarter of a second",
+but measured on Belroth from 315/1050 health (the heal should be +525, 50 % of his maximum):
+
+| `Duration` | Ticks of `GetHealPerTick` (MaxHealth × 0.5 / 4 / `Duration`) | Healed |
+|---|---|---|
+| 5 (Feb) | 20 × 26 over 5 s | +525 (100 %) |
+| 0.25 | 1 × 525 | +331 (63 %) |
+| **0.5 (built)** | 2 × 262.5 | **+487 (93 %)**, all within 0.7 s |
+| 1.0 | 4 × 131 | not tested (the shared test queue was full); likely closer to 100 %, but takes 1 s |
+
+The Blueprint isn't the cause: it only computes the per-tick heal, and its listener stops the heal at full health. The
+shortfall comes from the native healing execution (`MOBAHealingExecutionCalculation`, not decompiled), and it grows
+with the size of one heal. So the build uses `Duration` **0.5**: two ticks within half a second, 93 % of the heal. If the full 50 % matters more
+than speed, 1.0 s is the next value to try.
+
+**Somnia's ult on Brutus** (`RUN=cpv4`, his MoveSpeed attribute and health every 50 ms after the cast):
+- With the pak: the 30 % slow (600 → 420) is renewed once every 0.25 s, so one 50 ms sample at 600 shows at 1.00,
+  1.27, 1.53, 1.78, 2.00, 2.27, 2.53 s. His health falls in steps every 0.25 s.
+- Without it (`RUN=cpv-ctl`): small drops of about 5 HP every 0.1 s (the ult's 10 ticks a second, 150 / 30), and the
+  slow drops out at irregular 0.2-0.5 s gaps in the 50 ms samples.
+- In both runs he also took about 60 HP every 0.25 s from something else where `face()` put him (likely a turret), so
+  he died within about 3 s. The tick rate is what this test shows.
