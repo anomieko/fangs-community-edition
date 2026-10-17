@@ -94,7 +94,7 @@ and the AES key in `work/re/` (the `PAK_KEY` env var points elsewhere).
 | `wrap-call-arg` | `function`, `call`, `arg`, `from`, `count`, `with`, optional `args` | Puts a call around one argument of the matching calls, e.g. `Add_FloatFloat(r, 1.0)` → `Add_FloatFloat(Multiply_FloatFloat(r, 0.5), 1.0)` (Rayo's Stormlense ramp). `with` must already be called somewhere in the asset (its call node is reused); `args` are its further arguments. The statement grows, and the code offsets after it move along. |
 | `replace-call-arg` | `function`, `call`, `arg`, `from`, `count`, `to` (an `insert-code` expression) | Like `set-call-arg`, but the new argument may have another size, e.g. a vector literal `{"vec": [5, 240, 162]}` in place of a property read (Ethryn's shield push keeps its old box). |
 | `rename-prop-ref` | `function`, `from`, `to`, `count`, optional `call` | Points property reads at another property of the same owner, e.g. `MOBAProjectile.ProjectileSphere` → `ProjectileInteractionsSphere`. With `call`, only in statements that make that call. Same size. |
-| `insert-code` | `function`, `at` (`start`, `end`) or `before`/`after` (a call in that function), `code` | New statements, built from a small JSON form (below), inserted as a block; works in ubergraphs. Engine (`/Script`) functions it calls are added as imports when the asset lacks them. |
+| `insert-code` | `function`, `at` (`start`, `end`) or `before`/`after` (a call in that function), `code`, optional `anchor-match` | New statements, built from a small JSON form (below), inserted as a block; works in ubergraphs. Engine (`/Script`) functions it calls are added as imports when the asset lacks them. `anchor-match` (`{"<arg index>": "<text>"}`, written as `AssetPatch calls` prints them) picks one call among several of the same name, as for `insert-copy` (Zoey's ult: the cue call whose tag is `GameplayCue.CatSupp.Skill3.CastVFX`). |
 
 What a patch can't do (yet):
 - Add functions or variables. New statements (`insert-call`, `insert-copy`, `insert-code`, `insert-play-sound`)
@@ -152,6 +152,7 @@ How it is checked:
 | Kind | Form | Bytecode |
 |---|---|---|
 | variable | `{"local": name}`, `{"self": name}` | a copy of an existing use of that variable |
+| anchor argument | `{"anchor-arg": i}` (with `before`/`after`) | a copy of argument `i` of the anchor call |
 | literal | `{"str": s}`, `{"bool": b}`, `{"float": f}`, `{"int": n}`, `{"vec": [x, y, z]}` | the constant |
 | pure engine call | `{"math": "/Script/Engine.KismetStringLibrary:Contains", "args": [...]}` | `EX_CallMath` |
 | member call | `{"on": expr, "call": "/Script/Engine.SceneComponent:SetRelativeScale3D", "args": [...]}` | `EX_Context` + `EX_FinalFunction` |

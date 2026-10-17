@@ -6,6 +6,24 @@
   "research": "docs/recon/community-build-heroes.md",
   "assets": [
     {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/CatSupp/Skill3/BP_GA_CatSupp_Skill3",
+      "why": "Zoey's ult: the Zoey player sees the landing effect again, on every skin. The ability reaches its landing cue after a sync point where only the client waits; the server sends the cue under Zoey's prediction key, so her own client skips it, and her client, past its prediction window, doesn't play it either. Everyone else saw it. Now her own machine also plays it locally (MOBAAbilitySystemComponent.ExecuteGameplayCueLocal, only where Zoey is locally controlled).",
+      "edits": [
+        {
+          "op": "insert-code", "function": "ExecuteUbergraph_BP_GA_CatSupp_Skill3",
+          "after": "K2_ExecuteGameplayCueWithParams", "anchor-match": { "0": "GameplayCue.CatSupp.Skill3.CastVFX" },
+          "code": [
+            { "if": { "on": { "self": "Player" }, "call": "/Script/Engine.Pawn:IsLocallyControlled" },
+              "then": [
+                { "do": { "on": { "math": "/Script/GameplayAbilities.AbilitySystemBlueprintLibrary:GetAbilitySystemComponent", "args": [ { "self": "Player" } ] },
+                          "call": "/Script/MOBA.MOBAAbilitySystemComponent:ExecuteGameplayCueLocal",
+                          "args": [ { "anchor-arg": 0 }, { "local": "CallFunc_MakeGameplayCueParameters_ReturnValue_1" } ] } }
+              ] }
+          ]
+        }
+      ]
+    },
+    {
       "path": "MOBA/Content/Gameplay/Abilities/Player/BigBoi/Skill4/BP_MOBA_BigBoi_Skill4_Projectile_2",
       "why": "Belroth, Boulder Toss (E): Ethryn's shield reflected the boulder as soon as its big hit sphere (radius 170) touched the shield, far before the boulder reached it. That sphere now ignores shields and other ability objects (PhysicsBody); the shield reacts to the boulder's small interaction sphere (radius 60) instead. The boulder hits heroes as before.",
       "edits": [
