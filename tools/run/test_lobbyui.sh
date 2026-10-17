@@ -5,13 +5,13 @@
 # settings. Then 1 vs 1: carol's seat is gone, she waits; alice's LAUNCH has the server remove her, then the game
 # launches; alice and bob play: the HUD's vote every round, MaxRounds 3 on server and clients, an 8 s vote window on the
 # server. Screenshots in work/logs/lobbyui-shots/. Own backend data and game servers; local play is untouched.
-# Usage: [RUN=<name>] [CLIENT_DIR=clients/<build>] tools/run/test_lobbyui.sh
+# Usage: [RUN=<name>] [PATCHES="<patch> ..." (default community-lobby)] [CLIENT_DIR=clients/<build>] tools/run/test_lobbyui.sh
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 R=${RUN:-lobbyui}
 CLIENT=${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}
 rm -rf work/run/$R-hosts work/run/$R-store.json work/run/$R-paks; mkdir -p work/run/$R-paks
-OUT=$PWD/work/run/$R-paks/FangsCE_P.pak tools/patch/build.sh "$CLIENT" community-lobby > work/run/$R-build.txt || { cat work/run/$R-build.txt; exit 1; }
+OUT=$PWD/work/run/$R-paks/FangsCE_P.pak tools/patch/build.sh "$CLIENT" ${PATCHES:-community-lobby} > work/run/$R-build.txt || { cat work/run/$R-build.txt; exit 1; }
 export FANGS_PAKS=$PWD/work/run/$R-paks
 W=MOBA/Binaries/Win64/fangsctl_cmd.txt
 A=work/run/$R-alice/$W; B=work/run/$R-bob/$W; C=work/run/$R-carol/$W
