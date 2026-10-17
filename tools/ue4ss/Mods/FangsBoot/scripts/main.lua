@@ -1037,8 +1037,14 @@ do
     local TAG = "Effect.WoodenSword.Skill4.Cooldown"
     local timers = {}   -- icon address -> { full = the timer's length when it started, left = remaining last time }
     local lib, tagLib, hookedAt, logged = nil, nil, nil, 0
+    local seen = 0   -- the first few icons' stack info, logged once (what the hook looks at)
     local function redraw(w)
         local info = w["UIStack Info"]
+        if seen < 6 then
+            seen = seen + 1
+            log(string.format("Propagator bar: icon %s charge type %s tag %s", tostring(w:GetFName():ToString()),
+                tostring(info.ChargeType), tostring(info.EffectTag.TagName:ToString())))
+        end
         if info.ChargeType ~= 1 or info.EffectTag.TagName:ToString() ~= TAG then return end
         local box = w.StackPanel:GetChildAt(w.CurrStacks)
         if not (box and box:IsValid()) then return end
@@ -1047,6 +1053,7 @@ do
         local rem, tot = {}, {}
         lib:GetEffectRemainingTime(w:GetOwningASC(), tagLib:MakeGameplayTagContainerFromTag(info.EffectTag), rem, tot)
         local left, full = rem.RemainingTime, tot.TotalTime
+        if seen < 12 and type(left) ~= "number" then seen = seen + 1; log("Propagator bar: remaining time not read (" .. type(left) .. ")") end
         if type(left) ~= "number" or type(full) ~= "number" or full <= 0 then return end
         local key = w:GetAddress()
         local t = timers[key]
