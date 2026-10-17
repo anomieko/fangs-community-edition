@@ -168,7 +168,8 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
       (`docs/recon/community-build-modes.md`);
    4. Burning Harvest (Rowan), Ishir's health preview, Training on the player's PC, less laggy dummies, the Loadouts
       tab, DPS numbers, spectating;
-   5. Astrada's cage colours (needs the cage's second colour parameter), Zoey's Hellhound ult effect (not reproduced);
+   5. Astrada's cage colours (needs the cage's second colour parameter); Zoey's ult effect: fixed, not deployed (branch
+      `cp2-zoey`; only the Zoey player missed it, on every skin);
    6. netcode A/B tests (Dec 2023 settings) and Crownwatch's rendering.
    Players' feedback decides the numbers; each is one line in its patch file.
 

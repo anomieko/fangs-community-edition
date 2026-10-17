@@ -49,6 +49,38 @@ function S.aimLoop(name, seconds)
     return "aiming at " .. name .. " for " .. seconds .. " s"
 end
 
+-- server: give a hero a skin the way BP_AC_SkinHandler's "Accelbyte Get Owner Skin" does after reading the profile:
+-- Current SkinID and Current VFXPack set (both replicate) and their OnReps run here; the clients run theirs
+function S.skin(name, id)
+    local p = heroes()[name]
+    if not valid(p) then return "skin: no hero " .. name end
+    p:FlushNetDormancy()
+    p["Current SkinID"] = id; p["OnRep_Current SkinID"](p)
+    p["Current VFXPack"] = id; p["OnRep_Current VFXPack"](p)
+    local ref = p.VFXPackRef
+    return "skin " .. name .. " " .. id .. " -> pack " .. (valid(ref) and ref:GetFName():ToString() or "none")
+end
+
+-- client: what this machine has for that hero: skin, VFX pack, and the ult systems spawned so far (live components)
+function S.vfx(name)
+    local p = heroes()[name]
+    if not valid(p) then return "vfx: no hero " .. name end
+    local ref = p.VFXPackRef
+    local n, seen = 0, {}
+    for _, c in ipairs(FindAllOf("NiagaraComponent") or {}) do
+        local ok, a = pcall(function() return c:GetAsset() end)
+        if ok and valid(a) then
+            local an = a:GetFName():ToString()
+            if an:find("Skill3_ULT") or an:find("Skill3_CastVFX") then n = n + 1; seen[an] = (seen[an] or 0) + 1 end
+        end
+    end
+    local list = {}
+    for k, v in pairs(seen) do list[#list + 1] = k .. " x" .. v end
+    local function str(v) local ok, s = pcall(function() return v:ToString() end); return ok and s or tostring(v) end
+    return string.format("vfx %s: skin %s, pack %s (%s); ult systems %d: %s", name, str(p["Current SkinID"]),
+        str(p["Current VFXPack"]), valid(ref) and ref:GetFName():ToString() or "none", n, table.concat(list, ", "))
+end
+
 function S.hp(name)
     local p = heroes()[name]
     if not valid(p) then return "hp: no hero " .. name end
