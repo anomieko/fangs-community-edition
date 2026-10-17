@@ -10,7 +10,8 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 R=patchnotes
 CLIENT=${CLIENT_DIR:-clients/fangs-2023-02-15-b10554626}
-rm -rf work/run/$R-hosts work/run/$R-store.json work/run/$R-notes; mkdir -p work/run/$R-notes
+# the instances too: the steps below wait for lines in their fangsboot.log (headless.sh would delete them later)
+rm -rf work/run/$R-hosts work/run/$R-store.json work/run/$R-notes work/run/$R-first work/run/$R-second; mkdir -p work/run/$R-notes
 cp backend/patchnotes/*.json work/run/$R-notes/
 cat > work/run/$R-notes/2026-10-10-1200.json <<'EOF'
 {"tag": "deploy-2026-10-10-1200", "date": "2026-10-10", "title": "Patch notes: an older update (test)",
