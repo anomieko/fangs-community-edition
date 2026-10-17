@@ -777,7 +777,25 @@ def session_view(sess):
     host = sess.get('_host')
     if host is not None:  # live player count from the host's FangsHost heartbeat
         sess['game_session_setting']['current_player'] = host.status.get('players', 0)
+        lobby_settings(sess, host.status.get('lobby'))
     return {k: v for k, v in sess.items() if not k.startswith('_')}
+
+
+def lobby_settings(sess, lobby):
+    """The owner changed the map or the size in the lobby (FangsHost lobby.lua puts them in its heartbeat): the lobby
+    list shows them, and later joiners get them."""
+    if not isinstance(lobby, dict):
+        return
+    gs = sess['game_session_setting']
+    size = lobby.get('size')
+    if isinstance(size, int) and 2 <= size <= 12:
+        gs['max_player'] = size
+    level, name = lobby.get('map_level'), lobby.get('map_name')
+    if isinstance(level, str) and level.startswith('LE_') and len(level) < 64:
+        settings = gs.setdefault('settings', {})
+        settings['map_level'] = level
+        if isinstance(name, str) and name and len(name) < 64:
+            settings['map_name'] = name
 
 
 def known(request):

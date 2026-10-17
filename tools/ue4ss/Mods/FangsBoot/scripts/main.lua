@@ -166,6 +166,7 @@ local function everyonePickedASide(gs)
     return n > 0 and picked
 end
 local lobbyGS = nil
+local lobbyEnv = {}   -- filled by lobbyui.lua (custom lobby settings, Captain vote), loaded at the end
 local function offerLaunch(menu)
     local gi, pc = gameInstance(), menu.BP_LobbyPlayerControllerRef
     if not (gi and gi:IsValid() and gi.MapGameMode == 4 and pc:IsValid()) then return end   -- custom lobbies only
@@ -184,6 +185,10 @@ every(1000, function()
     local ok, err = pcall(RegisterHook, LOBBY_MENU_TICK, function(ctx)
         local s, e = pcall(offerLaunch, ctx:get())
         if not s then log("offerLaunch: " .. tostring(e)) end
+        if lobbyEnv.afterLobbyTick then
+            s, e = pcall(lobbyEnv.afterLobbyTick, ctx:get())
+            if not s then log("lobby settings: " .. tostring(e)) end
+        end
     end)
     launchHooked = true
     log(ok and "lobby: launch allowed before the lobby is full" or ("lobby menu hook failed: " .. tostring(err)))
@@ -1025,4 +1030,19 @@ if not gameVersion():find("^alpha7") then
             end
         end
     end)
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Custom lobby settings in the lobby screen (map, size, rounds, Captain vote, shuffle; FangsHost's lobby.lua applies
+-- them) and the Captain vote in matches: lobbyui.lua. Feb 2023 build only.
+if not gameVersion():find("^alpha7") then
+    lobbyEnv.log, lobbyEnv.every, lobbyEnv.gameInstance = log, every, gameInstance
+    function lobbyEnv.lobbyState()   -- the lobby's game state (through the world: no object scan)
+        local gi = gameInstance()
+        local ok, gs = pcall(function() return gi:GetWorld().GameState end)
+        if ok and gs and gs:IsValid() and gs:GetClass():GetFName():ToString() == "GS_Lobby_GameState_C" then return gs end
+        return nil
+    end
+    local ok, err = pcall(function() require("lobbyui")(lobbyEnv) end)
+    if not ok then log("lobby settings: not loaded: " .. tostring(err)) end
 end
