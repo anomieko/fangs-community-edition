@@ -1051,9 +1051,16 @@ do
         local bar = box:GetChildAt(0)
         if not (bar and bar:IsValid()) then return end
         local rem, tot = {}, {}
-        lib:GetEffectRemainingTime(w:GetOwningASC(), tagLib:MakeGameplayTagContainerFromTag(info.EffectTag), rem, tot)
-        local left, full = rem.RemainingTime, tot.TotalTime
-        if seen < 12 and type(left) ~= "number" then seen = seen + 1; log("Propagator bar: remaining time not read (" .. type(left) .. ")") end
+        local r1, r2 = lib:GetEffectRemainingTime(w:GetOwningASC(), tagLib:MakeGameplayTagContainerFromTag(info.EffectTag), rem, tot)
+        local left = rem.RemainingTime or rem[1] or tot.RemainingTime or (type(r1) == "number" and r1 or nil)
+        local full = tot.TotalTime or tot[1] or rem.TotalTime or (type(r2) == "number" and r2 or nil)
+        if seen < 12 and type(left) ~= "number" then
+            seen = seen + 1
+            local keys = {}
+            for k, v in pairs(rem) do keys[#keys + 1] = "rem." .. tostring(k) .. "=" .. tostring(v) end
+            for k, v in pairs(tot) do keys[#keys + 1] = "tot." .. tostring(k) .. "=" .. tostring(v) end
+            log("Propagator bar: remaining time not read; returned " .. tostring(r1) .. ", " .. tostring(r2) .. "; " .. table.concat(keys, " "))
+        end
         if type(left) ~= "number" or type(full) ~= "number" or full <= 0 then return end
         local key = w:GetAddress()
         local t = timers[key]
