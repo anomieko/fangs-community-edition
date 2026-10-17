@@ -1088,6 +1088,9 @@ Two facts used throughout:
   Astrada pack exists in the Feb pak.
 - **Confidence**: medium. Must check in a 2-client match: does an enemy's cage already look different, and does
   `User.Color`/`User.CircleColor` change the visible colour.
+- **Answer (17 Oct, matches)**: the team pick works, and neither parameter changes the colour: no emitter of either
+  system reads them. The colours are curves baked into each emitter, and the fix recolours those
+  (`docs/recon/community-build-heroes.md`).
 - **Questions for a community member**:
   1. Right now, does the cage of an Astrada on *your* team look exactly like the enemy Astrada's cage? (Yes / a bit different / no idea)
   2. Which colours? (a) ally blue, enemy red-orange as now (b) ally yellow-orange, enemy red (c) something else.
