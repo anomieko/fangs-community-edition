@@ -521,4 +521,56 @@ function T.key(n)   -- press and release ability key n, as the player controller
     return "key " .. n
 end
 
+-- A dash measured every frame for a while, one line to dash.log: how far the hero got, its top speed, when it started
+-- moving fast (seconds after t0), how many separate fast bursts (2 = a double dash), and the largest frame-to-frame
+-- jump beyond what its velocity explains (a correction). marks.release: when the key went up (client).
+local function dashlog(p, seconds, label, marks)
+    local f = io.open("dash.log", "a")
+    local t0, l0 = now(p), p:K2_GetActorLocation()
+    local last, tl, first, top, bursts, fast, jump, done = l0, 0, nil, 0, 0, false, 0, false
+    LoopInGameThreadWithDelay(10, function()
+        if done then return end
+        local t = valid(p) and now(p) - t0 or seconds + 1
+        if t > seconds then
+            done = true
+            local d = math.sqrt((last.X - l0.X) ^ 2 + (last.Y - l0.Y) ^ 2)
+            f:write(string.format("%s %s: moved %.0f, top speed %.0f, fast from %s, %d burst(s), largest jump %.0f%s\n",
+                os.date("%H:%M:%S"), label, d, top, first and string.format("%.3f s", first) or "never", bursts, jump,
+                marks.release and string.format(", key up at %.3f s", marks.release) or ""))
+            f:close()
+            return
+        end
+        if t <= tl then return end
+        local l, v = p:K2_GetActorLocation(), p:GetVelocity()
+        local s = math.sqrt(v.X * v.X + v.Y * v.Y)
+        local moved = math.sqrt((l.X - last.X) ^ 2 + (l.Y - last.Y) ^ 2)
+        jump = math.max(jump, moved - s * (t - tl))
+        last, tl, top = l, t, math.max(top, s)
+        if s > 900 then
+            if not fast then fast, bursts, first = true, bursts + 1, first or t end
+        elseif s < 300 then fast = false end
+    end)
+end
+
+function T.dashwatch(name, seconds, label)   -- server: the hero's dash (tools/run/test_tufts.steps)
+    local p = hero(name)
+    if not valid(p) then return "dashwatch: no hero " .. name end
+    dashlog(p, seconds, label or name, {})
+    return "dashwatch: " .. name
+end
+
+function T.dash(n, holdms, seconds, label)   -- client: hold ability key n for holdms, the own hero's dash to dash.log
+    local gi = FindFirstOf("BP_MOBAInstance_C")
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local p = GPS:GetPlayerController(gi, 0).Pawn
+    if not valid(p) then return "dash: no pawn" end
+    local marks, t0 = {}, now(p)
+    dashlog(p, seconds, label or ("key " .. n), marks)
+    p.BP_AC_InputManager:QueueInput(n, true)
+    ExecuteInGameThreadWithDelay(holdms, function()
+        if valid(p) then p.BP_AC_InputManager:QueueInput(n, false); marks.release = now(p) - t0 end
+    end)
+    return string.format("dash: key %d held %d ms", n, holdms)
+end
+
 return "test_patch helpers"

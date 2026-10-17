@@ -38,7 +38,9 @@ done
 
 mkdir -p "$REPO/work/patch"
 stage=$(mktemp -d "$REPO/work/patch/stage.XXXXXX"); trap 'rm -rf "$stage"' EXIT
-dotnet build "$REPO/tools/patch/AssetPatch/AssetPatch.csproj" -c Release -o "$REPO/work/bin/assetpatch" \
+# No build servers: one would outlive the build and keep any file descriptor it inherited, such as the test lock
+# of a tools/run test that builds the pak (flock), blocking the next test for its 10 minutes of idling.
+dotnet build --disable-build-servers "$REPO/tools/patch/AssetPatch/AssetPatch.csproj" -c Release -o "$REPO/work/bin/assetpatch" \
   -p:UAssetAPIDir="$(realpath "$REPO/third_party/UAssetAPI")" > "$stage/dotnet.log" 2>&1 || { cat "$stage/dotnet.log" >&2; exit 1; }
 
 # the game's own copies of every asset a patch changes or copies from (.uasset + .uexp)
