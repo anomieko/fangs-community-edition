@@ -1011,8 +1011,9 @@ Dec 2023 playtest (the developers' later build) changed exactly these settings:
   corrections and other heroes' visible jumps**. It is switched on (`server/netcode.env`).
 - The correction tolerance (3.0) added nothing on top; Aug's 8.5 made large snaps worse; higher rate caps changed
   nothing.
-- **Tufts' Wing Dive with `OnlyServerWait`** (`tools/patch/patches/tufts-sync.json`, off) more than halved his snaps
-  while dashing. It needs a player's try before it goes live.
+- **Tufts' Wing Dive with `OnlyServerWait`** (`tools/patch/patches/tufts-sync.json`) more than halved his snaps
+  while dashing. On for the next deploy (user, 17 Oct: "on"); `tools/run/test_tufts.sh` found the dash itself
+  unchanged (start, distance, a single burst, the hit).
 
 ### Measurement plan (to run later, never while people play; tests stay in their own network namespace and data)
 

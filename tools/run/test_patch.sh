@@ -53,8 +53,19 @@ HOSTS="work/run/$R-hosts/host-*/MOBA/Binaries/Win64"
 LOAD="lua dofile(\"Z:$PWD/work/run/$R-want.lua\") return dofile(\"Z:$PWD/tools/run/test_patch.lua\")"
 WHERE='lua local gs=FindFirstOf("GameStateBase"); local p=FindFirstOf("BP_PlayerChar_C");'\
 ' return "map=" .. (gs:GetFullName():match("Maps/([%w_]+)") or "?") .. " pawn=" .. (p and p:IsValid() and p:GetFName():ToString() or "none")'
-LOCKIN_BTN='lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); local h=pc.WB_LobbyHeroSelectRef;'\
-' if h:ShowSelectHeroBtn() == 0 then h:BndEvt__ReadyBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature() return "locked in" end return "lock in button hidden"'
+# The lock-in, tried three times (a run sometimes finds no hero select 16 s after the launch): every lobby controller
+# with a hero select screen; once locked in, never again (a second click could undo it). Says how many controllers and
+# hero select screens the client has, and the server's lobby state (LOBBY_PROBE), so a stuck run shows where it stopped.
+LOCKIN_BTN='lua if FCE_LOCKED then return "lock in: done before" end local n, w, out = 0, 0, "no hero select"'\
+' for _, pc in ipairs(FindAllOf("BP_PC_Lobby_PlayerController_C") or {}) do if pc:IsValid() and not pc:GetFullName():find("Default__", 1, true) then n = n + 1'\
+' local h = pc.WB_LobbyHeroSelectRef if h and h:IsValid() then if h:ShowSelectHeroBtn() == 0 then'\
+' h:BndEvt__ReadyBtn_K2Node_ComponentBoundEvent_0_OnButtonClickedEvent__DelegateSignature() FCE_LOCKED = true out = "locked in" else out = "lock in button hidden" end end end end'\
+' for _, x in ipairs(FindAllOf("WB_LobbyHeroSelect_C") or {}) do if x:IsValid() and not x:GetFullName():find("Default__", 1, true) then w = w + 1 end end'\
+' return string.format("lock in: %s (%d lobby controllers, %d hero select screens)", out, n, w)'
+LOBBY_PROBE='lua local gm=FindFirstOf("BP_GM_Lobby_GameMode_C"); local gs=FindFirstOf("GS_Lobby_GameState_C"); if not (gm and gm:IsValid() and gs and gs:IsValid()) then return "lobby probe: no lobby" end'\
+' local t={} gs.PlayerArray:ForEach(function(_, e) local p=e:get() local ok, s=pcall(function()'\
+' return string.format("%s seat=%d hero=%s locked=%s", p:GetPlayerName():ToString(), p.ChosenSlot, p.ChosenHero:ToString(), tostring(p.IsLockedIn)) end) t[#t+1]=ok and s or "?" end)'\
+' return string.format("lobby probe: state=%d size=%d step=%d | %s", gm.LobbyState, gs.MatchSize, gs.GS_HeroSelectStep, table.concat(t, "; "))'
 host() { for h in $HOSTS; do echo "$1" >> $h/fangsctl_cmd.txt; done; }
 pick() {
   echo 'lua local pc=FindFirstOf("BP_PC_Lobby_PlayerController_C"); FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef:UpdatePlayerHero("'"$2"'", false); pcall(function() pc:UpdateChosenHero("'"$2"'") end); return "picked '"$2"'"' >> "$1"
@@ -77,8 +88,10 @@ pick() {
   sleep 10
   echo 'lua FindFirstOf("BP_PC_Lobby_PlayerController_C"):StartHeroSelectionTimer(); return "alice: launch"' >> $A
   sleep 12; pick $A $HERO_A; pick $B $HERO_B
-  sleep 4; echo "$LOCKIN_BTN" >> $A; echo "$LOCKIN_BTN" >> $B
-  sleep 60; echo "$WHERE" >> $A; echo "$WHERE" >> $B
+  sleep 4; echo "$LOCKIN_BTN" >> $A; echo "$LOCKIN_BTN" >> $B; host "$LOBBY_PROBE"
+  sleep 10; echo "$LOCKIN_BTN" >> $A; echo "$LOCKIN_BTN" >> $B
+  sleep 10; echo "$LOCKIN_BTN" >> $A; echo "$LOCKIN_BTN" >> $B; host "$LOBBY_PROBE"
+  sleep 40; echo "$WHERE" >> $A; echo "$WHERE" >> $B
   # in the arena: what each process loaded, then the effects log
   echo "$LOAD" >> $A; echo "$LOAD" >> $B; host "$LOAD"
   sleep 2
