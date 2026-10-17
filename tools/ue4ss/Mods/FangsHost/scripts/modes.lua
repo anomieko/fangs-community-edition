@@ -49,12 +49,15 @@ return function(env)
 
     -- -------------------------------------------------------------------------------- Training: the augment phase
     -- The phase ends when CanSkipItemSelect (GS_MOBA_Battle, called every tick) is true: (time > max OR everyone locked
-    -- in) AND ItemSelectStartTime > 0. A post-hook on it holds ItemSelectStartTime at 0 from its first call, so it stays
-    -- open whatever the player does (lock in, P); the max time is raised so the HUD's timer doesn't run out. F6 puts
-    -- the start time back and the max time down. The TRAINING tile's island has no augment phase to hold: the game
-    -- ends it natively after a tick there (0.25 s, whatever CanSkipItemSelect says); this works in custom Solo lobbies.
+    -- in) AND ItemSelectStartTime > 0. The max time goes to 5999 s (the HUD's timer doesn't run out), and a post-hook on
+    -- the lock-in RPC (MOBAPlayerState.ServerSetFinishedItemSelect, native) clears the player's bSelectedItems again in
+    -- the same frame: the phase stays open through lock-in and P. F6 sets everyone's bSelectedItems, and the game ends
+    -- the phase. (ItemSelectStartTime must stay as the game set it: at 0 or below the game ends the phase at once.)
+    -- OFF until a lock-in can be kept from ending the phase (docs/recon/community-build-modes.md): with the hold on, the
+    -- timer never runs out, but a lock-in still ends the phase (the RPC's native code sets a game-state flag at 0x621).
+    local HOLD_PHASE = false
     local HOLD_MAX = 5999.0
-    local phase = { holding = false, start = nil, requested = false, gs = nil }
+    local phase = { holding = false, requested = false, gs = nil }
     local COUNTDOWN, ROUND = 7, 8   -- ENUM_RoundEvent CountDownStart, RoundStart_CoundownEnd (replicated round event)
     every(200, function()
         if not phase.holding then return end
@@ -67,17 +70,18 @@ return function(env)
             return
         end
     end)
-    local function hold(gs)   -- CanSkipItemSelect's post-hook: the next call sees no start time
-        if not phase.holding or phase.requested then return end   -- one game state per server
-        local t = gs.ItemSelectStartTime
-        if t and t > 0 then phase.start = t; gs.ItemSelectStartTime = 0.0 end
+    local keptLog = 0
+    local function keepOpen(ps)   -- the lock-in RPC's post-hook: the phase stays open
+        if not phase.holding or phase.requested or not valid(ps) then return end
+        ps.bSelectedItems = false
+        keptLog = keptLog + 1
+        if keptLog <= 3 then log("training: lock-in kept the augment phase open") end
     end
     local function startRound(pc)
         local gs = phase.gs
         if not (phase.holding and valid(gs)) or phase.requested then return log("training: F6 outside the augment phase") end
         phase.requested = true
-        gs.ItemSelectStartTime = (phase.start and phase.start > 0) and phase.start or 1.0
-        gs.ItemSelectFirstRoundMaxTime, gs.ItemSelectMaxTime = 0.1, 0.1
+        pcall(function() gs.PlayerArray:ForEach(function(_, e) local ps = e:get(); if valid(ps) then ps.bSelectedItems = true end end) end)
         log("training: F6 - the round starts")
     end
 
@@ -190,12 +194,14 @@ return function(env)
         done = hook(GSB .. ":PreRoundInvulAndSpawnTrapping", function(ctx)
             local gs = ctx:get()
             if not solo() then return end
-            phase.holding, phase.requested, phase.start, phase.gs = true, false, nil, gs
-            gs.ItemSelectFirstRoundMaxTime, gs.ItemSelectMaxTime = HOLD_MAX, HOLD_MAX
-            log("training: augment phase held until F6")
+            if HOLD_PHASE then
+                phase.holding, phase.requested, phase.gs, keptLog = true, false, gs, 0
+                gs.ItemSelectFirstRoundMaxTime, gs.ItemSelectMaxTime = HOLD_MAX, HOLD_MAX
+                log("training: augment phase held until F6")
+            end
             later(function() vulnerable(gs) end)
         end) and done
-        done = hook(GSB .. ":CanSkipItemSelect", function(ctx) hold(ctx:get()) end) and done
+        done = hook("/Script/MOBA.MOBAPlayerState:ServerSetFinishedItemSelect", function(ctx) keepOpen(ctx:get()) end) and done
         done = hook(GSB .. ":Spawn Preround Dummies", function(ctx)
             local gs = ctx:get()
             later(function()
