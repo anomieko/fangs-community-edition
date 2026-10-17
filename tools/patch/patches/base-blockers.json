@@ -1,0 +1,16 @@
+{
+  "name": "base-blockers",
+  "summary": "Base blockers (the community's \"Mickey Mouse fountain\"): spawn protection checks the hero itself again, as in Aug 2022, not the first player's hero",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": true,
+  "research": "docs/recon/base-blockers.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/BluePrints/Components/BP_AC_SpawnBlocker",
+      "why": "Spawn protection in your base (immune, no abilities until you leave) went to every hero whenever the first player in the match stood in a base, wherever that hero was: Feb 2023's HasRespawnedInsideBase asks GetPlayerPawn(0) instead of the hero. Aug 2022 asked the hero itself (IsInsideSpawnBlockers). Now the hero itself again, so the protection is only on heroes inside a base, and leaving the base takes it off.",
+      "edits": [
+        { "op": "replace-call-arg", "function": "HasRespawnedInsideBase", "call": "IsOverlappingActor", "arg": 0, "from": "CallFunc_GetPlayerPawn_ReturnValue", "to": { "call": "/Script/Engine.ActorComponent:GetOwner", "args": [] }, "count": 1 }
+      ]
+    }
+  ]
+}

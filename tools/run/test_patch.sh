@@ -11,6 +11,7 @@
 # Own backend data, game servers and instances; local play is untouched.
 # Usage: [PATCHES="<patch> ..." | PATCHES=none] [CLIENT_DIR=clients/<build>] tools/run/test_patch.sh
 #   Env: HERO_A/HERO_B (DT_Heroes rows), ULT_A, LMB_B, CAST_A, CAST_B (ability class name parts), RUN, DURATION,
+#        MAP/MAP_NAME (the lobby's level and name, default LE_Arena02_Map/Embersong), SKIP_CC=1 (only PRE_STEPS/STEPS),
 #        CHECK="<patch> ..." (whose values check() expects; default PATCHES, or ccrevert in a control run),
 #        AIM_A=<range>: CAST_A lands at alice's pointer (e.g. Brutus' Earthquake, 1350): bob is put there instead.
 #        STEPS=<file>: bash steps run after the CC casts (helpers host, \$A, \$B as in this script).
@@ -62,7 +63,7 @@ pick() {
   # lobby: alice creates it, bob joins from the lobby list, opposite teams (even seats team A, odd seats team B)
   sleep 40
   echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi.MapGameMode=4; local pm=gi.WB_MainMenuRef.WB_PlayMenu; pm.BP_MOBAInstanceRef=gi;'\
-' pm:CreateLobbyAndJoin("Patch Test", "Embersong", FText("LE_Arena02_Map"), 8); return "alice: create lobby"' >> $A
+" pm:CreateLobbyAndJoin(\"Patch Test\", \"${MAP_NAME:-Embersong}\", FText(\"${MAP:-LE_Arena02_Map}\"), 8); return \"alice: create lobby\"" >> $A
   sleep 50
   echo 'lua local gi=FindFirstOf("BP_MOBAInstance_C"); gi:ShowChoseGameMode(); gi.WB_ChoseGameModeRef:SetJoinCustomMode(); return "bob: join a lobby"' >> $B
   sleep 2
@@ -85,8 +86,8 @@ pick() {
   host 'lua return FCE_PATCH.watch()'
   [[ -n ${PRE_STEPS:-} ]] && source "$PRE_STEPS"   # before the round, e.g. equip items (tools/run/test_rowan.pre)
   sleep "${ROUND_WAIT:-90}"   # until the round is on: no casts before it
-  # CC: the target in the caster's line of fire (far along it, then right next to the caster)
-  for d in 300 60; do
+  # CC: the target in the caster's line of fire (far along it, then right next to the caster); SKIP_CC=1: only the steps
+  [[ ${SKIP_CC:-0} == 1 ]] || for d in 300 60; do
     if [[ -n ${AIM_A:-} ]]; then host "lua return FCE_PATCH.aim(\"alice\", \"bob\", $AIM_A)"
     else host "lua return FCE_PATCH.face(\"alice\", \"bob\", $d)"; fi
     sleep 0.5; echo "lua return FCE_PATCH.fire(\"$CAST_A\")" >> $A
@@ -97,9 +98,11 @@ pick() {
   done
   [[ -n ${STEPS:-} ]] && source "$STEPS"   # a hero's own extra steps (e.g. tools/run/test_fiorne.steps)
   # self-locks: alice's ult (mana filled first: ults cost mana), then bob's LMB (it stays active: no button release)
-  host 'lua return FCE_PATCH.fill("alice")'
-  sleep 2; echo "lua return FCE_PATCH.fire(\"$ULT_A\")" >> $A
-  sleep 8; echo "lua return FCE_PATCH.fire(\"$LMB_B\")" >> $B
+  if [[ ${SKIP_CC:-0} != 1 ]]; then
+    host 'lua return FCE_PATCH.fill("alice")'
+    sleep 2; echo "lua return FCE_PATCH.fire(\"$ULT_A\")" >> $A
+    sleep 8; echo "lua return FCE_PATCH.fire(\"$LMB_B\")" >> $B
+  fi
   sleep 5; host 'lua return FCE_PATCH.check()'
 ) &
 UE4SS=1 GPU=1 NOMOVIES=1 BACKEND=127.0.0.1:8080 RUN_BACKEND=1 \
