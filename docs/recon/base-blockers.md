@@ -223,6 +223,10 @@ there on the game server and on both players. Screenshots: `work/logs/<run>-shot
   (`walls: 0, blockers shown: 0`).
 - The players' copies of the turrets are gone too (`turrets: 0` on both clients), so nothing of them is left to
   collide with or to draw.
+- The blockers' own test with the new looks on the players (`base-e6`: Embersong, `test_base.steps`,
+  `PATCHES=base-blockers`, so the turret is there for its death step): every case as in `base-e2` (protected at spawn,
+  off on walking out, stopped at 842 and in with the blocker ignored, Feb's bug held off, teleport, death and respawn
+  protected, round change), and both players placed 2 walls and showed 2 blockers.
 - Screenshots, for instance: `walls-e5-shots/bob-ScreenShot00000.png` (Embersong, bob just outside his base: white
   ring, fire ring along the steps, Feb's red line), `walls-s2-shots/bob-ScreenShot00000.png` (Stormheart),
   `walls-c1-shots/alice-ScreenShot00002.png` (Crownwatch, alice stopped at the ring); before:
