@@ -15,7 +15,9 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Where | Off switch |
+|---|---|---|
+| Astrada's Flame Cage in team colours (Sheepa's list): her own and her teammates' cage yellow-orange (its blue and purple waves and flashes recoloured), an enemy Astrada's cage red (ring, waves, flashes, swords, embers, flames). Player update (pak). AssetPatch: `recolor-curve`, export paths of any length | pak `community-heroes.json` (`cp2-astrada`) | the two `NS_Astrada_Shift_System_*` entries out of `community-heroes.json`, then deploy |
 
 ## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
 
