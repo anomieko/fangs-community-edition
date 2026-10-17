@@ -66,6 +66,10 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
   notes; the newest opens once by itself after an update. From now on every deploy that reaches players gets a notes
   file in `backend/patchnotes/` in the same commit (`docs/CHANGELOG.md`, "How it works"); the PDF comes from the same
   file. Test: `tools/run/test_patchnotes.sh`, `backend/tests/test_patchnotes.py`.
+- **Tufts' Wing Dive lines up with the server** (Sheepa's list, tigga's report; branch `cp2-tufts`, pak `tufts-sync.json`,
+  on: user, 17 Oct): the server waits for the player's game at the dash's sync points, not the other way round. Half
+  the snap-backs while dashing at ~50 ms; the dash itself unchanged (`tools/run/test_tufts.sh`,
+  `docs/recon/server-performance.md`).
 - **Astrada's Flame Cage in team colours** (Sheepa's list; branch `cp2-astrada`, pak `community-heroes.json`): her own
   and her teammates' cage yellow-orange, an enemy Astrada's cage red. `docs/recon/community-build-heroes.md`.
 

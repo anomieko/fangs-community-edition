@@ -185,6 +185,28 @@ the 4 vCPUs; memory is unchanged.
 **Switched on:** `FANGS_NET_TICK=60` in `server/netcode.env`. It's committed and the deploy uploads it, and
 docker-compose hands it to every game server. Off switch: empty the value and deploy. Server only, no player update.
 
-**Prepared, off:** `FANGS_POS_ERROR`, `FANGS_NET_RATE` (`server/netcode.env`), `tufts-sync.json` (`"enabled": false`).
-The Tufts change alters how the dash feels and when the server applies it, so a player should try it before it goes
-live. The occlusion setting would go into the players' `FangsCE/Engine.ini` (from `tools/run/config/Engine.ini.template`).
+**Prepared, off:** `FANGS_POS_ERROR`, `FANGS_NET_RATE` (`server/netcode.env`). The occlusion setting would go into
+the players' `FangsCE/Engine.ini` (from `tools/run/config/Engine.ini.template`).
+
+**Switched on for the next deploy: Tufts' sync change** (`tufts-sync.json`; user, 17 Oct: "on"). Before it went on,
+`tools/run/test_tufts.sh` checked the dash itself: every patch of the deploy, about 50 ms latency (`NETEM`), bob as
+Tufts; four dashes from the middle of Embersong, each measured every frame on his own client and on the game server
+(`dash.log`): charged and tapped into open ground, charged into alice 500 ahead, charged again.
+
+| Run | Dash starts on his screen | Distance, open ground | Fast bursts | Dash into alice |
+|---|---|---|---|---|
+| tf-off3, without | 0.29-0.30 s after the press | 536-585 | 1 per dash | 28.8 damage and a stun |
+| tf-on, with | 0.30 s | 526-575 | 1 per dash | 28.8 damage and a stun |
+
+- The dash is unchanged: no lost or double dash, the same distance, top speed (2000) and hit. Client and server agree
+  on where each open dash ends.
+- It doesn't start sooner on the player's screen. Wing Dive has a fixed 0.3 s wind-up (an 80 ms tap and a 500 ms hold
+  dash alike), and the start doesn't move with the latency, so the sync points probably sit inside the wind-up. What
+  changes is which side waits there: the server waits for the client's signal, so its copy of the dash lines up with
+  the client's moves. The 120 s dashing runs above (nc-e0/nc-e1) saw that as fewer snaps; four dashes per run are too
+  few to show it (largest frame jump 28-141 units either way).
+- Lobby flake on the way: in one of these runs (tf-off2), as in `dp-patch` and `base-all2`, the test's lock-in found no
+  hero select 16 s after the launch and the match never started. `test_patch.sh` now tries the lock-in three times
+  over 20 s, says how many lobby controllers and hero select screens the client has, and probes the server's lobby
+  state (`LOBBY_PROBE`), so the next stuck run shows where it stops. The real LAUNCH button's path
+  (`test_lobbyui.sh`) hasn't stuck.
