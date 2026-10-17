@@ -162,7 +162,27 @@ function T.watch()
     T.watching, T.canskip = true, 0
     local logf = io.open("modeswatch.log", "a")
     local last = ""
-    pcall(RegisterHook, "/Game/BluePrints/Gameplay/GS_MOBA_Battle.GS_MOBA_Battle_C:CanSkipItemSelect", function() T.canskip = T.canskip + 1 end)
+    pcall(RegisterHook, "/Game/BluePrints/Gameplay/GS_MOBA_Battle.GS_MOBA_Battle_C:CanSkipItemSelect", function(ctx, ret)
+        T.canskip = T.canskip + 1
+        if T.canskip > 6 then return end   -- the first calls of the match: what decides them
+        local ok, line = pcall(function()
+            local g = ctx:get()
+            local r = "?"
+            pcall(function() r = tostring(ret:get()) end)
+            local who = {}
+            g.PlayerArray:ForEach(function(_, e)
+                local ps = e:get()
+                local pawn, ctl = nil, "?"
+                pcall(function() pawn = ps:GetPlayerPawn() end)
+                pcall(function() ctl = tostring(pawn:IsPlayerControlled()) end)
+                who[#who + 1] = string.format("%s pawn=%s controlled=%s selected=%s", ps:GetClass():GetFName():ToString(),
+                    valid(pawn) and pawn:GetFName():ToString() or "none", ctl, tostring(ps.bSelectedItems))
+            end)
+            return string.format("CanSkipItemSelect #%d -> %s start=%s cur=%s max=%s | %s", T.canskip, r, f(g.ItemSelectStartTime),
+                f(g:GetItemSelectCurrentTime()), f(g:GetItemSelectMaxTime()), table.concat(who, "; "))
+        end)
+        local lf = io.open("modeswatch.log", "a"); lf:write((ok and line or ("canskip trace failed: " .. tostring(line))) .. "\n"); lf:close()
+    end)
     LoopInGameThreadWithDelay(100, function()
         local ok, line = pcall(function()
             local g = gs()

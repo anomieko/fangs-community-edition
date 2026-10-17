@@ -43,34 +43,40 @@ they start a new one. Unit tests: `backend/tests/test_hosts.py` (5 new).
 
 Training = `MapGameMode` 0, or a custom lobby (4) launched with one player (`MapPlayerCount` 1).
 
-**Not working yet: a one-player game has no augment phase to hold.** Traced on the server (`tools/run/test_modes.sh`,
-world seconds, `CurrentRoundEvent`):
-- TRAINING (the island): PreRoundStart 97.5 → KingSelectStart 98.9 → KingSelected 103.5 → ItemSelectStart 103.9 →
-  CountDownStart 104.2 → round 107.2.
-- A custom Solo lobby on Embersong: PreRoundStart 99.9 → KingSelectStart 101.4 → KingSelected 106.0 → CountDownStart
-  106.4. No ItemSelectStart was seen at all.
+**Why the first version ended the phase at once (found 17 Oct).** It held the phase by setting `ItemSelectStartTime`
+to 0, from a 200 ms loop or a post-hook on `CanSkipItemSelect`. Traced (Solo lobby, world seconds): KingSelected 105.45
+→ `CanSkipItemSelect` called once, returning false (player present, controlled, not locked in; start already 0 from our
+hook) → CountDownStart 106.02, and `CanSkipItemSelect` was never called again. The game's native item-select state
+treats a start time of 0 or below as "no item selection" and moves on. One-player games don't skip the phase by
+themselves. The native side: `StartItemSelect` (exe `0x1413c7190`) sets `CurrentRoundEvent` = ItemSelectStart and
+`ItemSelectStartTime` (offset `0x294`) to the world time; `GetItemSelectCurrentTime` (`0x1412fc540`) = world time −
+that, floored at 0.
 
-In both, item selection ends within a tick: the player hadn't locked in (`bSelectedItems` false) and the max times were
-at 5999 s. Our first `CanSkipItemSelect` post-hook came too late to matter. The likely cause, unverified:
-`AllPlayersSelectedItems` only counts heroes whose `GetPlayerPawn().IsPlayerControlled()` is true, so a player whose
-pawn isn't set at that moment counts as ready. With two players it doesn't happen (`gs:IsAtItemSelection()` was true
-in the earlier two-player item tests). Next step: find what ends it. Either the native item-select state (the exe;
-`MobaGameStateItemSelect`, the native `RequestChangeAugments` flag) or that pawn check. A patch to
-`AllPlayersSelectedItems` or `CanSkipItemSelect` with the rewriter could then hold it before the first check. Until
-then the hold code below does nothing in practice, and F6 logs "outside the augment phase".
+**How it holds now.** `ItemSelectStartTime` is left alone, and the lock-in itself is undone:
+- the client's lock-in (`ReportetFinishedItemSelectOnServer`) reaches the server as the native RPC
+  `MOBAPlayerState.ServerSetFinishedItemSelect(bool)`;
+- a post-hook on it clears the player's `bSelectedItems` again in the same frame, so `AllPlayersSelectedItems` stays
+  false;
+- the max times are 5999 s, so the timer doesn't end the phase either;
+- F6 sets every player's `bSelectedItems` to true, and the game ends the phase the normal way.
 
-What does work in one-player games: the dummies stay after the round starts (Solo lobby: 3 spawned, still 3 alive 35 s
-into the round), and the augment-phase immunity swap.
+**Status: off** (`HOLD_PHASE = false` in `modes.lua`). Tested 17 Oct with it on, in both TRAINING and a Solo lobby:
+- the phase stays open with the timer at 5999 s: still "in item selection" 70 s in, ended at ~90 s by the test's lock-in;
+- **but a lock-in still ends it.** Our post-hook on `ServerSetFinishedItemSelect` ran ("lock-in kept the augment phase
+  open"), yet the next round event was CountDownStart. The lock-in code (decompiled: `ReportetFinishedItemSelectOnServer`
+  `0x1413dd340` → `0x141319c30`) also sets a byte on the game state at offset `0x621` to 1, then sends the RPC (its
+  server side, vfunc `0x6f8`, likely does the same). Most likely the item-select state ends on that flag, whatever
+  `bSelectedItems` says. `RequestChangeAugments` from the Dec dump doesn't exist in the Feb exe.
+- Next step: find which game-state bool sits at `0x621` (log every game-state bool before and after a lock-in), reset it
+  in the same post-hook, and test lock-in, P and F6 again. Then turn `HOLD_PHASE` on.
+- What stays on: the dummies are kept, and the augment-phase immunity is gone (both tested).
 
-In a Solo lobby:
-- **Held until F6.** The phase ends when `GS_MOBA_Battle.CanSkipItemSelect` (called every tick) is true: (time > max
-  OR all locked in) AND `ItemSelectStartTime > 0`. A post-hook on it keeps `ItemSelectStartTime` at 0 from its first
-  call, so neither lock-in nor the timer ends the phase. The max times go to 5999 s so the HUD's timer doesn't run out.
-  Lock-in and P (`ShowAugmentSelectAgain`, which only works during the phase) both work. A 200 ms loop ends the hold
-  when the round event (`CurrentRoundEvent`) reaches the countdown.
+In Training (the TRAINING tile and custom Solo lobbies), once on:
+- **Held until F6** (above). Lock-in and P (`ShowAugmentSelectAgain`, which only works during the phase) both work. A
+  200 ms loop ends the hold when the round event (`CurrentRoundEvent`) reaches the countdown.
 - **F6 starts the round.** FangsBoot binds F6 to `pc:DebugSpawnBot("FangsStartRound", 0)`. `DebugSpawnBot` is a server
   RPC that returns at once in Shipping builds (`IsInShippingBuild`); FangsHost's post-hook on it is our command
-  channel. The server puts the start time back and the max times to 0.1 s, and the phase ends.
+  channel.
 - **Damage in the phase.** The game gives each hero `BP_GE_Immunity_All` for the pre-round (application immunity to
   `Effect.Damage.Generic`) and grants `Effect.PreRoundUnlocked` (lets abilities be used then, `BP_AC_InputManager`)
   through the same spec. In Training, FangsHost removes it and applies `BP_GE_EmptyDuration` (no modifiers, no tags)
@@ -149,7 +155,7 @@ events). Backend unit tests: `backend/tests/test_hosts.py`: 61 pass, the full su
 |---|---|
 | TRAINING map | `LE_BeautifulCorner` (`GS_MOBA_Battle_Map3_C`); before the seed fix Embersong |
 | Training server freed | backend: "solo player left" ~12 s after the player left (log 20:10:22 → last server line 20:10:33) |
-| Augment phase held / F6 | not working: one-player games skip the phase (above) |
+| Augment phase held / F6 | held with the timer at 5999 s (TRAINING 104.8 → 195.2, Solo 106.2 → 195.5 world s, ended by the test's lock-in); a lock-in still ends it, so it's off (above) |
 | Dummies kept (Solo lobby) | 3 re-tagged `FangsKeptDummy`, 3 alive before and 35 s after the round start |
 | Wylde's gun in the dummy phase | "gun loaded", 12 ammo from the dummy phase on; no Bounty's Reward hits in the test (0 removed) |
 | Presets | served at round 1, a save from `SaveHeroLoadouts` stored by the backend and exported |
