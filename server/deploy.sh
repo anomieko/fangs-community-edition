@@ -71,7 +71,8 @@ cp "$ue4ss_zip" "$REPO/server/ue4ss.zip"
 # did, so a refused or failed deploy left no downloads, and a running container kept a mount of the deleted folder)
 rsync_ -a --delete --relative --exclude /server/.env --exclude /server/downloads/ \
   "$REPO/./backend/fangs_backend.py" "$REPO/./backend/hosts.py" "$REPO/./backend/matchmaker.py" "$REPO/./backend/social.py" \
-  "$REPO/./backend/skill.py" "$REPO/./backend/allocator.py" "$REPO/./backend/ranked.py" "$REPO/./backend/seed/make_seed.py" \
+  "$REPO/./backend/skill.py" "$REPO/./backend/allocator.py" "$REPO/./backend/ranked.py" "$REPO/./backend/patchnotes.py" \
+  "$REPO/./backend/patchnotes/" "$REPO/./backend/seed/make_seed.py" \
   "$REPO/./backend/seed/augments-alpha7.json" "$REPO/./backend/seed/augments-feb2023.json" "$REPO/./backend/seed/cosmetics-feb2023.json" "$REPO/./backend/seed/levels-feb2023.json" "$REPO/./backend/seed/itempaths-feb2023.json" "$REPO/./backend/seed/restore-feb2023.json" \
   "$REPO/./server/" "$REPO/./tools/ue4ss/" "$REPO/./tools/run/config/" "$REPO/./player/" "$REPO/./.dockerignore" \
   "$target:$remote/repo/"
