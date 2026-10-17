@@ -79,7 +79,9 @@ JOIN3='lua local pm=FindFirstOf("BP_MOBAInstance_C").WB_MainMenuRef.WB_PlayMenu;
   sleep 10; echo "$SEATS" >> $A
   printf "$PICK\n" FireMage FireMage FireMage >> $A; printf "$PICK\n" Lancer Lancer Lancer >> $B
   sleep 4; echo "$LOCKIN" >> $A; echo "$LOCKIN" >> $B
-  sleep 55
+  sleep 10   # the Captain vote: a few seconds after the arena loads (8 s window)
+  for i in 1 2 3 4 5 6 7 8; do echo 'shot showui' >> $A; echo 'shot showui' >> $B; sleep 2; done
+  sleep 29
   echo "$CLIENT_MATCH" >> $A; echo "$CLIENT_MATCH" >> $B; host "$SERVER_MATCH"
   for i in 1 2 3 4 5 6; do sleep 5; echo 'shot showui' >> $A; echo "$CLIENT_MATCH" >> $A; host "$SERVER_MATCH"; done
   sleep "${HOLD:-90}"; host "$SERVER_MATCH"; echo "$CLIENT_MATCH" >> $A
