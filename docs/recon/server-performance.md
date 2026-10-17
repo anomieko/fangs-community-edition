@@ -196,10 +196,10 @@ Tufts; four dashes from the middle of Embersong, each measured every frame on hi
 | Run | Dash starts on his screen | Distance, open ground | Fast bursts | Dash into alice |
 |---|---|---|---|---|
 | tf-off3, without | 0.29-0.30 s after the press | 536-585 | 1 per dash | 28.8 damage and a stun |
-| tf-on, with | 0.30 s | 526-575 | 1 per dash | 28.8 damage and a stun |
+| tf-on, tf-on2, with | 0.28-0.32 s | 509-586 | 1 per dash | 28.8 damage and a stun |
 
 - The dash is unchanged: no lost or double dash, the same distance, top speed (2000) and hit. Client and server agree
-  on where each open dash ends.
+  on how far each dash went (in tf-on the server's watch began mid-dash into alice: 137 against 270).
 - It doesn't start sooner on the player's screen. Wing Dive has a fixed 0.3 s wind-up (an 80 ms tap and a 500 ms hold
   dash alike), and the start doesn't move with the latency, so the sync points probably sit inside the wind-up. What
   changes is which side waits there: the server waits for the client's signal, so its copy of the dash lines up with
