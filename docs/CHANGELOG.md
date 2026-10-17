@@ -15,6 +15,13 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-17-1223 (`8059ad4`, Feb 2023 build)
+
+Deployed with the user's OK ("lets deploy it"), nobody playing (the script's check), not forced. Smoke test
+passed. Player update and server update: players get the new pak and FangsBoot from the launcher on their next start.
+
 **The community patch** (a community member's list, OK'd 16 Oct; `docs/recon/community-patchnotes.md`) and **the Fiorne restore**
 (the user's, `docs/recon/fiorne.md`), merged on branch `megapatch`. Each part was tested headless against a control
 run without it (`docs/recon/community-build-*.md`), and then all together on `megapatch` (17 Oct): 86/88 changed
