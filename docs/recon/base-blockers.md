@@ -114,6 +114,7 @@ from the centre, and Crownwatch's team A start was outside its blocker.
   doesn't). Every hero gets the game's pre-round immunity anyway; the difference is only whether abilities work from
   inside the base. The dummies stand a few hundred units outside each base: a hero walks out to them, can't walk back in until
   the round starts, and `RefreshPlayersAfterPreRound` then revives every hero, unblocks them and puts them at their
-  spawn, protected. Whether abilities should work inside the base during the augment phase is a question for Sheepa.
+  spawn, protected. Abilities inside the base during the augment phase stay as the game has them: locked in round 1
+  only (user, 17 Oct: "keep as is").
 - **Dashes out of the base** can't happen during a round: abilities are locked inside (`Systems.Input.LockAbilities`).
   A dash back in was not tested (headless clients can't aim); the teleport case covers being moved out.

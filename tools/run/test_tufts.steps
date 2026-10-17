@@ -1,0 +1,19 @@
+# Tufts' steps for tools/run/test_patch.sh (bob = Tufts; run through tools/run/test_tufts.sh): Wing Dive (Space)
+# measured frame by frame on bob's own client and on the game server (dash.log on each): a charged dash and a tap into
+# open ground, a charged dash into alice (her health before and after: the hit), then a second charged dash.
+# Every dash starts from the middle of the map with alice put on bob's pointer line.
+dive() {   # $1 = alice's distance ahead of bob, $2 = how long Space is held (ms), $3 = label
+  host 'lua return FCE_PATCH.moveto("bob", 0, 0)'; host "lua return FCE_PATCH.face(\"bob\", \"alice\", $1)"
+  sleep 1; host 'lua return FCE_PATCH.health("alice")'
+  host "lua return FCE_PATCH.dashwatch(\"bob\", 4, \"$3\")"
+  echo "lua return FCE_PATCH.dash(3, $2, 4, \"$3\")" >> $B
+  sleep 5; host 'lua return FCE_PATCH.health("alice")'
+  sleep 10   # Wing Dive's cooldown
+}
+# both out of their bases first: spawn protection (base blockers) locks abilities until it comes off, within a second
+host 'lua return FCE_PATCH.moveto("bob", 0, 0)'; host 'lua return FCE_PATCH.moveto("alice", 0, -1500)'
+sleep 3; host 'lua return FCE_PATCH.tags("bob", { "Systems.Input.LockAbilities", "Effect.SpawnBlocker" })'
+dive 3000 500 "charged, open"
+dive 3000 80 "tap, open"
+dive 500 500 "charged, into alice"
+dive 3000 500 "charged, open again"

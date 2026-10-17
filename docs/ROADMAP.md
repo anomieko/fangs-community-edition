@@ -167,7 +167,8 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
    2. the base blockers: fixed and on, on branch `cp2-base` (not merged, not deployed; `docs/recon/base-blockers.md`).
       Feb's spawn protection went to every hero while the first player stood in a base (patch `base-blockers`, plus a
       FangsHost safety net), and Stormheart's and Crownwatch's blockers were too small. Tested headless on all three
-      maps (walking, teleport, death, round change). Open for Sheepa: abilities inside the base in the augment phase;
+      maps (walking, teleport, death, round change). Abilities inside the base in the augment phase stay as the game has
+      them (locked in round 1 only; user, 17 Oct);
    3. the held Training augment phase and F6: built, off (`HOLD_PHASE`); a lock-in still sets a game-state flag
       (`docs/recon/community-build-modes.md`);
    4. Burning Harvest (Rowan), Ishir's health preview, Training on the player's PC, less laggy dummies, the Loadouts
@@ -234,6 +235,10 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
   Pommel +95 after a roster comparison.
 - Ishir's ult sound (user, 16 Oct): ship Sheepa's clip as he asked ("sheepas clip anyway is fine"); it is never committed.
 - Reconnect comes after the big patch is deployed (user, 17 Oct).
+- The base in the augment phase stays as the game has it (user, 17 Oct: "keep as is"): abilities are locked inside
+  the base in round 1's augment phase, not in later rounds' (`docs/recon/base-blockers.md`).
+- Tufts' Wing Dive ships with the sync change on (user, 17 Oct: "on"): his screen dashes at once and the server
+  follows. Players' feedback decides whether it stays; off switch `"enabled": false` in `tufts-sync.json`.
 - Kept dummies and no augment-phase immunity in a custom lobby launched alone are intended, as Sheepa asked: the
   user first called it a bug, then "apparently thats intended" (17 Oct). The change limiting it to TRAINING is unshipped
   (branch `dropped-cp2-solo`).
