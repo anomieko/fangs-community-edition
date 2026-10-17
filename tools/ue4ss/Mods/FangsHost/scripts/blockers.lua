@@ -6,32 +6,33 @@
 -- 2022 places (world transforms from the Aug maps, attach parents resolved), on the game server (FangsHost) and on
 -- every player (FangsBoot): the actor doesn't replicate, and a hero's movement is predicted on its player's machine, so
 -- both must have the same collision. The same file is in both mods (tools/run/test_modes.sh checks they are equal).
--- OFF for now (17 Oct): with blockers on a map, a hero who spawns inside them gets BP_AC_SpawnBlocker's
--- ApplyImmunity: BP_GE_Immunity_All with no end and Systems.Input.LockAbilities, removed only when the hero is seen
--- leaving the blocker (OnActorEndOverlap). Teleported test heroes kept it all match (no abilities), and a blink or
--- teleport out of the base might do the same in play; round end doesn't remove it. Test walking and blinking out on all
--- three maps before switching this on.
-local ENABLED = false
+-- On since the fix of 17 Oct (docs/recon/base-blockers.md): spawn protection (BP_AC_SpawnBlocker.ApplyImmunity: immune,
+-- no abilities) went to every hero whenever the first player's hero stood in a base (Feb's HasRespawnedInsideBase asks
+-- GetPlayerPawn(0)); the patch base-blockers asks the hero itself again, as Aug did, and FangsHost's modes.lua takes
+-- the protection off any hero who still has it outside every blocker. Stormheart's and Crownwatch's blockers now get
+-- their Aug mesh's collision and protection sphere too (below). Off switch: false here (both mods).
+local ENABLED = true
 
 return function(log)
     local CLASS = "/Game/BluePrints/BP_SpawnBlocker.BP_SpawnBlocker_C"
     local CDO = "/Game/BluePrints/BP_SpawnBlocker.Default__BP_SpawnBlocker_C"
     local SPHERE_100 = "/Game/VFX_Packs/Stylized_VFX_StPack/Meshes/SM_Sphere.SM_Sphere"   -- radius 100 (the class's own
     -- mesh, /Engine/BasicShapes/Sphere, has radius 50)
-    -- map -> { x, y, z, yaw, scale x, y, z, mesh (nil: the class's) } (Aug 2022 maps; every Feb 2023 player start of
-    -- each base is inside its blocker)
+    -- map -> { x, y, z, yaw, scale x, y, z, mesh (nil: the class's), Sphere's relative scale (nil: the class's) } (Aug
+    -- 2022 maps; every Feb 2023 player start of each base is inside its blocker and its Sphere). The Sphere component
+    -- (overlap only) is where Feb's HasRespawnedInsideBase gives spawn protection: radius 32 x its smallest world scale.
     local BLOCKERS = {
         LE_Arena02_Map = {     -- Embersong
             { 0.0, 4220.0, 214.67, 0.0, 16.8125, 16.8125, 16.21875 },
             { 0.0, -4220.46, 68.66, -43.48, 16.8125, 16.8125, 16.21875 },
         },
         LE_Arena06_Map = {     -- Stormheart (Aug: attached to the bases' floor planes)
-            { -85.0, 4637.5, 94.0, -180.0, 6.0156, 7.26, 4.9375, SPHERE_100 },
-            { -72.23, -4718.48, 96.0, -179.37, 6.0156, 7.2656, 4.9375, SPHERE_100 },
+            { -85.0, 4637.5, 94.0, -180.0, 6.0156, 7.26, 4.9375, SPHERE_100, { 5.4375, 5.4375, 3.625 } },
+            { -72.23, -4718.48, 96.0, -179.37, 6.0156, 7.2656, 4.9375, SPHERE_100, { 5.375, 5.375, 3.5625 } },
         },
         LE_Payload03_Map = {   -- Crownwatch (Aug: attached to the base meshes)
-            { -1963.9, 3490.8, 115.8, -108.67, 8.478, 8.277, 5.955, SPHERE_100 },
-            { -2039.7, -3588.2, 145.7, 137.2, 8.99, 7.838, 4.976, SPHERE_100 },
+            { -1963.9, 3490.8, 115.8, -108.67, 8.478, 8.277, 5.955, SPHERE_100, { 5.4375, 5.4375, 3.625 } },
+            { -2039.7, -3588.2, 145.7, 137.2, 8.99, 7.838, 4.976, SPHERE_100, { 5.375, 5.375, 3.5625 } },
         },
     }
 
@@ -55,9 +56,10 @@ return function(log)
         if not class then log("base blockers: BP_SpawnBlocker not loaded"); return 0 end
         GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
         -- A spawned actor's root gets the spawn scale times the class's own (BP_SpawnBlocker's mesh: 5): divide it out
-        local t = { X = 1, Y = 1, Z = 1 }
+        local t, tmpl = { X = 1, Y = 1, Z = 1 }, nil
         pcall(function()
-            local r = StaticFindObject(CDO).StaticMeshComponent.RelativeScale3D
+            tmpl = StaticFindObject(CDO).StaticMeshComponent
+            local r = tmpl.RelativeScale3D
             t = { X = r.X, Y = r.Y, Z = r.Z }
         end)
         local n = 0
@@ -65,12 +67,19 @@ return function(log)
             local h = math.rad(b[4]) / 2
             local xf = { Translation = { X = b[1], Y = b[2], Z = b[3] }, Rotation = { X = 0, Y = 0, Z = math.sin(h), W = math.cos(h) },
                          Scale3D = { X = b[5] / t.X, Y = b[6] / t.Y, Z = b[7] / t.Z } }
-            local a = GPS:BeginDeferredActorSpawnFromClass(context, class, xf, 1, nil)   -- 1: always spawn
-            if valid(a) then
-                local mesh = b[8] and load(b[8])
-                if mesh then a.StaticMeshComponent.StaticMesh = mesh end   -- before it registers (static mobility)
+            -- The root mesh registers (and takes its collision) as the actor is created, from the class's default
+            -- component: a mesh set on the new actor afterwards changes its looks and bounds, not its collision (until
+            -- 17 Oct Stormheart and Crownwatch blocked at the class sphere's radius, 50 x the smallest scale). So the
+            -- default's mesh is swapped for the spawn and put back.
+            local mesh, old = b[8] and load(b[8]), nil
+            if mesh and valid(tmpl) then old = tmpl.StaticMesh; tmpl.StaticMesh = mesh
+            elseif b[8] then log("base blockers: " .. b[8] .. " not used (mesh or class default missing)") end
+            local ok, a = pcall(function() return GPS:BeginDeferredActorSpawnFromClass(context, class, xf, 1, nil) end)   -- 1: always spawn
+            if old then tmpl.StaticMesh = old end
+            if ok and valid(a) then
                 GPS:FinishSpawningActor(a, xf)
                 pcall(function() a.SpawnTrapperCylinder:SetVisibility(false, false) end)   -- Feb's addition: no collision
+                if b[9] then pcall(function() a.Sphere:SetRelativeScale3D({ X = b[9][1], Y = b[9][2], Z = b[9][3] }) end) end
                 n = n + 1
             end
         end

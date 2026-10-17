@@ -581,7 +581,7 @@ end
 if not IS_AUG2022 then
     local ok, err = pcall(function()
         require("modes")({ log = log, every = every, readRecord = readRecord, hook = hook, later = later,
-                           gameInstance = gameInstance })
+                           gameInstance = gameInstance, gameState = gameState })
     end)
     if not ok then log("modes: not loaded: " .. tostring(err)) end
 end

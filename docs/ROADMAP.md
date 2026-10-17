@@ -164,8 +164,10 @@ Current deploy: `deploy-2026-10-17-1223` (`8059ad4`); what each deploy changed: 
    Follow-ups (Sheepa's order where he gave one):
    1. reconnect to custom games (the game has it built in; about 2 days; `docs/recon/community-build-lobby.md`), after
       the big patch (user, 17 Oct);
-   2. the base blockers: built, off (`ENABLED` in `blockers.lua`); the game's spawn protection locks abilities until a
-      hero is seen walking out. Test walking and blinking out on all three maps first;
+   2. the base blockers: fixed and on, on branch `cp2-base` (not merged, not deployed; `docs/recon/base-blockers.md`).
+      Feb's spawn protection went to every hero while the first player stood in a base (patch `base-blockers`, plus a
+      FangsHost safety net), and Stormheart's and Crownwatch's blockers were too small. Tested headless on all three
+      maps (walking, teleport, death, round change). Open for Sheepa: abilities inside the base in the augment phase;
    3. the held Training augment phase and F6: built, off (`HOLD_PHASE`); a lock-in still sets a game-state flag
       (`docs/recon/community-build-modes.md`);
    4. Burning Harvest (Rowan), Ishir's health preview, Training on the player's PC, less laggy dummies, the Loadouts
