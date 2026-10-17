@@ -78,6 +78,11 @@ convoluted (`backend/matchmaker.py`: no ratings, whoever is queueing gets a matc
 - UE4SS: `obj:IsValid()` stays true for a destroyed actor until garbage collection (15 s and more); check
   `obj:HasAnyInternalFlags(EInternalObjectFlags.PendingKill)` too (`KismetSystemLibrary:IsValid(x)` didn't help:
   most likely UE4SS's own `IsValid` method answers for the library object).
+- UE4SS (Feb build, tests of 17-18 Oct, `docs/recon/base-blockers.md`): `MakeDamageEffectSpec` then
+  `ApplyEffectSpecToTarget` from Lua dealt no damage (most likely the spec handle doesn't survive the round trip
+  through Lua; not pinned down, so check that a spec made this way applies), and calling
+  functions on every `NiagaraComponent` from `FindAllOf` (component templates among them) crashed the game: read
+  properties, or go through the owning actors.
 
 - A player's mod can send the game server a command through `BP_PC_MOBA_PlayerController.DebugSpawnBot(Name, Int)`:
   a server RPC whose body returns at once in Shipping builds (`IsInShippingBuild`), so FangsHost's post-hook on it is

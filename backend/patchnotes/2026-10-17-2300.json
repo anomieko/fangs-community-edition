@@ -1,0 +1,20 @@
+{
+  "tag": "deploy-2026-10-17-2300",
+  "date": "2026-10-17",
+  "title": "Patch notes: base walls",
+  "subtitle": "FANGS Community Edition · 17 October 2026, night",
+  "intro": [
+    "A small follow-up to this evening’s base change: you can now see where your base ends, and the base laser is gone.",
+    "<b>To get it:</b> start the game through the launcher as usual; it updates itself."
+  ],
+  "sections": [
+    {
+      "name": "General",
+      "items": [
+        "<b>You can see the base border again:</b> like in the old version, a thin white ring marks the edge of each base and a wall of fire stands across its exit, on Embersong, Stormheart and Crownwatch. Once you’ve left your base, that’s where you’re stopped until you die or the round ends.",
+        "<b>No more base laser:</b> the turret in each base that shot at enemies (and healed its own team) is gone. Nobody can walk back into their base, so it isn’t needed."
+      ]
+    }
+  ],
+  "outro": "Thanks for the quick feedback on the base change!"
+}
