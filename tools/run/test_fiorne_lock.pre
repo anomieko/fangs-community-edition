@@ -1,0 +1,10 @@
+# Pre-round steps (PRE_STEPS) for tools/run/test_fiorne_lock.sh: in round 1's augment phase, while alice (Fiorne)
+# stands in her base under spawn protection (Systems.Input.LockAbilities), her stack system is granted again, as her
+# passive does at spawn. Whether that start is refused shows in passives.log: stacksys=<active count>, stacks.
+L="lua return dofile(\"Z:$PWD/tools/run/test_passives.lua\")"
+host "$L"
+host 'lua return FCE_PASSIVES.watch()'
+sleep 1; host 'lua return FCE_PATCH.tags("alice", { "Systems.Input.LockAbilities", "Effect.SpawnBlocker" })'
+host 'lua return FCE_PASSIVES.state("alice")'
+host 'lua return FCE_PATCH.regrant("alice")'
+sleep 2; host 'lua return FCE_PASSIVES.state("alice")'

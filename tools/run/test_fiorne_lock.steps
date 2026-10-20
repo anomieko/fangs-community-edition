@@ -1,0 +1,3 @@
+# Steps for tools/run/test_fiorne_lock.sh, once the round is on: alice's stack system and stacks.
+host 'lua return FCE_PASSIVES.state("alice")'
+sleep 8; host 'lua return FCE_PASSIVES.state("alice")'
