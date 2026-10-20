@@ -1,0 +1,5 @@
+# Pre-round steps for tools/run/test_patch.sh (PRE_STEPS, through tools/run/test_passives.sh): the game server's
+# passives watcher from the arena's first moments (the augment phase before round 1), not only from the steps.
+L="lua return dofile(\"Z:$PWD/tools/run/test_passives.lua\")"
+host "$L"
+host 'lua return FCE_PASSIVES.watch()'

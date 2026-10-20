@@ -40,6 +40,13 @@ return function(env)
     local ui = nil        -- the panel of the lobby menu it was built for: { menu, map, size, rounds, vote, shuffle, launch, ... }
     local last = nil      -- the settings last seen in a lobby: { map, size, rounds, vote, maps = { {name, level} } }
     local pending = nil   -- the owner's launch, waiting for the waiting players to be gone: { until_ }
+    -- The owner's changes on their way to the server: setting -> { value, os.clock() when sent }. Until the server's
+    -- settings show the value (or 3 s pass), the panel doesn't put that setting back to the server's old one. Without
+    -- this, the 300 ms sync flipped a just-clicked setting back until the server's answer arrived (tests on one machine
+    -- never saw it), and a second click on the flickering toggle turned it off again: on the live server the Captain
+    -- vote went on and off within a second (20 Oct, an owner's two "vote" commands).
+    local wanted = {}
+    local syncing = false   -- show() is setting the toggle: never a player's click (a guard; ToggleState sends nothing today)
 
     local function parse(s)
         if type(s) ~= "string" or s:sub(1, 5) ~= "fce1|" then return nil end
@@ -164,14 +171,26 @@ return function(env)
         return u
     end
 
+    local function hold(key, server)   -- true while the owner's change of this setting is still on its way
+        local w = wanted[key]
+        if not w then return false end
+        if server == w[1] or os.clock() - w[2] > 3 then wanted[key] = nil; return false end
+        return true
+    end
     local function select(w, text)
         if text and w.OptionDropDown:GetSelectedOption():ToString() ~= text then w.OptionDropDown:SetSelectedOption(text) end
     end
     local function show(u, t)   -- the server's settings in the panel
-        for name, level in pairs(u.mapLevels) do if level == t.map then select(u.map, name) end end
-        for _, s in ipairs(SIZES) do if s[2] == t.size then select(u.size, s[1]) end end
-        for _, r in ipairs(ROUNDS) do if r[2] == t.rounds then select(u.rounds, r[1]) end end
-        if u.vote.CurrentState ~= t.vote then u.vote:ToggleState(t.vote) end
+        if not hold("map", t.map) then
+            for name, level in pairs(u.mapLevels) do if level == t.map then select(u.map, name) end end
+        end
+        if not hold("size", t.size) then for _, s in ipairs(SIZES) do if s[2] == t.size then select(u.size, s[1]) end end end
+        if not hold("rounds", t.rounds) then for _, r in ipairs(ROUNDS) do if r[2] == t.rounds then select(u.rounds, r[1]) end end end
+        if not hold("vote", t.vote) and u.vote.CurrentState ~= t.vote then
+            syncing = true
+            pcall(function() u.vote:ToggleState(t.vote) end)
+            syncing = false
+        end
     end
 
     -- clicks on our widgets (the hooks run after the widgets' own handlers)
@@ -185,16 +204,22 @@ return function(env)
         local kind = how:get()
         if kind ~= 0 and kind ~= 2 then return end   -- the player's choice (key or mouse), not ours (Direct)
         local text = item:get():ToString()
-        if a == ui.map:GetAddress() and ui.mapLevels[text] then send("map=" .. ui.mapLevels[text])
+        if a == ui.map:GetAddress() and ui.mapLevels[text] then
+            wanted.map = { ui.mapLevels[text], os.clock() }; send("map=" .. ui.mapLevels[text])
         elseif a == ui.size:GetAddress() then
-            for _, s in ipairs(SIZES) do if s[1] == text then send("size=" .. s[2]) end end
+            for _, s in ipairs(SIZES) do if s[1] == text then wanted.size = { s[2], os.clock() }; send("size=" .. s[2]) end end
         elseif a == ui.rounds:GetAddress() then
-            for _, r in ipairs(ROUNDS) do if r[1] == text then send("rounds=" .. r[2]) end end
+            for _, r in ipairs(ROUNDS) do if r[1] == text then wanted.rounds = { r[2], os.clock() }; send("rounds=" .. r[2]) end end
         end
     end
     local function onToggle(ctx)
         local w = ctx:get()
-        if ours(w) and ui.owner and w:GetAddress() == ui.vote:GetAddress() then send("vote=" .. (w.CurrentState and "1" or "0")) end
+        if syncing then return end
+        if ours(w) and ui.owner and w:GetAddress() == ui.vote:GetAddress() then
+            local on = w.CurrentState == true
+            wanted.vote = { on, os.clock() }
+            send("vote=" .. (on and "1" or "0"))
+        end
     end
     local function onButton(ctx)
         local w = ctx:get()

@@ -101,7 +101,10 @@ local function line(name, p)
     local pn, act = abilitiesOf(p)
     local set = asc.SpawnedAttributes[1]
     local blk = {}
-    for _, t in ipairs({ "Effect.LockCasts", "State.Dead", "State.Channeling" }) do
+    -- the passive's old start blockers, the base's spawn protection (base blockers), Fiorne's E block at 0 stacks and her
+    -- stack cooldown (a running one adds a stack when it ends)
+    for _, t in ipairs({ "Effect.LockCasts", "State.Dead", "State.Channeling", "Systems.Input.LockAbilities",
+                         "Effect.SpawnBlocker", "Lancer.Skill4.CantCast", "Effect.Ammo.Cooldown.Skill1" }) do
         if tagged(asc, t) then blk[#blk + 1] = t end
     end
     return string.format("%s %s %s ammo/stacks=%d hp=%.0f block=%s", name, pn, act,
