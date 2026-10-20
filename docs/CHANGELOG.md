@@ -21,7 +21,9 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Where | Off switch |
+|---|---|---|
+| Fiorne damage nerf (the user: "she became a monster after our buff"): LMB 45 → 38, passive attack speed +100 % → +75 %, RMB 40 → 30 per parry (area tick 20 → 15), E 85 → 75, R about 365 → 275 (50 grab, 3 x 45, 90 knockdown). HP, Space and Shift unchanged (`docs/recon/fiorne.md`, "Damage nerf") | pak `fiorne.json` (branch `cp4-fiorne-nerf`) | the old `to` values back in `fiorne.json` |
 
 ## deploy-2026-10-17-2347 (`a2e2218`, Feb 2023 build)
 

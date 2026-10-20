@@ -22,10 +22,10 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/LMB/BP_GA_Lancer_LMB",
-      "why": "Fiorne, Swift Strike (LMB): 45 damage and 550 reach, with 0.3 s between strikes, as in Aug 2022 (Feb: 30, 425, 0.17 s). Relaxing Tankard heals 7 per Bunny Stack (Feb 5); Stabbers ramps by 2 (Feb 1.5).",
+      "why": "Fiorne, Swift Strike (LMB): 38 damage (21 Oct nerf; Aug 45) and 550 reach, with 0.3 s between strikes, as in Aug 2022 (Feb: 30, 425, 0.17 s). Relaxing Tankard heals 7 per Bunny Stack (Feb 5); Stabbers ramps by 2 (Feb 1.5).",
       "edits": [
-        { "op": "set-default", "property": "AbilityDamage", "from": 30.0, "to": 45.0 },
-        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 30.0, "to": 45.0 },
+        { "op": "set-default", "property": "AbilityDamage", "from": 30.0, "to": 38.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 30.0, "to": 38.0 },
         { "op": "set-default", "property": "Range", "from": 425.0, "to": 550.0 },
         { "op": "set-default", "property": "ModifiedRange", "from": 425.0, "to": 550.0 },
         { "op": "set-default", "property": "AbilityCooldown", "from": 0.17, "to": 0.3 },
@@ -36,9 +36,9 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/P/GA_Lancer_P",
-      "why": "Fiorne, passive: +100 % attack speed for 1.25 s after an LMB hit, every 7 s, as in Aug 2022 (Feb: +50 % for 0.7 s every 5 s). Warrior's Bounty gives 3 stacks per kill or assist (Feb 2); Fifi's Little Helper 3 % damage and 1 % lifesteal per stack (Feb 1 % and 0.75 %).",
+      "why": "Fiorne, passive: +75 % attack speed (21 Oct nerf; Aug +100 %) for 1.25 s after an LMB hit, every 7 s, as in Aug 2022 (Feb: +50 % for 0.7 s every 5 s). Warrior's Bounty gives 3 stacks per kill or assist (Feb 2); Fifi's Little Helper 3 % damage and 1 % lifesteal per stack (Feb 1 % and 0.75 %).",
       "edits": [
-        { "op": "set-default", "property": "PassiveASMagnitude", "from": 0.5, "to": 1.0 },
+        { "op": "set-default", "property": "PassiveASMagnitude", "from": 0.5, "to": 0.75 },
         { "op": "set-default", "property": "PassiveASDuration", "from": 0.7, "to": 1.25 },
         { "op": "set-default", "property": "PassiveCooldown", "from": 5.0, "to": 7.0 },
         { "op": "set-default", "property": "Item23 Kill Stacks to Add", "from": 2.0, "to": 3.0 },
@@ -59,10 +59,10 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/RMB/BP_GA_Lancer_RMB",
-      "why": "Fiorne, Retaliate (RMB): 40 damage per parry and 20 per area tick, up to 5 parries in a 0.85 s stance, and the larger catch area (2.6x her body), as in Aug 2022 (Feb: 20, 10, 4 parries, 1.5 s, 1x). Feb's movement in the stance stays. Warmother's Glaive adds 20 (Feb 10).",
+      "why": "Fiorne, Retaliate (RMB): 30 damage per parry and 15 per area tick (21 Oct nerf; Aug 40 and 20), up to 5 parries in a 0.85 s stance, and the larger catch area (2.6x her body), as in Aug 2022 (Feb: 20, 10, 4 parries, 1.5 s, 1x). Feb's movement in the stance stays. Warmother's Glaive adds 20 (Feb 10).",
       "edits": [
-        { "op": "set-default", "property": "AbilityDamage", "from": 20.0, "to": 40.0 },
-        { "op": "set-default", "property": "Dmg Per AOE Tick", "from": 10.0, "to": 20.0 },
+        { "op": "set-default", "property": "AbilityDamage", "from": 20.0, "to": 30.0 },
+        { "op": "set-default", "property": "Dmg Per AOE Tick", "from": 10.0, "to": 15.0 },
         { "op": "set-default", "property": "CounterCap", "from": 4, "to": 5 },
         { "op": "set-default", "property": "CounterDuration", "from": 1.5, "to": 0.85 },
         { "op": "set-default", "property": "IncreasedCapsuleSize", "from": 1.0, "to": 2.6 },
@@ -80,10 +80,10 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill4/BP_GA_Lancer_Skill4",
-      "why": "Fiorne, Spear Throw (E): 85 damage, 6 s cooldown, a faster spear (3750) with 1200 range, as in Aug 2022 (Feb: 70, 6.5 s, 3375, 1120). The cooldown still adds the player's ping, which keeps it in step with the server.",
+      "why": "Fiorne, Spear Throw (E): 75 damage (21 Oct nerf; Aug 85), 6 s cooldown, a faster spear (3750) with 1200 range, as in Aug 2022 (Feb: 70, 6.5 s, 3375, 1120). The cooldown still adds the player's ping, which keeps it in step with the server.",
       "edits": [
-        { "op": "set-default", "property": "AbilityDamage", "from": 70.0, "to": 85.0 },
-        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 70.0, "to": 85.0 },
+        { "op": "set-default", "property": "AbilityDamage", "from": 70.0, "to": 75.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 70.0, "to": 75.0 },
         { "op": "set-default", "property": "AbilityCooldown", "from": 6.5, "to": 6.0 },
         { "op": "set-default", "property": "ModifiedAbilityCooldown", "from": 6.5, "to": 6.0 },
         { "op": "set-default", "property": "Projectile Speed", "from": 3375.0, "to": 3750.0 },
@@ -92,13 +92,13 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/Lancer/Skill3/BP_GA_Lancer_Skill3",
-      "why": "Fiorne, Grand Finale (R): 65 on the grab, 3 x 60 in the air and 120 on the knockdown, about 365 in all, as in Aug 2022 (Feb: 30, 3 x 30, 60). The tooltip's total was computed from a stale 30 and is right again. The dash stops dead at its end again. Woemaker adds 40 per Bunny Stack (Feb 35); Deathly Carnival 60 per stack (Feb 40). Hooking Ribbons keeps Feb's 50 %.",
+      "why": "Fiorne, Grand Finale (R): 50 on the grab, 3 x 45 in the air and 90 on the knockdown, about 275 in all (21 Oct nerf, the user: she became a monster; Aug 65, 3 x 60, 120, about 365; Feb 30, 3 x 30, 60). The tooltip's total was computed from a stale 30 and is right again. The dash stops dead at its end again. Woemaker adds 40 per Bunny Stack (Feb 35); Deathly Carnival 60 per stack (Feb 40). Hooking Ribbons keeps Feb's 50 %.",
       "edits": [
-        { "op": "set-default", "property": "AbilityDamage", "from": 30.0, "to": 65.0 },
-        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 30.0, "to": 65.0 },
-        { "op": "set-default", "property": "AerialDamage", "from": 30.0, "to": 60.0 },
-        { "op": "set-default", "property": "KnockDownDamage", "from": 60.0, "to": 120.0 },
-        { "op": "set-default", "property": "ModifiedKnockDownDamage", "from": 30.0, "to": 120.0 },
+        { "op": "set-default", "property": "AbilityDamage", "from": 30.0, "to": 50.0 },
+        { "op": "set-default", "property": "ModifiedAbilityDamage", "from": 30.0, "to": 50.0 },
+        { "op": "set-default", "property": "AerialDamage", "from": 30.0, "to": 45.0 },
+        { "op": "set-default", "property": "KnockDownDamage", "from": 60.0, "to": 90.0 },
+        { "op": "set-default", "property": "ModifiedKnockDownDamage", "from": 30.0, "to": 90.0 },
         { "op": "set-default", "property": "Woemaker Bunny Stack Additional Damage", "from": 35.0, "to": 40.0 },
         { "op": "set-default", "property": "ItemStackingAdditionalDamage", "from": 40.0, "to": 60.0 },
         { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_GA_Lancer_Skill3", "call": "ApplyRootMotionJumpForce", "arg": 8, "from": "0", "to": "1", "count": 1 }
