@@ -21,7 +21,9 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Where | Off switch |
+|---|---|---|
+| Ethryn nerfs (a community member, 21 Oct), six heirloom numbers: Knight's Prayer Book stacks up to 4 (was 6; tooltip text too); Dawncleave +7 % damage taken per Pummel stack (9 %); Brawler's Aegis 30 bonus damage (40); Oathsworn Mask cooldown reduction capped at 33 % (45 %; its "maxed" mask effect too); Elysian Warbrew 2 % of her current HP (2.5 %); Matriarch's Halo heals 10 % of missing HP per enemy (12 %). Other tooltips compute the new numbers by themselves. Player update (pak). Research: `docs/recon/community-build-heroes.md`, "Ethryn nerfs" | pak `community-ethryn.json` (branch `cp4-ethryn`) | `"enabled": false` in `community-ethryn.json` (or remove one asset's entry), deploy |
 
 ## deploy-2026-10-17-2347 (`a2e2218`, Feb 2023 build)
 

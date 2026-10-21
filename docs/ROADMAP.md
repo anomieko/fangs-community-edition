@@ -66,7 +66,9 @@ Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing right now.
+- **Ethryn nerfs** (a community member, 21 Oct; branch `cp4-ethryn`): Knight's Prayer Book 6 → 4 stacks, Dawncleave 9 → 7 %,
+  Brawler's Aegis 40 → 30, Oathsworn Mask cap 45 → 33 %, Elysian Warbrew 2.5 → 2 % of current HP, Matriarch's Halo
+  12 → 10 % per enemy. Pak patch `community-ethryn.json`; research and test in `docs/recon/community-build-heroes.md`.
 
 ## In progress
 

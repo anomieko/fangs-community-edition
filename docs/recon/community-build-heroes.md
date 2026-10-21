@@ -165,3 +165,39 @@ nor Ethryn's narrower reflect against shots passing beside her (no test for that
 Test harness notes: `test_patch.sh`'s opening casts put the heroes next to each other in the caster's base, so a
 second hero can die to the base laser before the steps run (`S.stage` moves both to mid-map and heals them, but
 can't revive). Steering aim with `SetMouseLocation` works for the hero's facing; alice's own aim stays her pointer.
+
+## Ethryn nerfs (a community member, 21 Oct)
+
+a community member's list via the user: "Nerf Ethryn: (these are purely number changes …)". All six are plain values, done in
+the new patch `tools/patch/patches/community-ethryn.json` (`"enabled": true`, branch `cp4-ethryn`). Off switch: its
+`"enabled": false`, or remove one asset's entry. Feb build; values read with `AssetPatch info`/`props`, code from
+`work/bp-2023-02-15`. Asset paths under `MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/` unless they start with
+another folder.
+
+| Heirloom (item asset) | Who reads it (code) | Edit | Before → after | Tooltip |
+|---|---|---|---|---|
+| Knight's Prayer Book, LMB (`Items/…/LMB/ITEM_ShieldGirl_LMB_StackingArmor`) | `BP_GA_ShieldGirl_LMB.GrantItemStackingArmor` applies `LMB/BP_GE_ShieldGirl_Item_LMB_ArmorStack` (armor by SetByCaller, 10 per stack, 3 s); the cap is that effect's `StackLimitCount`. The same function plays the "max stacks" book cue when current = max stacks, both read from the effect, so it follows | `set-default` `StackLimitCount` on the effect | 6 → 4 | written into the text: `LOC_EN_AUGMENTS_SHIELDGIRL` `ShieldGirl_StackingArmor_desc` "stacking</> up to 6 times." → "… 4 times." (`replace-text`) |
+| Dawncleave, passive (`Items/…/HeroPassive/ITEM_ShieldGirl_DefenseReductionDebuffOnPassive`) | `LMB/BP_GA_Bashed.Apply Debuff on Passive` (on the bashed enemy): `MakeDefenseReductionEffectSpec` with the passive's `ItemBashDamageAmpPerStack` (at max Pummel stacks, max stacks × it) | `set-default` on `Passive/BP_GA_ShieldGirl_P` | `ItemBashDamageAmpPerStack` 0.09 → 0.07 | computed, `$ItemBashDamageAmpPerStack%100$%`: says 7 % |
+| Brawler's Aegis, passive (`…/HeroPassive/ITEM_ShieldGirl_DamageOnBashProc`) | `BP_GA_Bashed.ApplyItemBashBonusDamage` (bound to the Pummel stun, `OnBashProc`): a damage spec of the passive's `ItemBashBonusDamage` | `set-default` on `BP_GA_ShieldGirl_P` | `ItemBashBonusDamage` 40 → 30 | computed, `$ItemBashBonusDamage$`: says 30 |
+| Oathsworn Mask, passive (`…/HeroPassive/ITEM_ShieldGirl_Passive_PermastackingCDR`) | `BP_GA_ShieldGirl_P.GrantPermaStackingCDRPassiveItem` (called through the character from `BP_GA_Bashed.GrantPermastackingCDRPassive` on each Pummel stun): `FMin(current + ItemPermaStackingCDRIncrement (0.03), ItemPermaStackingCDRMaximum)` into `BP_GE_ShieldGirl_P_Item_PermaCDR` (CooldownReduction, SetByCaller) | `set-default` on `BP_GA_ShieldGirl_P`; twin: `LMB/Cues/BP_GC_ShieldGirl_P_CDRMask.CDRMaskMaxStack` (the mask cue shows its "maxed" effect when her total cooldown reduction is ≥ this) | 0.45 → 0.33, both. Still +3 % per stun, so the cap comes after 11 stuns (was 15) | computed, `$ItemPermaStackingCDRMaximum%100$%`: says 33 % |
+| Elysian Warbrew, LMB (`…/LMB/ITEM_ShieldGirl_LMB_CannotIgnoreMe`) | `BP_GA_ShieldGirl_LMB.GrantCurrentHPDamageItem`: damage = her `Health` attribute (current health, not max) × `ItemCurrentHPCoefficient` | `set-default` on `BP_GA_ShieldGirl_LMB` | 0.025 → 0.02 | computed, `$ItemCurrentHPCoefficient%100$%`: says 2 %. The text says "current HP", which is what the code uses; a community member's "max hp" is the wrong word, the percentage is what changes |
+| Matriarch's Halo, Shift (`…/Shift/ITEM_ShieldGirl_Skill2_MissingHPHeal`) | `Skill2/BP_GA_ShieldGirl_Skill2.ItemMissingHPHeal` (post-hit): per hit actor, a heal of (MaxHealth − Health) × `ItemMissingHPHealCoefficient` | `set-default` on `BP_GA_ShieldGirl_Skill2` | 0.12 → 0.10 | computed, `$ItemMissingHPHealCoefficient%100$%`: says 10 % |
+
+Checked on the way:
+- No "Modified…" twin and no `ResetAbilityAttributes` copy for any of these values; the item assets (`MOBASkillItem`)
+  hold only the tag and texts; the skill data assets (`Skills/ShieldGirl/*/DA_*`) hold no numbers.
+- `BP_GA_Bashed` has its own `DamageOnBashProc` = 40, read by no code (Brawler's Aegis reads the passive's value).
+  Left as it is.
+- Tooltip numbers come from `BP_FL_MOBA_AbilitySystemFunctionLibrary`: `Find Variable` reads the property by name
+  from the hero's ability (by slot), `%100` multiplies, and `MakePrettyString` prints a whole number when the value is
+  within 0.001 of one (so 0.07 × 100 shows "7", not 7.0000001).
+- Earlier builds, for reference: Aug 2022 had Knight's Prayer Book 3 stacks of 20 armor, Elysian Warbrew 3 %,
+  Matriarch's Halo 15 %; Dec 2023 has 5 stacks of 6 armor and the Feb values for Dawncleave, Oathsworn Mask and
+  Elysian Warbrew.
+
+Test (21 Oct, headless, under the shared lock): `tools/patch/build.sh clients/fangs-2023-02-15-b10554626` builds with
+every enabled patch (13, 7.5 MB). `tools/run/test_patch.sh` with the live set plus `community-ethryn` (`RUN=ethryn`,
+`SKIP_CC=1`, `HERO_A=ShieldGirl`): alice (Ethryn), bob and both game servers loaded 93/95 patched class defaults, all
+7 of this patch among them; the other 2 are the nested Brutus/Fiorne health values `check()` can't read. Not tested
+in a match: the stack cap, the damage, heal and cooldown numbers as they play, and the tooltips on screen (only the
+values they compute from).
