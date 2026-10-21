@@ -1,0 +1,18 @@
+# Rowan's corpse in a Sourblossom's ring (tools/run/test_patch.sh STEPS, bob = Rowan; tools/run/test_rowan_heal.pre
+# before the round): with community-rowan's plant fix the ring checks every 0.1 s whether he lacks the passive, so it
+# must not give it to a dead Rowan (he lies where he died for 2.5 s, DeathDelayTimer). Feb's plant tries once, when he
+# enters. alice shoots him dead outside the ring, the corpse is put into it; health, effects and tags every 0.25 s.
+host "lua return dofile(\"Z:$PWD/tools/run/test_rowan.lua\")"
+sleep 10; host 'lua return FCE_PATCH.health("bob")'
+host 'lua return FCE_PATCH.moveto("alice", 0, 0)'; sleep 2
+host 'lua return FCE_PATCH.face("alice", "bob", 400)'
+echo 'lua return FCE_PATCH.chain("BookMage_LMB", 17, 1100)' >> $A   # 950 health: dead after 16 basic attacks (~17.6 s)
+sleep 13; echo 'lua return FCE_PATCH.fire("WoodenSword_Skill4_C")' >> $B   # a fresh ring, wherever his pointer is
+for i in $(seq 1 20); do
+  sleep 1; host 'lua return FCE_PATCH.tags("bob", { "State.Dead" })'
+  sleep 0.3; grep -h 'lua ok: tags bob: State.Dead' $HOSTS/fangsctl.log 2>/dev/null | grep -q . && break
+done
+host 'lua return R.near("bob", 200)'   # the corpse into the newest Sourblossom's ring
+host 'lua return R.track("bob", 4, "dead, in a Sourblossom ring")'
+for i in 1 2 3 4 5 6 7 8; do sleep 0.5; host 'lua return FCE_PATCH.tags("bob", { "State.Dead", "Effect.WoodenSword.Passive.Buff" })'; done
+sleep 4
