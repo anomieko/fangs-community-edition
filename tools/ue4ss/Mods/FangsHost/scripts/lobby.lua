@@ -21,6 +21,12 @@ return function(env)
     local CUSTOM = 4
     local VOTE_SECS = 8.0
     local S = { map = nil, mapName = nil, size = nil, rounds = 2, vote = false, maps = nil }
+    -- The owner launched (main.lua's StartHeroSelectionTimer hook): the lobby has just been shrunk to the players present
+    -- and hero select is starting. The 500 ms loop below must not put the owner's size back in that moment: it did, now
+    -- and then, and hero select then waited for players who weren't there (stuck in the lobby; test runs since 17 Oct,
+    -- and a live lobby whose owner had to launch twice).
+    local launched = false
+    function env.launched() launched = true end
     local lastCaptain = {}       -- team (1/2) -> PlayerCustomID of that team's last Captain
     local push = nil
     local function dirty(obj, index, name)
@@ -159,7 +165,7 @@ return function(env)
     every(500, function()
         if env.notOnLobby() then return end
         local gm, gs = lobby()
-        if not gm or env.gameMode() ~= CUSTOM or gm.LobbyState ~= 0 then return end
+        if launched or not gm or env.gameMode() ~= CUSTOM or gm.LobbyState ~= 0 then return end
         if not S.size then S.size = gs.MatchSize end   -- the lobby's own size until the owner changes it
         if not S.map then
             S.map = gs.Level:ToString()

@@ -392,6 +392,7 @@ local function startWithPresentPlayers(ctx)
     local n = gm.PlayerControllersRP:GetArrayNum()
     if n < 1 or n >= gm.MaxPlayers then return end
     log(string.format("lobby: owner launched with %d of %d players", n, gm.MaxPlayers))
+    if lobbyEnv.launched then pcall(lobbyEnv.launched) end   -- lobby.lua: stop putting the owner's size back
     setLobbySize(gm, gs, n)
     -- The hook runs after the RPC body. Aug 2022: that body waited for the missing players, so start hero
     -- select again now that the lobby has its real size. Feb 2023 already started it (launch any time):
