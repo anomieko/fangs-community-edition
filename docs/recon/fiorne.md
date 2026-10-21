@@ -358,3 +358,19 @@ The user and a community member: Fiorne "very commonly" had no Bunny Stacks, so 
     of alice wasn't running: started again (true)`), and normal through the round start.
   - `quiet` (`tools/run/test_passives.sh`, Fiorne against Wylde, rounds, augments, deaths): no `always-on` action; the
     same handles all match.
+
+## Damage nerf (21 Oct)
+
+After a few days of play the user: "she became a monster after our buff! so strong!" The restore had given her Aug
+2022's damage on top of the Feb buffs we kept (Shift's 80 damage, 600 move speed, the stronger heirlooms). The user
+OK'd a damage-only nerf, about halfway back towards Feb on her main damage sources; 700 HP, Space and Shift stay.
+
+| Value (`fiorne.json`) | Feb | Restore (17 Oct) | Now |
+|---|---|---|---|
+| LMB `AbilityDamage`/`ModifiedAbilityDamage` | 30 | 45 | **38** |
+| Passive `PassiveASMagnitude` (attack speed, 1.25 s) | 0.5 (0.7 s) | 1.0 | **0.75** |
+| RMB `AbilityDamage` per parry; `Dmg Per AOE Tick` | 20; 10 | 40; 20 | **30; 15** |
+| E `AbilityDamage`/`ModifiedAbilityDamage` | 70 | 85 | **75** |
+| R `AbilityDamage`; `AerialDamage` (x3); `KnockDownDamage`/`ModifiedKnockDownDamage` | 30; 30; 60 | 65; 60; 120 | **50; 45; 90** (about 275 in all, Aug 365, Feb 180) |
+
+The tooltips read these values, so they follow. Each is one line in `fiorne.json`; tune from players' feedback.

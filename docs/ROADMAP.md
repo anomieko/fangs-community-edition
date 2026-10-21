@@ -236,6 +236,8 @@ Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: 
   Pommel +95 after a roster comparison.
 - Ishir's ult sound (user, 16 Oct): ship a community member's clip as he asked ("a community member's clip anyway is fine"); it is never committed.
 - Reconnect comes after the big patch is deployed (user, 17 Oct).
+- Fiorne's damage nerfed about halfway back towards Feb (user, 21 Oct: "she became a monster", OK'd the numbers in
+  `docs/recon/fiorne.md`, "Damage nerf"); 700 HP and her mobility stay.
 - The base in the augment phase stays as the game has it (user, 17 Oct: "keep as is"): abilities are locked inside
   the base in round 1's augment phase, not in later rounds' (`docs/recon/base-blockers.md`).
 - No base laser (user, 17 Oct: "since you cant re-enter base its not needed"), and the base's border visible as in the
