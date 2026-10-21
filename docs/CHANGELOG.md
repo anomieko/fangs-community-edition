@@ -21,6 +21,20 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-21-0241 (`e6c9721`, Feb 2023 build)
+
+Deployed with the user's OK ("ok to deploy"), nobody playing (the script's check), not forced. Smoke test passed.
+Player update and server update: the pak gets `community-ethryn` and the new `fiorne.json`/`community-rowan.json`;
+FangsHost gets `alwayson.lua` and the lobby fix, FangsBoot the lobby panel fix. Players' notes:
+`backend/patchnotes/2026-10-21-0245.json`. Tested together on branch `deploy3` (21 Oct): `test_patch` (94/96 patched
+values on both clients and the server; the two are the nested HP values `check()` can't read), `test_lobbyui` (the
+Captain vote stays on; shuffle, size, launch with a waiting player kicked, the vote in the match), `test_match`
+(results, history, mastery), `test_fiorne_lock` with `test_fiorne_recover.pre` (her stack system back 2 s after it
+ended, with 5 stacks); 229 backend tests; the pak builds from all 12 patches. Not in it: Wylde's E lockout (the test
+can't get Lamblaster to cast yet).
+
 | Change | Where | Off switch |
 |---|---|---|
 | Fiorne's Bunny Stacks about every second match: her stack system's start gave up when her player state wasn't there yet (a race on the live server) and nothing restarted it. The always-on safety net starts it again (and Wylde's reload, which has the same start); passives are only logged unless safe. Every action logs `always-on: …` (`docs/recon/fiorne.md`, "0 Bunny Stacks about every second match") | FangsHost `alwayson.lua` (`cp4-stackwatch`) | `ENABLED = false` in `alwayson.lua` |

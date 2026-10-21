@@ -17,7 +17,7 @@ Last updated: 2026-10-18.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-21-0241` (`e6c9721`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -63,22 +63,13 @@ Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: 
   Astrada's cage in team colours, Zoey sees her own ult's landing (`docs/CHANGELOG.md`).
 - since 17 Oct 23:47 UTC: base walls (a white ring at each base's border and a fire wall across its exit, as in Aug
   2022), no base turrets (patch `base-turrets`), the main menu crash fix (`settled` in FangsBoot).
+- since 21 Oct 02:41 UTC: the always-on safety net (Fiorne's Bunny Stacks, Wylde's reload), the Captain vote and
+  stuck-lobby fixes, Fiorne's damage nerf, Ethryn's six heirloom nerfs, Rowan's heal back and the Sourblossom fix.
 
 ## Done, not deployed
 
-- **Fiorne's Bunny Stacks, captain vote, stuck lobbies** (branch `cp4-fixes`, 21 Oct): the always-on safety net for
-  abilities started once (Fiorne's stack system, Wylde's reload; `docs/recon/fiorne.md`), the lobby panel no longer
-  undoes the owner's clicks, and the owner's launch with fewer players no longer gets stuck. `docs/CHANGELOG.md`.
-- **Fiorne's damage nerf** (user, 21 Oct; branch `cp4-fiorne-nerf`): LMB 38, passive +75 %, RMB 30 per parry, E 75, R
-  about 275 (`docs/recon/fiorne.md`, "Damage nerf").
-- **Ethryn nerfs** (a community member, 21 Oct; branch `cp4-ethryn`): Knight's Prayer Book 6 → 4 stacks, Dawncleave 9 → 7 %,
-  Brawler's Aegis 40 → 30, Oathsworn Mask cap 45 → 33 %, Elysian Warbrew 2.5 → 2 % of current HP, Matriarch's Halo
-  12 → 10 % per enemy. Pak patch `community-ethryn.json`; research and test in `docs/recon/community-build-heroes.md`.
-- **Rowan's heal and the Sourblossom bug** (a community member's 21 Oct requests; branch `cp4-rowan`, `community-rowan.json`;
-  `docs/recon/community-build-rowan.md`, "21 Oct"): the passive heals 1.8 % of missing HP per tick (7.2 %/s), recomputed
-  every tick, which gives a community member's pre-17-Oct amounts (from 90 HP: ~645, ~796 with Heal Sprite); tooltips state 7.2 %
-  and Heal Sprite's 65 %; a Sourblossom gives the passive back when an Earth Rend arc or the ult's Overgrowth took it
-  away while he stands in its ring. a community member OK'd the 7.2 %, recomputed every tick (21 Oct: "updating it makes sense").
+Nothing right now. Open: Wylde's E (Lamblaster) holding back LMB/RMB (`Ability.Skill4` in their
+blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lamblaster to cast on the server yet.
 
 ## In progress
 
