@@ -1,0 +1,10 @@
+# Pre-round steps (PRE_STEPS) for tools/run/test_fiorne_lock.sh: in round 1's augment phase alice's (Fiorne's) stack
+# system ends itself, as when its start gives up (no player state yet); FangsHost's always-on safety net must start it
+# again within about 4 s, with her stacks (passives.log: stacksys=<active count>, stacks; fangshost.log: always-on).
+L="lua return dofile(\"Z:$PWD/tools/run/test_passives.lua\")"
+host "$L"
+host 'lua return FCE_PASSIVES.watch()'
+sleep 1; host 'lua return FCE_PASSIVES.state("alice")'
+host 'lua return FCE_PATCH.endability("alice", "/Game/Gameplay/Abilities/Player/Lancer/Skill1/BP_GA_Lancer_Ammo.BP_GA_Lancer_Ammo_C")'
+sleep 1; host 'lua return FCE_PASSIVES.state("alice")'
+sleep 6; host 'lua return FCE_PASSIVES.state("alice")'
