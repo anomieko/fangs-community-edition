@@ -329,3 +329,32 @@ start (it binds the round delegates when it activates), so "all match" points to
 ends before it binds them (`K2_CommitAbility` failing, or no `Player`). The patch covers that too, as long as the
 ability activates at all. One that never activates again isn't covered: a FangsHost watcher would be the safety net
 (not built).
+
+## 0 Bunny Stacks about every second match (21 Oct): cause and fix
+
+The user and a community member: Fiorne "very commonly" had no Bunny Stacks, so no Space, already in the augment phase; "like
+50% of the time", in one of two matches on 21 Oct.
+
+- **Cause.** Her stack system (`BP_GA_Lancer_Ammo`, child of `BP_GA_Template_Ammo`) is started once, when her passive
+  grants it at spawn. Its start gives up when the hero's `GetMOBAPlayerState` isn't valid yet or `K2_CommitAbility`
+  fails (`BP_GA_Template_Ammo` L630 → L2181 `K2_EndAbility`). Nothing starts it again: her passive's
+  `CheckAmmoSystemIsInit` only asks whether an instance exists, and an `InstancedPerActor` ability's instance exists
+  from the grant on. On the live server whether the player state is there at that moment is a race; the headless
+  tests (one machine) always won it, so they never showed it.
+- **Ruled out by test.** The base lock: the game's activation check refuses abilities while the hero has
+  `Systems.Input.LockAbilities` unless they set `ShouldIgnoreInputLock` (native, `14124fba0`), but only abilities with
+  input tags (`1412657d0`); her stack system has none. `tools/run/test_fiorne_lock.sh` granted it again under base
+  protection without any fix: it started (`lock-live`). The `fiorne-stacks` patch (that flag) was dropped. Her passive
+  being refused by `Ability.Passive` (community-passives): only hero passives own that tag, and she has one.
+- **Fix: FangsHost's always-on safety net** (`tools/ue4ss/Mods/FangsHost/scripts/alwayson.lua`). Every 2 s on arena
+  maps, for each living hero: her stack system and Wylde's reload (both listeners whose setup starts from scratch;
+  `fiorne.json` makes hers clear the old one) are started again when seen not running on two passes in a row. Her
+  passive is started again only if she has no stack system at all (a second grant would make two that fight);
+  otherwise, and Wylde's passive, it is logged once. Every action logs `always-on: …`, so the live server shows how
+  often it happens. Off switch: `ENABLED = false`.
+- **Tests** (`tools/run/test_fiorne_lock.sh`, every live patch):
+  - `recover` (`PRE_STEPS=tools/run/test_fiorne_recover.pre`): her stack system ended in the augment phase, as a start
+    that gave up does: `stacksys=0`, then started again 3.7 s later with 5 stacks (`always-on: Fiorne's Bunny Stacks
+    of alice wasn't running: started again (true)`), and normal through the round start.
+  - `quiet` (`tools/run/test_passives.sh`, Fiorne against Wylde, rounds, augments, deaths): no `always-on` action; the
+    same handles all match.

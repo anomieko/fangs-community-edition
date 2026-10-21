@@ -66,7 +66,9 @@ Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing right now.
+- **Fiorne's Bunny Stacks, captain vote, stuck lobbies** (branch `cp4-fixes`, 21 Oct): the always-on safety net for
+  abilities started once (Fiorne's stack system, Wylde's reload; `docs/recon/fiorne.md`), the lobby panel no longer
+  undoes the owner's clicks, and the owner's launch with fewer players no longer gets stuck. `docs/CHANGELOG.md`.
 
 ## In progress
 

@@ -21,7 +21,11 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Where | Off switch |
+|---|---|---|
+| Fiorne's Bunny Stacks about every second match: her stack system's start gave up when her player state wasn't there yet (a race on the live server) and nothing restarted it. The always-on safety net starts it again (and Wylde's reload, which has the same start); passives are only logged unless safe. Every action logs `always-on: …` (`docs/recon/fiorne.md`, "0 Bunny Stacks about every second match") | FangsHost `alwayson.lua` (`cp4-stackwatch`) | `ENABLED = false` in `alwayson.lua` |
+| Captain vote turned itself off: the lobby panel's 300 ms sync flipped a just-clicked setting back until the server answered, and a second click turned it off (live, 20 Oct). The panel keeps the owner's change (map, size, rounds, vote) for up to 3 s or until the server shows it | FangsBoot `lobbyui.lua` | revert `wanted`/`hold` in `lobbyui.lua` |
+| Lobby stuck before hero select: launching with fewer players than the lobby size shrinks it, and lobby.lua's 500 ms loop could put the size back before hero select began (tests since 17 Oct; a live owner on 17 Oct launched twice). The loop stops once the owner launched | FangsHost `lobby.lua`, `main.lua` | remove the `lobbyEnv.launched` call in `main.lua` |
 
 ## deploy-2026-10-17-2347 (`a2e2218`, Feb 2023 build)
 
