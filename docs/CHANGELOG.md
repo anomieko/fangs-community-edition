@@ -21,7 +21,12 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+| Change | Where | Off switch |
+|---|---|---|
+| Rowan's passive heals as much as before the 17 Oct patch (a community member: "revert this shadow nerf"): on Overgrowth 1.8 % of his missing HP every 0.25 s (7.2 %/s; Heal Sprite ×1.65), recomputed every tick. From 90 HP over a Sourblossom's ~14 s: 645 HP, 796 with Heal Sprite (live: 341 / 448; before 17 Oct: 646 / 797). Stepping on healthy no longer means no heal (Feb fixed the strength when he stepped on). The flat 3 HP/s of 17 Oct is gone. Research and runs (`rh-feb`, `rh-live`, `rh-new`, `rh-new-item`, `rh-dead`): `docs/recon/community-build-rowan.md`, "21 Oct" | pak `community-rowan.json`: `BP_GA_WoodenSword_P` (`MissingHealthHPS` 2.0 → 1.8, plus the 17 Oct `GetMissingHpValue` edit); the `BP_GA_WoodenSword_CreepTimer` entry removed | Feb's heal exactly (strength fixed at step-on): remove the `BP_GA_WoodenSword_P` entry from `community-rowan.json`; a round 8 %/s instead: remove only its `MissingHealthHPS` edit |
+| Tooltips state the real heal: passive "7.2% of his missing HP per second" (was "2% … plus 3 HP"), Heal Sprite "increased by 65%" (said 82.5 %) | pak `community-rowan.json`: `LOC_EN_ABILITIES_WOODENSWORD`, `LOC_EN_AUGMENTS_WOODENSWORD` | remove the entry from `community-rowan.json` |
+| A Sourblossom keeps Rowan's passive when an Earth Rend arc or The Bloomblade's ult Overgrowth ends or is walked out of while he stands in the plant's ring (in Feb, too, it stopped until he stepped out and in again) | pak `community-rowan.json`: `BP_TA_WoodenSword_Skill4` (`set-call-arg` in its `Creep Growth` check) | remove the `BP_TA_WoodenSword_Skill4` entry from `community-rowan.json` |
+| Tests: `tools/run/test_rowan_heal.sh` (+ `.pre`, `.steps`, helpers `tools/run/test_rowan.lua`), `tools/run/test_rowan_dead.steps` | `tools/run/` | – |
 
 ## deploy-2026-10-17-2347 (`a2e2218`, Feb 2023 build)
 

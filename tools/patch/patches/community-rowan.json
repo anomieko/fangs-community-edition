@@ -1,6 +1,6 @@
 {
   "name": "community-rowan",
-  "summary": "Community patch (a community member's list, OK'd 16 Oct): Rowan's passive heal and Dourling Caltrops; CC immunity on Rowan's and Belroth's dashes and on the Rush boon, as in Aug 2022",
+  "summary": "Community patch (a community member's list, OK'd 16 Oct; heal and Sourblossom fix from a community member's 21 Oct requests): Rowan's passive heal and its tooltips, a Sourblossom keeping his passive when an Earth Rend arc or the ult's Overgrowth ends, and Dourling Caltrops; CC immunity on Rowan's and Belroth's dashes and on the Rush boon, as in Aug 2022",
   "build": "Playtest021523v1_v0_0_02",
   "enabled": true,
   "research": "docs/recon/community-patchnotes.md, docs/recon/community-build-rowan.md",
@@ -32,29 +32,31 @@
     },
     {
       "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Passive/BP_GA_WoodenSword_P",
-      "why": "Rowan, passive: the share of missing health healed per second is the full 2 % again, applied to his health at each tick (Feb multiplied it once by the missing share when he stepped on Overgrowth).",
+      "why": "Rowan, passive: on Overgrowth he heals 1.8 % of his missing health every quarter second (7.2 % per second; Heal Sprite x1.65), recomputed every tick from his health at that moment. Feb heals 2 % per tick times the share of health he was missing when he stepped on, fixed for that stay (from 90 HP: 1.8 %; stepping on at full health: about nothing, even after he is hit). So from low health he heals as much as before our 17 Oct patch (2 % per second plus 3 HP per second: a community member found it too little), and he no longer loses the heal by stepping on healthy.",
       "edits": [
-        { "op": "set-call-arg", "function": "GetMissingHpValue", "call": "Multiply_FloatFloat", "arg": 0, "from": "CallFunc_Subtract_FloatFloat_ReturnValue", "to": "1.0", "count": 1 }
+        { "op": "set-call-arg", "function": "GetMissingHpValue", "call": "Multiply_FloatFloat", "arg": 0, "from": "CallFunc_Subtract_FloatFloat_ReturnValue", "to": "1.0", "count": 1 },
+        { "op": "set-default", "property": "MissingHealthHPS", "from": 2.0, "to": 1.8 }
       ]
     },
     {
-      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Passive/BP_GA_WoodenSword_CreepTimer",
-      "why": "Rowan, passive: on Overgrowth he heals 2 % of his missing health plus 3 health per second, recomputed every quarter second, as in Aug 2022 (Feb passed the percentage as a flat amount, about 0 HP).",
+      "path": "MOBA/Content/Gameplay/Abilities/Player/WoodenSword/Skill4/Actors/BP_TA_WoodenSword_Skill4",
+      "why": "Rowan, Sourblossom: while he stands in its Overgrowth ring, the plant gives his passive back whenever he lacks it. An Earth Rend arc or the ult's Overgrowth (The Bloomblade) that ended, or that he walked out of, took the passive away although he still stood in the ring (they only see the plant's small body, not its ring), and the plant gave it only when he stepped in again.",
       "edits": [
-        { "op": "set-name-const", "function": "Activate Regenerate Item", "from": "Data.Heal", "to": "Data.Heal.MissingMultiple", "count": 1 },
-        { "op": "insert-copy", "function": "Activate Regenerate Item", "copy": "Divide_FloatFloat",
-          "args": { "0": "self.ModifiedHealPerSecond" },
-          "after": "AssignTagSetByCallerMagnitude", "anchor-match": { "1": "Data.Heal.MissingMultiple" } },
-        { "op": "insert-copy", "function": "Activate Regenerate Item", "copy": "AssignTagSetByCallerMagnitude", "match": { "1": "Data.Heal.MissingMultiple" },
-          "args": { "0": "CallFunc_AssignTagSetByCallerMagnitude_ReturnValue_1", "1": "Data.Heal" },
-          "after": "Divide_FloatFloat", "anchor-match": { "0": "self.ModifiedHealPerSecond" } }
+        { "op": "set-call-arg", "function": "ExecuteUbergraph_BP_TA_WoodenSword_Skill4", "call": "Not_PreBool", "arg": 0, "from": "self.IsPlayerInCreep", "to": "false", "count": 1 }
       ]
     },
     {
       "path": "MOBA/Content/UI/Localization/LOC_EN_ABILITIES_WOODENSWORD",
-      "why": "Rowan, passive tooltip: mentions the 3 health per second.",
+      "why": "Rowan, passive tooltip: the real heal, 7.2 % of his missing HP per second (MissingHealthHPS x 4: the heal ticks four times a second at that rate; Feb said 2 %, our 17 Oct patch 2 % plus 3 HP).",
       "edits": [
-        { "op": "replace-text", "key": "WoodenSword_P_desc", "from": "</> of his <RichText.TooltipHeal>missing HP</> per second.", "to": "</> of his <RichText.TooltipHeal>missing HP</> plus <RichText.TooltipHeal>3 HP</> per second." }
+        { "op": "replace-text", "key": "WoodenSword_P_desc", "from": "<RichText.TooltipHeal>$MissingHealthHPS$%</> of his <RichText.TooltipHeal>missing HP</> per second.", "to": "<RichText.TooltipHeal>$MissingHealthHPS*4$%</> of his <RichText.TooltipHeal>missing HP</> per second." }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_AUGMENTS_WOODENSWORD",
+      "why": "Rowan, Heal Sprite tooltip: the real increase, 65 % (ItemRegenMultiplier 1.65; the tooltip computed 1.65 x 50 = 82.5 %).",
+      "edits": [
+        { "op": "replace-text", "key": "WoodenSword_HealSprite_desc", "from": "<RichText.TooltipHeal>$ItemRegenMultiplier*50$%</>", "to": "<RichText.TooltipHeal>65%</>" }
       ]
     },
     {

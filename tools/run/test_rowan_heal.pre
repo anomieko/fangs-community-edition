@@ -1,0 +1,9 @@
+# Before the round (tools/run/test_rowan_heal.sh): bob fills every heirloom slot, so no default pick stays: Dourling
+# Caltrops, Glimmerbranch Hilt and Propagator (two of them the utility slots a default Heal Sprite would take; Propagator
+# also brings Sourblossom charges back sooner) and The Bloomblade (his ult leaves Overgrowth). HEALSPRITE=1: Heal Sprite
+# (the passive heals 1.65 times as much) instead of Glimmerbranch Hilt. Then he locks in.
+I=/Game/Items/Characters/WoodenSword
+it() { echo "\"$I/$1/$2.$2\""; }
+SECOND=$(it Skill1 Item_WoodenSword_Skill1_Recast)
+[[ ${HEALSPRITE:-0} == 1 ]] && SECOND=$(it Passive Item_WoodenSword_P_Regenerate)
+echo "lua return FCE_PATCH.equip($(it Skill1 Item_WoodenSword_Skill1_DourlingCaltrops), $SECOND, $(it Passive Item_WoodenSword_P_CreepSourblosom), $(it Skill3 Item_WoodenSword_Skill3_Overgrowth))" >> $B

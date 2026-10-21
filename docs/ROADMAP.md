@@ -66,7 +66,12 @@ Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing right now.
+- **Rowan's heal and the Sourblossom bug** (a community member's 21 Oct requests; branch `cp4-rowan`, `community-rowan.json`;
+  `docs/recon/community-build-rowan.md`, "21 Oct"): the passive heals 1.8 % of missing HP per tick (7.2 %/s), recomputed
+  every tick, which gives a community member's pre-17-Oct amounts (from 90 HP: ~645, ~796 with Heal Sprite); tooltips state 7.2 %
+  and Heal Sprite's 65 %; a Sourblossom gives the passive back when an Earth Rend arc or the ult's Overgrowth took it
+  away while he stands in its ring. For a community member/the user to confirm: 7.2 % (exactly last patch's amount from low
+  health, more than Feb when he steps on healthy) vs a round 8 %/s or Feb's exact rule (each one edit).
 
 ## In progress
 
