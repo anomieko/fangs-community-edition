@@ -1,0 +1,59 @@
+{
+  "tag": "deploy-2026-10-21-1200",
+  "date": "2026-10-21",
+  "title": "Patch notes: Fiorne's stacks, lobby fixes and balance",
+  "subtitle": "FANGS Community Edition · 21 October 2026",
+  "intro": [
+    "Fiorne gets her Bunny Stacks every match again, the Captain vote and custom lobbies work properly, and more changes from the community's list (thanks a community member and everyone who tested).",
+    "<b>To get it:</b> start the game through the launcher as usual; it updates itself."
+  ],
+  "sections": [
+    {
+      "name": "Highlights",
+      "items": [
+        "<b>Fiorne's Bunny Stacks:</b> about every second match she had none (no Space all match). The server now notices within a few seconds and gives them back.",
+        "<b>Captain vote</b> stays on when the lobby owner turns it on (it used to switch itself off again).",
+        "<b>Custom lobbies</b> no longer get stuck before hero select when the owner starts with fewer players than the lobby size.",
+        "<b>Balance:</b> Fiorne's damage toned down, Rowan's healing back to how it was, Ethryn's augments nerfed."
+      ]
+    },
+    {
+      "name": "General",
+      "items": [
+        "<b>Lobby settings:</b> a changed map, size, rounds or Captain vote no longer flicks back for a moment before the server confirms it.",
+        "<b>Wylde's reload</b> is covered by the same safety net as Fiorne's stacks, so a whole match with no reloads can't happen that way anymore."
+      ]
+    },
+    {
+      "name": "Heroes",
+      "heroes": [
+        ["Ethryn", [
+          "<b>Knight's Prayer Book:</b> armor stacks up to 4 times (was 6).",
+          "<b>Dawncleave:</b> each Pummel stack makes enemies take 7% more damage (was 9%).",
+          "<b>Brawler's Aegis:</b> Pummel's stun deals 30 bonus damage (was 40).",
+          "<b>Oathsworn Mask:</b> cooldown reduction caps at 33% (was 45%).",
+          "<b>Elysian Warbrew:</b> Talon Strike's bonus damage is 2% of her current HP (was 2.5%).",
+          "<b>Matriarch's Halo:</b> Ironclad Slam heals 10% of her missing HP per enemy hit (was 12%)."
+        ]],
+        ["Fiorne", [
+          "<b>Damage toned down</b> (health, Space and Shift unchanged): LMB 45 → 38, passive attack speed +100% → +75%, RMB 40 → 30 per parry, E 85 → 75, R about 365 → 275 in total.",
+          "<b>Bunny Stacks</b> always come back (see Highlights)."
+        ]],
+        ["Rowan", [
+          "<b>Passive healing</b> is back to how much it healed before the last patches: from 90 HP a Sourblossom heals you to about 645 HP (about 795 with Heal Sprite), instead of about 340 (450).",
+          "The heal now always follows how hurt you are right now, also when you get hit while standing in the Overgrowth.",
+          "<b>Tooltips</b> show the real numbers: the passive heals 7.2% of your missing HP per second, Heal Sprite adds 65%.",
+          "<b>Fixed:</b> when an Earth Rend area or your ult's Overgrowth (The Bloomblade) ended while you also stood in a Sourblossom's ring, the Sourblossom stopped healing you until you stepped out and back in."
+        ]]
+      ]
+    },
+    {
+      "name": "Coming next",
+      "items": [
+        "Wylde's E (Lamblaster) holding back his next shot for about a second.",
+        "Reconnecting to a custom game after a crash or disconnect."
+      ]
+    }
+  ],
+  "outro": "Thanks for all the reports! Keep them coming."
+}
