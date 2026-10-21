@@ -1,0 +1,53 @@
+{
+  "name": "community-ethryn",
+  "summary": "Ethryn nerfs (a community member, 21 Oct): six heirloom numbers (Knight's Prayer Book, Dawncleave, Brawler's Aegis, Oathsworn Mask, Elysian Warbrew, Matriarch's Halo)",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": true,
+  "research": "docs/recon/community-build-heroes.md (Ethryn nerfs, a community member, 21 Oct)",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/LMB/BP_GE_ShieldGirl_Item_LMB_ArmorStack",
+      "why": "Ethryn, Knight's Prayer Book (LMB heirloom): the armor from Talon Strike hits stacks up to 4 times (Feb 6). The heirloom's max-stacks effect plays at the new cap, since it asks this effect for its limit.",
+      "edits": [
+        { "op": "set-default", "property": "StackLimitCount", "from": 6, "to": 4 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/UI/Localization/LOC_EN_AUGMENTS_SHIELDGIRL",
+      "why": "Ethryn, Knight's Prayer Book tooltip: up to 4 stacks (the text has the number written in).",
+      "edits": [
+        { "op": "replace-text", "key": "ShieldGirl_StackingArmor_desc", "from": "stacking</> up to 6 times.", "to": "stacking</> up to 4 times." }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/Passive/BP_GA_ShieldGirl_P",
+      "why": "Ethryn's passive heirlooms: Dawncleave, each Pummel stack makes the enemy take 7 % more damage (Feb 9 %); Brawler's Aegis, the Pummel stun deals 30 bonus damage (Feb 40); Oathsworn Mask, the cooldown reduction from Pummel stuns stops at 33 % (Feb 45 %; still +3 % per stun). The tooltips show these values by themselves.",
+      "edits": [
+        { "op": "set-default", "property": "ItemBashDamageAmpPerStack", "from": 0.09, "to": 0.07 },
+        { "op": "set-default", "property": "ItemBashBonusDamage", "from": 40.0, "to": 30.0 },
+        { "op": "set-default", "property": "ItemPermaStackingCDRMaximum", "from": 0.45, "to": 0.33 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/LMB/Cues/BP_GC_ShieldGirl_P_CDRMask",
+      "why": "Ethryn, Oathsworn Mask: the mask's 'maxed' look shows from 33 % cooldown reduction, the new cap (Feb 45 %, which the heirloom alone could no longer reach).",
+      "edits": [
+        { "op": "set-default", "property": "CDRMaskMaxStack", "from": 0.45, "to": 0.33 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/LMB/BP_GA_ShieldGirl_LMB",
+      "why": "Ethryn, Elysian Warbrew (LMB heirloom): Talon Strike's bonus damage is 2 % of her current health (Feb 2.5 %). The tooltip shows the value by itself.",
+      "edits": [
+        { "op": "set-default", "property": "ItemCurrentHPCoefficient", "from": 0.025, "to": 0.02 }
+      ]
+    },
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/Skill2/BP_GA_ShieldGirl_Skill2",
+      "why": "Ethryn, Matriarch's Halo (Shift heirloom): Ironclad Slam heals her 10 % of her missing health per enemy hit (Feb 12 %). The tooltip shows the value by itself.",
+      "edits": [
+        { "op": "set-default", "property": "ItemMissingHPHealCoefficient", "from": 0.12, "to": 0.1 }
+      ]
+    }
+  ]
+}

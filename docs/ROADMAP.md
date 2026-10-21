@@ -70,6 +70,10 @@ Current deploy: `deploy-2026-10-17-2347` (`a2e2218`); what each deploy changed: 
   abilities started once (Fiorne's stack system, Wylde's reload; `docs/recon/fiorne.md`), the lobby panel no longer
   undoes the owner's clicks, and the owner's launch with fewer players no longer gets stuck. `docs/CHANGELOG.md`.
 
+- **Ethryn nerfs** (a community member, 21 Oct; branch `cp4-ethryn`): Knight's Prayer Book 6 → 4 stacks, Dawncleave 9 → 7 %,
+  Brawler's Aegis 40 → 30, Oathsworn Mask cap 45 → 33 %, Elysian Warbrew 2.5 → 2 % of current HP, Matriarch's Halo
+  12 → 10 % per enemy. Pak patch `community-ethryn.json`; research and test in `docs/recon/community-build-heroes.md`.
+
 ## In progress
 
 1. **Unreleased heroes.** Playable with full kits: Warlock (Withergrim), Priest (Ellis), WaterBlade (Nuali),
