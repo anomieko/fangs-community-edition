@@ -573,4 +573,18 @@ function T.dash(n, holdms, seconds, label)   -- client: hold ability key n for h
     return string.format("dash: key %d held %d ms", n, holdms)
 end
 
+-- Server: ends one of the hero's abilities (class path), as an ability whose start gave up ends itself (e.g. Fiorne's
+-- stack system without a player state): FangsHost's always-on safety net must start it again.
+function T.endability(name, path)
+    local p = hero(name)
+    if not valid(p) then return "endability: no hero " .. name end
+    local cls = loadClass(path)
+    local lib = StaticFindObject("/Script/MOBA.Default__MOBAAbilityLibrary")
+    local inst = lib:GetAbilityInstanceFromAbilityClass(p.AbilitySystemComponent, cls)
+    if not valid(inst) then return "endability: no instance of " .. path:match("([^.]+)$") end
+    local ok, err = pcall(function() inst:K2_EndAbility() end)
+    log(string.format("        %s: %s ended%s", name, path:match("([^.]+)$"), ok and "" or (": " .. tostring(err))))
+    return "endability: " .. name .. " " .. path:match("([^.]+)$") .. (ok and " ended" or (" failed: " .. tostring(err)))
+end
+
 return "test_patch helpers"

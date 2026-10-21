@@ -586,3 +586,10 @@ if not IS_AUG2022 then
     end)
     if not ok then log("modes: not loaded: " .. tostring(err)) end
 end
+
+-- Abilities that run all match from a single start (Fiorne's Bunny Stacks, Wylde's reload, their passives): started
+-- again if they ever aren't running (alwayson.lua). Feb 2023 build only.
+if not IS_AUG2022 then
+    local ok, err = pcall(function() require("alwayson")({ log = log, every = every, gameState = gameState }) end)
+    if not ok then log("always-on: not loaded: " .. tostring(err)) end
+end
