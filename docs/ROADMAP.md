@@ -184,6 +184,12 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
 
 ## Known issues and small ideas
 
+- **Fangs: Forever feasibility investigated (22 Oct); prototype pending.** Proposed separate edition/repo:
+  custom lobbies only, with the creator hosting inside their visible game. Discovery, relays, updates,
+  privacy and concrete listen-host blockers: [research](recon/fangs-forever.md). Edgegap excluded by the
+  user. Next: prove one complete host-and-guest match before selecting the connectivity provider.
+  No gameplay implementation, new repository or live changes in this investigation.
+
 - **Alternative hosting investigated (22 Oct); decision pending.** Current idle snapshot: 2.513 GiB,
   20.77% of one CPU core, no players. Free web tiers cannot run the current game stack. Compare a small
   x86 VPS, on-demand Fly hosting and a community member's PC in [hosting options](recon/hosting-options.md).

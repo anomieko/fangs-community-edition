@@ -2,6 +2,9 @@
 
 Investigated 22 October 2026 for the February 2023 build. Decision pending; research only.
 
+Follow-up direction: [Fangs Forever feasibility and design](fangs-forever.md), a proposed separate
+custom-lobby edition whose creator hosts inside their visible game. Edgegap was excluded by the user.
+
 To reclaim the current Hetzner machine, the least disruptive option is another small x86 VPS.
 For almost no hosting bill, run the existing stack on a community member's computer during play sessions.
 An on-demand cloud machine is feasible in principle, but storage and networking charges can make it cost
