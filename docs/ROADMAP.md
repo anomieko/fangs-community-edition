@@ -184,6 +184,11 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
 
 ## Known issues and small ideas
 
+- **Alternative hosting investigated (22 Oct); decision pending.** Current idle snapshot: 2.513 GiB,
+  20.77% of one CPU core, no players. Free web tiers cannot run the current game stack. Compare a small
+  x86 VPS, on-demand Fly hosting and a community member's PC in [hosting options](recon/hosting-options.md).
+  Next: select a direction, then qualify it with a complete match; no migration or live changes made.
+
 - Ranked (and probably Casual): with a no-show, the others' lobby screen gives up after ~45 s ("Failed to Connect to
   Match.") just as FangsHost would start without the missing player (seen in `NOSHOW=1 tools/run/test_ranked.sh`).
 - Underworld (`LE_UnderWorldArena`, own "stocks" mode: team lives, random spawns; Aug 2022 + Feb 2023 paks) and
