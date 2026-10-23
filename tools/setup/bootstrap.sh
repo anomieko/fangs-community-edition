@@ -112,8 +112,8 @@ if [[ -s $KEY ]]; then ok "$KEY"
 elif [[ -n $CHECK ]]; then need "$KEY (run without --check to recover it from your game files)"
 elif [[ -f $pak && -f $exe ]]; then
   echo "  recovering it from your MOBA-Win64-Shipping.exe (a few minutes)..."
-  mkdir -p work/re && umask 077
-  if python3 -I tools/pak/findkey_code.py "$exe" "$pak" > "$KEY.part" 2>/dev/null && grep -qE '^0x[0-9A-F]{64}$' "$KEY.part"; then
+  mkdir -p work/re
+  if (umask 077; python3 -I tools/pak/findkey_code.py "$exe" "$pak" > "$KEY.part" 2>/dev/null) && grep -qE '^0x[0-9A-F]{64}$' "$KEY.part"; then
     mv "$KEY.part" "$KEY"; ok "recovered into $KEY (never commit or share it)"
   else rm -f "$KEY.part"; need "$KEY: no key found in $exe (is it the 15 Feb 2023 build?)"; fi
 else need "$KEY: needs the game files first"; fi
