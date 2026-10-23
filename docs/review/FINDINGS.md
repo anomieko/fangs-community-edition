@@ -11,7 +11,7 @@ user's call), *won't fix: reason*, *fixed in `<commit>`*.
 
 ## Baseline
 
-Taken 15 Oct 2026 at `6f26b44` (ruff 0.17.1, Python 3.12, aiohttp 3.14).
+Taken 15 Oct 2026 at `dee53e4` (ruff 0.17.1, Python 3.12, aiohttp 3.14).
 - **Python:** 26 tracked files.
   - Pyflakes (`ruff --select F`): `backend/` has 0 findings; tools have 8 (unused imports, one unused variable).
   - A broader rule set (E, F, W, B, SIM, PLE, PLW, ASYNC, RUF; line length 130) gives 223 findings over the repo, mostly
@@ -82,7 +82,7 @@ Each reviewer looked for these first:
 
 | id | sev | crit | where | defect | evidence | state |
 |---|---|---|---|---|---|---|
-| D1 [F-2] | high | R7, R1 | `server/deploy.sh` | The server-code upload (`rsync --delete` of `server/`) runs before the "people are playing" check and deletes the server's `server/.env` and `server/downloads/`. A refused deploy leaves no downloads (new players can't install); a deploy that doesn't rebuild the image keeps a mount of the deleted folder. | reproduced (rsync, locally) | fixed, on `main` with the user's OK (`90ebe4e`) |
+| D1 [F-2] | high | R7, R1 | `server/deploy.sh` | The server-code upload (`rsync --delete` of `server/`) runs before the "people are playing" check and deletes the server's `server/.env` and `server/downloads/`. A refused deploy leaves no downloads (new players can't install); a deploy that doesn't rebuild the image keeps a mount of the deleted folder. | reproduced (rsync, locally) | fixed, on `main` with the user's OK (`4fd8a59`) |
 | D2 [F-3, F-6, X1-11] | medium | R1 | `server/deploy.sh` | The busy check counts only players in game servers (not menus, queues or parties), reads errors as 0, and the image build runs between the check and the restart. | reasoning | later (deploy script; can only be checked against the server) |
 | D3 [F-5] | medium | R7 | `server/` | `store.json` (all accounts and history) has no backup and no documented restore. | reasoning | later (a backup needs a tested restore procedure; the volume's files belong to uid 10001) |
 | D4 [F-4, E-2] | medium | R6 | `docs/SERVER.md`, launcher | The documented join-code rotation doesn't work, and a launcher can't replace a remembered invite. | reasoning | later |
@@ -100,8 +100,8 @@ Each reviewer looked for these first:
 
 | id | what | evidence |
 |---|---|---|
-| X1 [X2-C] | **Decided (user, 15 Oct): keep full games only.** Casual starts only full games (8 players) since 14 Oct (`5643344`). The old 15 s early start is behind `--match-wait`. The reason is recorded, the user's decision is not; ROADMAP Decisions call Casual "quick matches". | `git show 5643344` |
-| X2 [X2-A] | **Decided (user, 15 Oct): the user's call.** Trio custom mode removed on 15 Oct (`ac76b9a`) without a recorded reason; FangsBoot's "Battle = 8 players" hook is dead since. | |
+| X1 [X2-C] | **Decided (user, 15 Oct): keep full games only.** Casual starts only full games (8 players) since 14 Oct (`0b3a8fb`). The old 15 s early start is behind `--match-wait`. The reason is recorded, the user's decision is not; ROADMAP Decisions call Casual "quick matches". | `git show 0b3a8fb` |
+| X2 [X2-A] | **Decided (user, 15 Oct): the user's call.** Trio custom mode removed on 15 Oct (`edd7781`) without a recorded reason; FangsBoot's "Battle = 8 players" hook is dead since. | |
 | X3 [X2-B, E-3, F-14] | **Decided: the `.bat` client is retired (C1).** Each deploy deletes the full-client zip that `SERVER.md` still tells you to build (the `.bat` path, C1). | |
 | X4 [X2-1] | **Decided (user, 15 Oct): kept.** `tools/pak/findkey.py` and `findkey_code.py` recover the pak's AES key from the exe. No key is in the repo, but the tool is public. | |
 | X5 [X2-2] | The server distributes the whole game install to players; the README says players need their own legitimately obtained copy. | |

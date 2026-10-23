@@ -17,7 +17,7 @@ directory/relay design as the alternative. Provider choice follows the local gam
 
 ## Evidence and feasibility boundary
 
-The source examined is the current Community Edition implementation at `956d988`, targeting Steam build
+The source examined is the current Community Edition implementation at `f18e865`, targeting Steam build
 10554626. No game binary was modified or executed for this investigation. These are source-derived
 constraints, not a successful visible-host demonstration.
 

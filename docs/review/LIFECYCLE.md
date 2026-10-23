@@ -6,7 +6,7 @@ in a game that no longer exists?
 
 How it was made: an independent audit (15 Oct, review sprint) traced each cell through the code. Cells marked
 "reproduced" were checked with deterministic scripts. Those scripts ran the real `HostManager`, `Matchmaker`, `Store`
-and request dispatch, with a fake game server in place of Wine. Line numbers are at `6f26b44`. Gaps link to
+and request dispatch, with a fake game server in place of Wine. Line numbers are at `dee53e4`. Gaps link to
 `docs/review/FINDINGS.md` and are updated there as fixes land.
 
 **Short answer:** every way a game server ends goes through `HostManager.stop()` (`hosts.py`), which waits for the

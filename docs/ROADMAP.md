@@ -17,7 +17,7 @@ Last updated: 2026-10-23.
 
 ## Live on the server
 
-Current deploy: `deploy-2026-10-23-1912` (`20e2ee9`); what each deploy changed: `docs/CHANGELOG.md`.
+Current deploy: `deploy-2026-10-23-1912` (`3f22cc4`); what each deploy changed: `docs/CHANGELOG.md`.
 - since 14 Oct 16:07: all cosmetics owned, menu cleanup and players-online count, match history / levels /
   ratings / leaderboard, friends / parties / chat / party queue, custom-lobby joiner fix, PLAY waits for full
   4v4 games;
@@ -47,7 +47,7 @@ Current deploy: `deploy-2026-10-23-1912` (`20e2ee9`); what each deploy changed: 
   no party, launcher install help (invite first, checked folder, shortcuts, `FANGS.exe` starts the launcher), faster
   downloads (gzipped 32 MiB pieces, 4 at a time) and BBR on the VPS.
 - since 15 Oct 21:44 UTC: the launcher puts back mod loader files an antivirus removed and tells the player how to add
-  the exclusion (no more silent "Steam authorization"); the public launcher on GitHub is `launcher-4f83b89` (invite
+  the exclusion (no more silent "Steam authorization"); the public launcher on GitHub is `launcher-05b39cd` (invite
   first, the install checks and this one).
 - since 15 Oct 23:36 UTC (forced with 5 players on, no match test: the user's decisions): Somnia's item picker has the
   restored boons and artifacts like every other hero (FangsBoot skipped her pawn, `BP_BookMage_Char2_C`;
@@ -129,7 +129,7 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
    `docs/review/LIFECYCLE.md`. Architecture: `docs/ARCHITECTURE.md`.
    Done on the branch (not merged, not deployed): 8 independent reviews; 20 findings fixed (ledger rows), code ones
    each with a test that failed first; a second review of the fixes themselves (5 corrections). 199 backend unit tests run on production's
-   Python and aiohttp; CI runs them with ruff. The `deploy.sh` fix is already on `main` (`90ebe4e`, user's OK).
+   Python and aiohttp; CI runs them with ruff. The `deploy.sh` fix is already on `main` (`4fd8a59`, user's OK).
    Merged into `main` and pushed on 15 Oct (user's request); the party-of-one fix and the test-data
    guards (no test touches `backend/data` or `work/hosts`) merged last, after `ranked-fixes`, `install-ux`, `fast-download`. Live
    since `deploy-2026-10-15-2104` (forced; the headless regression was skipped, both the user's decisions). Next: that
@@ -146,7 +146,7 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
    on the next start; a folder with other things in it is never moved on a build switch; the launcher copies itself
    to `%LOCALAPPDATA%\Programs\Fangs Community Edition` and makes desktop and Start menu shortcuts once; the game
    folder's `FANGS.exe` is a copy of the launcher that hands over to that copy (`server/deploy.sh`).
-   The GitHub release is `launcher-4f83b89` (15 Oct, after `deploy-2026-10-15-2144`), so newcomers get the invite-first
+   The GitHub release is `launcher-05b39cd` (15 Oct, after `deploy-2026-10-15-2144`), so newcomers get the invite-first
    order from the start. Open: a player who starts `MOBA-Win64-Shipping.exe` (e.g. pinned to the taskbar while the game ran) still
    gets no login; FangsBoot could start the launcher instead.
    Live since `deploy-2026-10-15-2144`: the launcher checks the mod loader files before and 5 s after starting the
@@ -238,7 +238,7 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
   nobody playing, after the 16 Oct external review. BBR on the VPS goes in with that deploy, not before. The
   party-of-one fix is part of this deploy.
 - Casual (PLAY) starts only full games (8 players); the early start stays off (`--match-wait` 0) (user, 15 Oct).
-- Trio custom mode removed (`ac76b9a`): the user's call (15 Oct).
+- Trio custom mode removed (`edd7781`): the user's call (15 Oct).
 - The old `.bat` client (FangsCE.bat, unsigned updates over HTTP) is retired; `FangsCE.exe` is the only installer
   (user, 15 Oct).
 - `tools/pak/findkey*.py` and `docs/recon/playtest-source-paths.txt` stay in the repo (user, 15 Oct).

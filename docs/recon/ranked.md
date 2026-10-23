@@ -105,7 +105,7 @@ stored casual one (second run: winner 28.514 / 7.556 on the game's scale).
 
 The server runs `--ranked-widen-speed 2` (`server/entrypoint.sh`; the user, 15 Oct).
 
-## Review follow-ups (15 Oct 2026, independent review of `6a0baa9`)
+## Review follow-ups (15 Oct 2026, independent review of `7dcc615`)
 
 - Fixed: quitting in round 1 voided a lost game (now the assigned teams are rated, see Settlement).
 - Fixed: rank points could drop by hundreds when the model reopened a player's uncertainty (to 300), even after a

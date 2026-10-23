@@ -106,8 +106,8 @@ so nobody could pick them.
   both back ("A player has not locked in a hero").
 - **Cause:** FangsBoot's `every()` ended a loop whose work was done with `CancelDelayedAction`. In this UE4SS build,
   that now and then stops another loop of the mod for good (`docs/recon/server-performance.md`, finding 7; fixed in
-  FangsHost on 14 Oct). FangsBoot has many loops that end themselves at start-up, from `1995f9c` (14 Oct) on, more
-  since `c49e624`. The unreleased-heroes loop is created after them, and it was stopped: no hooks re-registered, no
+  FangsHost on 14 Oct). FangsBoot has many loops that end themselves at start-up, from `6cc1008` (14 Oct) on, more
+  since `4a07d1f`. The unreleased-heroes loop is created after them, and it was stopped: no hooks re-registered, no
   toggle. Which loop dies varies, so it can also hit others.
 - **Fix:** `every()` keeps a finished loop registered but idle, as FangsHost does. FangsBoot also logs
   "unreleased heroes: toggle added to hero select".
