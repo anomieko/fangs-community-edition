@@ -4,9 +4,8 @@
 pak index. Usage: findkey_code.py <exe> <pak>"""
 import itertools, re, struct, sys
 import pefile
-from Crypto.Cipher import AES
 sys.path.insert(0, __import__('os').path.dirname(__file__))
-from findkey import index_head, plausible
+from findkey import ecb_decrypt, index_head, plausible
 
 exe, pak = sys.argv[1], sys.argv[2]
 head = index_head(pak)[:16]
@@ -23,8 +22,8 @@ tested = 0
 def test(key):
     global tested
     tested += 1
-    if plausible(AES.new(key, AES.MODE_ECB).decrypt(head + b'\0' * 16)[:32]) or \
-       plausible(AES.new(key, AES.MODE_ECB).decrypt(head)[:16] + b'\0' * 16):
+    if plausible(ecb_decrypt(key, head + b'\0' * 16)[:32]) or \
+       plausible(ecb_decrypt(key, head)[:16] + b'\0' * 16):
         print('0x' + key.hex().upper()); sys.exit(0)
 
 def groups(items, n, span):

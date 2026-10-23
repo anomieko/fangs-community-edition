@@ -49,7 +49,9 @@ done
 if python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null; then ok "python3 $(python3 -V | cut -d' ' -f2)"
 else need "python3 3.10 or newer (sudo apt install python3)"; fi
 if python3 -I -c 'import Crypto' 2>/dev/null || python3 -I -c 'import cryptography' 2>/dev/null; then ok "python AES (pycryptodome or cryptography)"
-else need "python AES library for the game's encrypted pak (sudo apt install python3-pycryptodome)"; fi
+else need "python AES library for the game's encrypted pak (Debian/Ubuntu: sudo apt install python3-pycryptodome)"; fi
+if python3 -I -c 'import pefile' 2>/dev/null; then ok "python pefile (finds the pak key in the game's exe)"
+else need "python pefile (Debian/Ubuntu: sudo apt install python3-pefile; Arch: sudo pacman -S python-pefile)"; fi
 if [[ $(dotnet --list-sdks 2>/dev/null) == *"10."* ]]; then ok ".NET SDK 10"
 else need ".NET 10 SDK, for the patch pak tool (https://dotnet.microsoft.com/download/dotnet/10.0; Ubuntu: sudo apt install dotnet-sdk-10.0)"; fi
 go=$REPO/work/toolchains/go/bin/go; [[ -x $go ]] || go=$(command -v go || true)

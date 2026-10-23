@@ -4,10 +4,20 @@
 UE 4.26 provides the key through a small callback that writes 32 bytes, usually as eight
 `mov dword ptr [rcx+N], imm32` instructions. We collect those candidates and accept the one that
 decrypts the pak index to a sane mount point. For your own copy of the game, for preservation and
-interoperability. Usage: findkey.py <game.exe> <pak>   (needs pycryptodome)"""
+interoperability. Usage: findkey.py <game.exe> <pak>   (needs pefile, and pycryptodome or cryptography)"""
 import re, struct, sys
 
-from Crypto.Cipher import AES
+try:
+    from Crypto.Cipher import AES
+
+    def ecb_decrypt(key, data):
+        return AES.new(key, AES.MODE_ECB).decrypt(data)
+except ImportError:  # pycryptodome missing: use the 'cryptography' package
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+    def ecb_decrypt(key, data):
+        d = Cipher(algorithms.AES(key), modes.ECB()).decryptor()
+        return d.update(data) + d.finalize()
 
 FOOTER = 16 + 1 + 4 + 4 + 8 + 8 + 20 + 5 * 32
 
@@ -60,7 +70,7 @@ def main(exe, pak):
             continue
         if len(seen) < 100000:
             seen.add(key)
-        if plausible(AES.new(key, AES.MODE_ECB).decrypt(head[:32])):
+        if plausible(ecb_decrypt(key, head[:32])):
             print('0x' + key.hex().upper())
             return 0
     print(f'no key found among {len(seen)} candidates', file=sys.stderr)
