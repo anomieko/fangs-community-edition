@@ -155,9 +155,11 @@ How it is checked:
 | variable | `{"local": name}`, `{"self": name}` | a copy of an existing use of that variable |
 | anchor argument | `{"anchor-arg": i}` (with `before`/`after`) | a copy of argument `i` of the anchor call |
 | literal | `{"str": s}`, `{"bool": b}`, `{"float": f}`, `{"int": n}`, `{"vec": [x, y, z]}` | the constant |
+| object | `{"null": true}` (no object), `{"this": true}` (the Blueprint object itself, `self`) | `EX_NoObject`, `EX_Self` |
+| cast | `{"cast": className, "of": expr}`: `Cast<className>(expr)`, a class the asset already imports (adds no reference) | `EX_DynamicCast` |
 | pure engine call | `{"math": "/Script/Engine.KismetStringLibrary:Contains", "args": [...]}` | `EX_CallMath` |
 | member call | `{"on": expr, "call": "/Script/Engine.SceneComponent:SetRelativeScale3D", "args": [...]}` | `EX_Context` + `EX_FinalFunction` |
-| statement | `{"do": expr}`, `{"let-obj": local, "value": expr}`, `{"set-bool": {"on": expr, "prop": name}, "value": b}` | the call, `EX_LetObj`, `EX_LetBool` through a context |
+| statement | `{"do": expr}`, `{"let-obj": local, "value": expr}`, `{"let-self-obj": variable, "value": expr}` (an object variable of the Blueprint), `{"set-bool": {"on": expr, "prop": name}, "value": b}` | the call, `EX_LetObj`, `EX_LetBool` through a context |
 | condition | `{"if": expr, "then": [statements]}` | `EX_JumpIfNot` past the block |
 
 Pure static library functions are called with `EX_CallMath`, as the compiler does (`KismetMathLibrary::…` in the

@@ -126,8 +126,9 @@ return function(env)
     end
 
     -- -------------------------------------------------------------------------------- Wylde in the dummy phase
-    -- His gun is loaded only when the round countdown ends (BP_GA_Gunslinger_P.ForceReloadRoundStart): load it when the
-    -- dummies appear. Bounty's Reward (Fan the Hammers hits) stacks for the whole game: drop what was earned on dummies.
+    -- His gun is loaded only when the round starts (BP_GA_Gunslinger_P.OnRoundStart): load it when the dummies appear
+    -- (the round-start refill then adds nothing, with the pak's wylde-ammo fix: docs/recon/community-build-modes.md).
+    -- Bounty's Reward (Fan the Hammers hits) stacks for the whole game: drop what was earned on dummies.
     local STACK = "/Game/Gameplay/Abilities/Player/Gunslinger/E/Items/BP_GE_Gunslinger_Skill2_MaxAmmoIncreaseStack.BP_GE_Gunslinger_Skill2_MaxAmmoIncreaseStack_C"
     local APPLIED = "/Game/Gameplay/Abilities/Player/Gunslinger/E/Items/BP_GE_Gunslinger_Skill2_MaxAmmoIncreaseApplied.BP_GE_Gunslinger_Skill2_MaxAmmoIncreaseApplied_C"
     local wylde = {}   -- pawn address -> { stacks, applied } at the dummies' spawn

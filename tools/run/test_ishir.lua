@@ -8,10 +8,16 @@ local I = FCE_ISHIR
 local SOUND = "/Game/FangsCE/Audio/SFX_Ishir_ShotgunPop.SFX_Ishir_ShotgunPop"
 local function valid(o) return type(o) == "userdata" and o.IsValid ~= nil and o:IsValid() end
 local function name(o) return valid(o) and o:GetFName():ToString() or "none" end
+local GPS
+local function now()   -- world seconds, the same clock as the game's own timers
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local ok, t = pcall(function() return GPS:GetTimeSeconds(FindFirstOf("BP_MOBAInstance_C")) end)
+    return ok and t or 0
+end
 local logf
 local function log(msg)
     logf = logf or io.open("ishirsound.log", "a")
-    logf:write(os.date("%H:%M:%S ") .. msg .. "\n"); logf:flush()
+    logf:write(string.format("%s %8.2f %s\n", os.date("%H:%M:%S"), now(), msg)); logf:flush()
 end
 
 local function live(className)   -- live objects of a class (an object scan: test clients only)
@@ -86,3 +92,35 @@ function I.pop(n)
     local ok, err = pcall(function() cdo:OnRemove(p, {}) end)
     return ok and ("pop: OnRemove ran for " .. n) or ("pop failed: " .. tostring(err))
 end
+
+
+-- Client: log every start and end of the mark cue on this client (its OnActive and OnRemove: the pop plays the shotgun
+-- in OnRemove), with the marked hero. A mark the client predicted and then dropped shows as an extra OnRemove.
+local CUE = "/Game/Gameplay/Abilities/Player/BackStab/Skill3/BP_GC_UltimateMark.BP_GC_UltimateMark_C"
+function I.hookcue()
+    if I.cueHooked then return "cue already hooked" end
+    if not loadClass(CUE) then return "hookcue: cue class not loaded" end
+    local out = {}
+    for _, fn in ipairs({ "OnActive", "OnRemove" }) do
+        local ok, err = pcall(RegisterHook, CUE .. ":" .. fn, function(ctx, target)
+            local t = target:get()
+            log(string.format("mark cue %s on %s", fn, valid(t) and name(t) or "none"))
+        end)
+        out[#out + 1] = fn .. (ok and " hooked" or (" not hooked: " .. tostring(err)))
+    end
+    I.cueHooked = true
+    return "hookcue: " .. table.concat(out, ", ")
+end
+
+-- Client: press and release ability key n (1 LMB, 2 RMB, 3 Space, 4 Shift, 5 R, 6 E) through the input manager, as the
+-- player controller does for a key, and log it.
+function I.press(n)
+    GPS = GPS or StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local p = GPS:GetPlayerController(FindFirstOf("BP_MOBAInstance_C"), 0).Pawn
+    if not valid(p) then return "press: no pawn" end
+    log("key " .. n .. " pressed")
+    p.BP_AC_InputManager:QueueInput(n, true)
+    ExecuteInGameThreadWithDelay(80, function() if valid(p) then p.BP_AC_InputManager:QueueInput(n, false) end end)
+    return "press: key " .. n
+end
+

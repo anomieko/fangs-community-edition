@@ -1,0 +1,23 @@
+# Ishir's real ult for tools/run/test_patch.sh (alice = Ishir, through MODE=ult tools/run/test_ishir.sh): bob stands where
+# alice aims (her pointer is far away: the ult searches 150 around the point 1100 towards it), alice presses R as a
+# player does, the mark pops 3.6 s later. Both clients log every start and end of the
+# mark cue and every SpawnSoundAttached (the shotgun) with the world time (ishirsound.log): the pop should play it
+# once on each client, and nothing at the press.
+for f in "$A" "$B"; do
+  echo "lua dofile(\"Z:$PWD/tools/run/test_ishir.lua\") return FCE_ISHIR.hook() .. \"; \" .. FCE_ISHIR.hookcue() .. \"; \" .. FCE_ISHIR.watch(200)" >> "$f"
+done
+echo 'lua local c = StaticFindObject("/Game/Gameplay/Abilities/Player/BackStab/Skill3/BP_GA_Backstab_Skill3.Default__BP_GA_Backstab_Skill3_C") return "ult NetExecutionPolicy " .. tostring(c and c.NetExecutionPolicy)' >> $A
+host 'lua return FCE_PATCH.moveto("alice", 0, 0)'; host 'lua return FCE_PATCH.moveto("bob", 0, 300)'
+sleep 2
+for i in 1 2; do
+  host 'lua return FCE_PATCH.fill("alice")'
+  host 'lua return FCE_PATCH.aim("alice", "bob", 1100)'
+  sleep 1.5
+  echo 'lua return FCE_ISHIR.press(5)' >> $A
+  sleep 1
+  echo 'lua return FCE_PATCH.count("BP_GC_UltimateMark_C")' >> $A; echo 'lua return FCE_PATCH.count("BP_GC_UltimateMark_C")' >> $B
+  sleep 8
+  # the next cast: the ult's cooldown ends at once (its cooldown effect removed on the server)
+  host 'lua local gi = FindFirstOf("BP_MOBAInstance_C") local n = 0 gi:GetWorld().GameState.PlayerArray:ForEach(function(_, e) local ps = e:get() if ps:GetPlayerName():ToString() == "alice" then n = ps.PawnPrivate.AbilitySystemComponent:RemoveActiveEffectsWithTags({ GameplayTags = { { TagName = FName("Cooldown") } } }) end end) return "cooldowns removed: " .. tostring(n)'
+  sleep 2
+done

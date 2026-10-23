@@ -1,0 +1,24 @@
+{
+  "tag": "deploy-2026-10-23-2300",
+  "date": "2026-10-23",
+  "title": "Patch notes: Wylde's and Ishir's fixes",
+  "subtitle": "FANGS Community Edition · 23 October 2026",
+  "intro": [
+    "Two bug fixes from your reports.",
+    "<b>To get it:</b> start the game through the launcher as usual; it updates itself."
+  ],
+  "sections": [
+    {
+      "name": "Heroes",
+      "heroes": [
+        ["Ishir", [
+          "<b>Sever Spirit (R):</b> the shotgun sound plays once, when the mark pops. Ishir's player also heard it right when pressing R."
+        ]],
+        ["Wylde", [
+          "<b>Fan the Hammers (Shift):</b> fixed the first casts of a game firing 12 to 24 bullets. His gun could hold several magazines at once until his first reload of the game; now it never holds more than one."
+        ]]
+      ]
+    }
+  ],
+  "outro": "Thanks for the reports! Keep them coming."
+}

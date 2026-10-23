@@ -1,0 +1,20 @@
+# Steps for tools/run/test_patch.sh (through tools/run/test_fth.sh; bob = Wylde): Fan the Hammers four times in round 1
+# from the middle of the map (abilities are locked in the base), 10 s apart: Shift pressed as a player does, then the
+# ability started directly; then the round ends and two more once round 2 is on. fth.log has the bullets.
+L="lua return dofile(\"Z:$PWD/tools/run/test_passives.lua\")"
+host "$L"
+host 'lua return FCE_PATCH.moveto("bob", 0, 0)'; host 'lua return FCE_PATCH.moveto("alice", 0, -2500)'
+sleep 2
+for i in 1 2 3 4; do   # FTH_ROUND1=0: none in round 1 (the gun stays full through the round changes)
+  if (( i > ${FTH_ROUND1:-4} )); then sleep 10; continue; fi
+  if (( i <= 2 )); then mark "round 1: Shift $i"; echo 'lua return FCE_PATCH.key(4)' >> $B
+  else mark "round 1: Fan the Hammers started $i"; echo 'lua return FCE_PATCH.fire("Gunslinger_E_C")' >> $B; fi
+  sleep 10
+done
+mark "round 1 ends"; host 'lua return FCE_PASSIVES.endround(1)'
+sleep 100
+host 'lua return FCE_PATCH.moveto("bob", 0, 0)'; sleep 2
+for i in 1 2; do
+  mark "round 2: Shift $i"; echo 'lua return FCE_PATCH.key(4)' >> $B
+  sleep 10
+done

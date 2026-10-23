@@ -1,0 +1,7 @@
+# Pre-round steps for tools/run/test_patch.sh (PRE_STEPS, through tools/run/test_fth.sh): the ammo logs and the hooks on
+# the game server from the arena's first moments (the augment phase before round 1, with its dummies), and bob's client.
+L="lua return dofile(\"Z:$PWD/tools/run/test_fth.lua\")"
+host "$L"; echo "$L" >> $B
+host 'lua return FCE_FTH.hooks("bob")'
+host 'lua return FCE_FTH.watch("bob", 900)'; echo 'lua return FCE_FTH.watch("local", 900)' >> $B
+mark() { host "lua return FCE_FTH.mark(\"$1\")"; echo "lua return FCE_FTH.mark(\"$1\")" >> $B; }   # both logs

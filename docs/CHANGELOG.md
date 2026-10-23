@@ -21,7 +21,17 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Branch `fix-wylde-ishir` (23 Oct). Player update and server update: the patch pak gets `wylde-ammo` (new) and the
+`community-ishir` change. Players' notes: `backend/patchnotes/2026-10-23-2300.json` (rename it and its tag to the
+deploy's time). Tested in two-player matches with all enabled patches (`tools/run/test_fth.sh`, `MODE=ult
+tools/run/test_ishir.sh`); the pak builds from all 13 patches.
+
+| Change | Where | Off switch |
+|---|---|---|
+| Wylde's first Fan the Hammers of a game fired 12-24 bullets (the user: "the first 2 or 3 fan the hammers of a game are shooting with much more bullets than they are supposed to"). His reload ability's `Do Reload` read the bullets in his gun through a variable that only his first timed reload sets, so until then every load (the round-start refill on the dummy phase's bullets, each round change while he hadn't fired) put a full magazine on top. `Do Reload` now sets it first. In the test: first Fan the Hammers 12 → 6, round changes without firing 18/24 → 6 (`docs/recon/community-build-modes.md`, "The first Fan the Hammers of a game fired 12 to 24 bullets") | pak `wylde-ammo.json` (`BP_GA_Gunslinger_Reload`) | `"enabled": false` in `wylde-ammo.json` |
+| Ishir's ult played the shotgun twice for the Ishir player, once right on the press (the user: "remove the first one"). His own game predicted the mark on the enemy and dropped it when the server's arrived, and dropping it ran the mark's pop. Only the server applies the mark now; Ishir's screen shows it about one ping after the press. Every other player already heard it once (`docs/recon/community-build-ishir.md`, "Twice for the Ishir player") | pak `community-ishir.json` (`BP_GA_Backstab_Skill3`, `ApplyMarkToTarget`) | remove the `BP_GA_Backstab_Skill3` entry from `community-ishir.json` |
+| Patch tool: `insert-code` expressions `{"null": true}`, `{"this": true}`, `{"cast": class, "of": expr}` and the statement `{"let-self-obj": variable, "value": expr}` (`docs/PATCHING.md`) | `tools/patch/AssetPatch/Code.cs` | – |
+| Tests: `tools/run/test_fth.sh` (+ `.lua`, `.pre`, `.steps`), `MODE=ult` in `tools/run/test_ishir.sh` (`test_ishir_ult.steps`; `test_ishir.lua` logs the mark cue's start and end and presses keys as a player does) | `tools/run/` | – |
 
 ## deploy-2026-10-21-0241 (`e6c9721`, Feb 2023 build)
 

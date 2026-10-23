@@ -110,6 +110,62 @@ a community member; that stream edits `BP_GA_Gunslinger_P` and others). This cha
 If that fix loads the gun whenever the passive starts, the dummy-phase reload only tops it up (harmless). The Bounty's
 Reward undo stays needed either way.
 
+Correction (23 Oct): the gun is loaded when the round starts, by the passive's `OnRoundStart` (`Reset Bullets to
+Modified Max` → the hero's `Add Loaded Bullets(Modified MaxBullets)` → the reload ability's `Do Reload`).
+`ForceReloadRoundStart`, at the countdown's end, calls the reload ability's `Start Reload`, which only plays the reload
+(montage, sound, the `Effect.Reload` tag) and loads nothing. The dummy-phase load was not harmless, see below.
+
+### The first Fan the Hammers of a game fired 12 to 24 bullets (fixed 23 Oct)
+
+The user's report: "the first 2 or 3 fan the hammers of a game are shooting with much more bullets than they are
+supposed to (like 20+ shots)". Fan the Hammers fires every bullet loaded when it starts
+(`BP_GA_Gunslinger_E`, `Start Intervals`: `Intervals to Do = Get Loaded Bullets`), so his gun held more than his
+magazine (6).
+
+**Cause.** The reload ability (`Passive/BP_GA_Gunslinger_Reload`) loads with `Do Reload(override)`: it applies
+`(override, or Modified MaxBullets) − Get Loaded Bullets` stacks of `BP_GE_Gunslinger_P_Bullets`. It reads both through
+its `Gunslinger` variable, which only `Check Reload` sets: the first *timed* reload of the match, after a Fan the
+Hammers or after LMB shots. Until then `Gunslinger` is empty, the call to `Get Loaded Bullets` is skipped and the
+count reads 0, so every load before the first timed reload is a full magazine on top of what the gun holds. The game
+itself loads only at the round start, onto an empty gun, so it rarely showed. FangsHost's dummy-phase load
+(`wyldeLoad`, since 17 Oct) fills the gun before the round, and then:
+- round 1 start: the passive's refill puts 6 on the 6 from the dummy phase: 12;
+- every round change after that (the next dummy phase, the next round start) another 6 while he hasn't fired a Fan the
+  Hammers or reloaded: 18, 24;
+- his first Fan the Hammers fires them all, its reload sets `Gunslinger`, and from then on he loads correctly.
+
+The same applies to anything that calls `Add Loaded Bullets` early in a match (augments that give bullets back on a
+hit: a full magazine instead of 1-3 bullets).
+
+**Fix** (`tools/patch/patches/wylde-ammo.json`): `Do Reload` sets `Gunslinger` itself before it reads it:
+
+```
+L10:
+    self.Gunslinger = Cast<BP_Gunslinger_Char_C>(self.Player);
+    self.Player.ShakeCameraByType(0, true);
+    ...
+    self.Gunslinger.Get Loaded Bullets(CallFunc_Get_Loaded_Bullets_CurrentStacks);
+```
+
+(`insert-code` gained `{"cast": class, "of": expr}` and `{"let-self-obj": variable, "value": expr}` for it.) Server
+only in effect (`Do Reload` loads only with authority); the pak is the same file for players.
+
+**Tests** (`tools/run/test_fth.sh`: bob = Wylde; the game server logs his bullets every 50 ms, each Fan the Hammers'
+bullets spawned, and every call that loads his gun with the bullets at that moment; bob's client logs his bullets as it
+sees them; `FTH_ROUND1=0`: no Fan the Hammers in round 1):
+
+| Run | Round 1 start | First Fan the Hammers | Later ones | Round changes |
+|---|---|---|---|---|
+| `fth4` (live patches) | refill `Do Reload(6)` with 6 loaded applies 6 more: 12 | 12 bullets | 6 each (rounds 1 and 2) | correct once `Check Reload` ran |
+| `fth8` (live, no casts in round 1) | 12 | – | – | 18 at the next dummy phase, 24 at round 2's start |
+| `fth9` (with `wylde-ammo`) | refill applies 0: 6 | 6 | 6 each, rounds 1 and 2 | 0 added |
+| `fth10` (with `wylde-ammo`, no casts in round 1) | 6 | round 2: 6 | 6 | 0 added at both |
+
+On the way there, two wrong leads (kept here so nobody repeats them): replacing the dummy-phase bullets with a fresh
+magazine at `Destroy Preround Dummies` (`fth5`, `fth6`: the refill still added 6, before or after it), and counting
+the bullet effect with `GetGameplayEffectCount` inside `Get Loaded Bullets` (`fth7`, `fth8`: that function is never
+reached while `Gunslinger` is empty).
+
 ## Presets (FangsHost `modes.lua`, backend)
 
 The in-match preset panel (`WB_LoadoutPresets`) loads with the server RPC `GetHeroLoadouts` and saves with
@@ -160,6 +216,6 @@ events). Backend unit tests: `backend/tests/test_hosts.py`: 61 pass, the full su
 | Training server freed | backend: "solo player left" ~12 s after the player left (log 20:10:22 → last server line 20:10:33) |
 | Augment phase held / F6 | held with the timer at 5999 s (TRAINING 104.8 → 195.2, Solo 106.2 → 195.5 world s, ended by the test's lock-in); a lock-in still ends it, so it's off (above) |
 | Dummies kept (Solo lobby) | 3 re-tagged `FangsKeptDummy`, 3 alive before and 35 s after the round start |
-| Wylde's gun in the dummy phase | "gun loaded", 12 ammo from the dummy phase on; no Bounty's Reward hits in the test (0 removed) |
+| Wylde's gun in the dummy phase | "gun loaded", 12 ammo from the dummy phase on (that 12 was a bug, fixed 23 Oct: "The first Fan the Hammers of a game fired 12 to 24 bullets" above); no Bounty's Reward hits in the test (0 removed) |
 | Presets | served at round 1, a save from `SaveHeroLoadouts` stored by the backend and exported |
 | Base blockers | Embersong: 2 placed on the server and the client, scale 16.8. After the hero was moved out of its base, its capsule blocks the blockers' channel on both sides (`GetCollisionResponseToChannel(25)` 1 → 2) and the in-base immunity is gone. Swept back towards its spawn, it stopped 1179 short of it, about 225 before the sphere's edge: blocked, though the base's own geometry isn't ruled out (no control sweep yet). The first run spawned them 5× too big (below). Stormheart and Crownwatch: not run. |

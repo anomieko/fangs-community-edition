@@ -4,10 +4,12 @@
 //
 //   expr: {"local": name} | {"self": name}              a variable the function (or class) already uses
 //         {"str": s} | {"bool": b} | {"float": f} | {"int": n} | {"vec": [x, y, z]}
+//         {"null": true} | {"this": true}                    no object (nullptr), the Blueprint object itself (self)
+//         {"cast": className, "of": expr}                    Cast<className>(expr), a class the asset already imports
 //         {"math": "/Script/<Module>.<Class>:<Function>", "args": [expr...]}   static pure call (EX_CallMath)
 //         {"on": expr, "call": "/Script/<Module>.<Class>:<Function>", "args": [...]}   member call on an object
 //         {"anchor-arg": i}                                  a copy of argument i of the anchor call (before/after)
-//   stmt: {"do": expr} | {"let-obj": localName, "value": expr}
+//   stmt: {"do": expr} | {"let-obj": localName, "value": expr} | {"let-self-obj": variableName, "value": expr}
 //         {"set-bool": {"on": expr, "prop": name}, "value": bool}   a bool property of that object
 //         {"if": expr, "then": [stmt...]}                            skips "then" unless expr is true
 using Newtonsoft.Json.Linq;
@@ -78,6 +80,15 @@ static partial class Program
         if (o["float"] != null) return new EX_FloatConst { Value = (float)o["float"] };
         if (o["int"] != null) return new EX_IntConst { Value = (int)o["int"] };
         if (o["vec"] is JArray v) return new EX_VectorConst { Value = new FVector((float)v[0], (float)v[1], (float)v[2]) };
+        if (o["null"] != null) return new EX_NoObject();
+        if (o["this"] != null) return new EX_Self();
+        if (o["cast"] != null)
+        {
+            string n = (string)o["cast"];
+            var hits = Enumerable.Range(0, a.Imports.Count).Where(i => a.Imports[i].ObjectName.ToString() == n).ToList();
+            if (hits.Count != 1) throw new PatchError($"insert-code: {hits.Count} imports named '{n}', need exactly 1 (no new references are added)");
+            return new EX_DynamicCast { ClassPtr = FPackageIndex.FromImport(hits[0]), Target = Expr(a, f, o["of"]) };
+        }
         if (o["anchor-arg"] != null)
         {
             int i = (int)o["anchor-arg"];
@@ -109,6 +120,8 @@ static partial class Program
             if (s["do"] != null) list.Add(Expr(a, f, s["do"]));
             else if (s["let-obj"] != null)
                 list.Add(new EX_LetObj { VariableExpression = CopyVariable<EX_LocalVariable>(a, f, (string)s["let-obj"]), AssignmentExpression = Expr(a, f, s["value"]) });
+            else if (s["let-self-obj"] != null)
+                list.Add(new EX_LetObj { VariableExpression = CopyVariable<EX_InstanceVariable>(a, f, (string)s["let-self-obj"]), AssignmentExpression = Expr(a, f, s["value"]) });
             else if (s["set-bool"] is JObject sb)
             {
                 var ptr = PropertyPointer(a, (string)sb["prop"]);

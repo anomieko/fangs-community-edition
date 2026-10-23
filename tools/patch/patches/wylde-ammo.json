@@ -1,0 +1,17 @@
+{
+  "name": "wylde-ammo",
+  "summary": "Wylde: reloads before his first timed reload of a match no longer load a full magazine on top of the bullets he has (his first Fan the Hammers of a game fired 12-24 shots)",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": true,
+  "research": "docs/recon/community-build-modes.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/Gunslinger/Passive/BP_GA_Gunslinger_Reload",
+      "why": "Wylde: Do Reload loads 'magazine minus the bullets in the gun', but it reads the bullets through its Gunslinger variable, which only his first timed reload (Check Reload) sets. Until then it read 0 and loaded a full magazine on top: the round-start refill on the dummy phase's bullets gave 12, and every round change another 6, until his first Fan the Hammers emptied the gun. Do Reload now sets Gunslinger itself first.",
+      "edits": [
+        { "op": "insert-code", "function": "ExecuteUbergraph_BP_GA_Gunslinger_Reload", "before": "ShakeCameraByType",
+          "code": [ { "let-self-obj": "Gunslinger", "value": { "cast": "BP_Gunslinger_Char_C", "of": { "self": "Player" } } } ] }
+      ]
+    }
+  ]
+}

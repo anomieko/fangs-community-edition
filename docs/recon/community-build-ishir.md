@@ -88,3 +88,38 @@ SoundWave with the duration, channels and sample rate the patch wrote; loading r
   on the same path.
 
 `AssetPatch rewrite-check` on the Feb build: 0 failed. The ops add no code to `Rewrite.cs`.
+
+## Twice for the Ishir player (23 Oct)
+
+The user's report: "ishir ult gun sfx is firing twice (once on press, once on deathmark procc/explosion.) remove the
+first one (when he just pressed ult)".
+
+**Cause.** The ult (`BP_GA_Backstab_Skill3`, `NetExecutionPolicy` 0 = LocalPredicted) puts the mark on in its first cast
+(`ApplyMarkToTarget`: `K2_ApplyGameplayEffectSpecToTarget(BP_GE_ShadowMark, AbilityTargetDataFromActor(self.Target))`),
+right on the press. Ishir's own client predicts that effect on the enemy: the mark cue starts (`OnActive`). When the
+server's answer arrives, the client drops its predicted copy, and that runs the cue's `OnRemove`, where the shotgun is.
+The server's own mark then starts the cue again, and its real pop runs `OnRemove` a second time. Other players only
+ever get the server's mark: one shotgun, at the pop. Whether the predicted copy's removal runs `OnRemove` is a race
+(GAS skips it when the server's copy got there first), so with real ping it happens more often than locally.
+The game's own FMOD sounds of the mark (`LifetimeSFX`, `LifetimeEndSFX`) were doubled for Ishir the same way.
+
+**Fix** (`community-ishir.json`, `BP_GA_Backstab_Skill3`): only the server applies the mark. Both
+`AbilityTargetDataFromActor(self.Target)` calls in `ApplyMarkToTarget` get
+`SelectObject(self.Target, nullptr, IsServer(self))`, so on a client the target data holds no actor and nothing is
+predicted (`replace-call-arg`; `insert-code` expressions gained `{"null": true}` and `{"this": true}` for it).
+Decompiled:
+
+```
+CallFunc_AbilityTargetDataFromActor_ReturnValue_1 = AbilitySystemBlueprintLibrary::AbilityTargetDataFromActor(KismetMathLibrary::SelectObject(self.Target, nullptr, KismetSystemLibrary::IsServer(self)));
+```
+
+Ishir's own screen shows the mark when the server's arrives (50 ms later in the local test, about one ping in a real
+game) instead of at the press. Damage, the debuff ability and every other player's view are unchanged.
+
+**Test** (`MODE=ult tools/run/test_ishir.sh`: alice = Ishir presses R as a player does, twice; bob stands where the ult
+searches; both clients log every start and end of the mark cue and every shotgun play, `test_ishir_ult.steps`):
+
+| Run | alice (Ishir), cast 1 | alice, cast 2 | bob |
+|---|---|---|---|
+| `ishir-ult2` (live patch) | press 270.69: `OnActive`; 270.74: **shotgun + `OnRemove`**, `OnActive`; pop 274.37: shotgun + `OnRemove` | press: `OnActive` ×2 (no extra shotgun: the race went the other way); pop: shotgun | one shotgun per cast, at the pop |
+| `ishir-ult3` (with the fix) | press 270.84; 270.89: `OnActive` (the server's); pop 274.54: shotgun + `OnRemove` | press 283.15; 283.17: `OnActive`; pop 286.84: shotgun | one shotgun per cast, at the pop |
