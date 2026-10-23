@@ -21,9 +21,14 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
+Nothing yet.
+
+## deploy-2026-10-23-1912 (`20e2ee9`, Feb 2023 build)
+
+Deployed with the user's OK ("lets deploy this"), nobody playing (the script's check), not forced. Smoke test passed.
 Branch `fix-wylde-ishir` (23 Oct). Player update and server update: the patch pak gets `wylde-ammo` (new) and the
-`community-ishir` change. Players' notes: `backend/patchnotes/2026-10-23-1915.json`. Tested in two-player matches with all enabled patches (`tools/run/test_fth.sh`, `MODE=ult
-tools/run/test_ishir.sh`); the pak builds from all 13 patches.
+`community-ishir` change; the pak built from all 13 patches. Players' notes: `backend/patchnotes/2026-10-23-1915.json`.
+Tested in two-player matches with all enabled patches (`tools/run/test_fth.sh`, `MODE=ult tools/run/test_ishir.sh`).
 
 | Change | Where | Off switch |
 |---|---|---|
