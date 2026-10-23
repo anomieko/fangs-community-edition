@@ -144,9 +144,9 @@ if [[ $missing != 0 ]]; then
   exit 1
 fi
 cat <<EOF
-  Ready. Next (docs/SELF-HOSTING.md, from "Rent a server"):
+  Ready. Next (docs/SELF-HOSTING.md, from step 4):
     1. a Debian 13 x86-64 VPS with 8 GB RAM; harden it: server/harden.sh (docs/SERVER.md, "First-time setup")
     2. deploy:   FANGS_JOIN_CODE=\$(cat work/joincode) server/deploy.sh <admin>@<server> $GAME <server>
     3. players: your server's own launcher, http://<server>:8080/download/\$(cat work/joincode)/FangsCE.exe (a private
-       link: it holds the join code), or your public build plus an invite code (docs/SELF-HOSTING.md, "Your launcher")
+       link: it holds the join code), or your public build plus an invite code (docs/SELF-HOSTING.md, step 6)
 EOF
