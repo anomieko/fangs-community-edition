@@ -5,9 +5,11 @@ shut down. FANGS was a hero arena game built in Unreal Engine 4.26. Its backend 
 game-server hosting (Zeuz/Improbable) are gone. This project replaces those services so people who
 built and played the game can run private custom matches again.
 
-**Want to play?** You only need **[FangsCE.exe](https://github.com/anomieko/fangs-community-edition/releases/latest/download/FangsCE.exe)**
-and an invite code: see [Playing](#playing-windows). (The green "Code" button downloads this project's source code,
-not the game.)
+**Want to play?** Ask whoever runs your community's server for their launcher (`FangsCE.exe`) and an invite: see
+[Playing](#playing-windows). (The green "Code" button downloads this project's source code, not the game.)
+
+**Want to run your own server?** Everything is here except the game files, which you bring:
+**[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)** (a small Linux VPS, one setup command, one deploy command).
 
 > ## ⚠️ Disclaimer
 >
@@ -35,11 +37,14 @@ See **[docs/STATUS.md](docs/STATUS.md)** and **[docs/SERVER.md](docs/SERVER.md)*
 
 ## Playing (Windows)
 
-You need an **invite code** from whoever runs your community server (it starts with `FCE-`).
+You need your server's launcher and, for a public launcher build, an **invite code** (it starts with `FCE-`), both
+from whoever runs your community server. Each server signs its own updates, so a launcher only works with the
+server it came from. (The [FangsCE.exe on this repository's releases](https://github.com/anomieko/fangs-community-edition/releases/latest/download/FangsCE.exe)
+is the original community server's.)
 
-1. Download **[FangsCE.exe](https://github.com/anomieko/fangs-community-edition/releases/latest/download/FangsCE.exe)**.
-   It's the only file you need: a small launcher that downloads the game (about 13 GB) from your server. If the
-   browser says the file isn't commonly downloaded, choose **Keep**.
+1. Download **FangsCE.exe** from the link your server's operator gives you. It's the only file you need: a small
+   launcher that downloads the game (about 13 GB) from your server. If the browser says the file isn't commonly
+   downloaded, choose **Keep**.
 2. Start it. Windows may say "Windows protected your PC" because the launcher isn't code-signed: click
    **More info → Run anyway**.
 3. Paste your invite code when it asks for it. When it asks where the game should go, **press Enter** for the
@@ -61,6 +66,7 @@ whatever is missing.
 | Client config | `tools/run/config/Engine.ini.template` | User-level config that points the game at your backend. No game files are modified. |
 | Patch pak | `tools/patch/` | Gameplay changes to the game's own data (e.g. ability effects and numbers) as one extra pak that the game loads after its own. It is built from your game files at deploy, never committed (`docs/PATCHING.md`). |
 | Research tools | `tools/pak`, `tools/bpdump`, `tools/re` | Pak reader, Blueprint bytecode decompiler (built on [UAssetAPI](https://github.com/atenfyr/UAssetAPI)), small x64 helpers used to understand the client, and a Ghidra wrapper that decompiles chosen functions (`tools/re/decomp.sh`). |
+| Setup | `tools/setup/` | `bootstrap.sh` prepares a clone for your own server (tools, game check, pinned third-party code, pak key, join code; [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)); `leakcheck.py` keeps private things out of commits (pre-commit hook and CI). |
 | Notes | `docs/` | Findings about the client and the backend API it expects. |
 
 Third-party tools (UE4SS, UAssetAPI, Ghidra and its JDK) are downloaded separately into `third_party/` and are not part of
@@ -79,7 +85,7 @@ backend/.venv/bin/python backend/fangs_backend.py --port 8080 --public-ip <publi
 # research tooling
 python3 -I tools/pak/paklist.py    <pak> work/pakfiles.tsv            # list pak contents
 python3 -I tools/pak/pakextract.py <pak> work/extract '<regex>'        # extract files
-git clone --depth 1 https://github.com/atenfyr/UAssetAPI third_party/UAssetAPI
+tools/setup/bootstrap.sh                                             # tools, UE4SS + UAssetAPI (pinned), pak key
 dotnet build -c Release tools/bpdump -o work/bin/bpdump
 work/bin/bpdump/BpDump work/extract work/bpjson <asset.uasset | dir>...  # Blueprint -> JSON
 python3 -I tools/bpdump/bp2txt.py work/bpjson -o work/bp                # JSON -> pseudocode

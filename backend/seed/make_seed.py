@@ -2,7 +2,7 @@
 """Generates backend/seed/game_records.json — the global CloudSave game records the client
 expects at login. Values are reconstructed from the Blueprint code that reads them
 (see docs/recon/backend-api.md). Usage: make_seed.py <public-host:port>"""
-import json, sys
+import json, os, re, sys
 from pathlib import Path
 
 host = sys.argv[1] if len(sys.argv) > 1 else '127.0.0.1:8080'
@@ -130,6 +130,21 @@ alpha7_data = {**version_data,
                'AvailableCustomModes': [m for m in version_data['AvailableCustomModes'] if m != 'AI'],
                'AvailableAugments': augments('augments-alpha7.json'), 'AvailableHeroes': heroes}
 del alpha7_data['AvailableSkins']   # its skin ids differ; it keeps the default skins
+
+def name_styles(text):
+    """FANGS_NAME_STYLES, the operator's own setting ("<name>=<style>,..."; empty: plain names for everyone): names in the
+    main menu's online list that get a style, e.g. "rainbow". Kept out of the repo, so nobody gets another server's
+    styled name by registering it."""
+    styles = {}
+    for item in filter(None, (x.strip() for x in text.split(','))):
+        name, _, style = item.partition('=')
+        name, style = name.strip().lower(), style.strip().lower()
+        if not (re.fullmatch(r'[^\s=,]{1,32}', name) and re.fullmatch(r'[a-z]{1,16}', style)):
+            sys.exit(f'FANGS_NAME_STYLES: "{item}" is not <name>=<style>')
+        styles[name] = style
+    return styles
+
+
 records = {
     # Keyed by the client's MOBA/Content/Data/version.txt. Known builds:
     #   main_v0_0_444            Closed Playtest, Dec 2023 (app 1831080)
@@ -148,7 +163,7 @@ records = {
     # Not read by the client: FangsBoot gets it from /fangsapi/*/unreleased-heroes.
     'CEUnreleasedHeroes': {'Playtest021523v1_v0_0_02': unreleased},
     # Not read by the client: name styles in the main menu's online list (FangsBoot), lowercase name -> style.
-    'CENameStyles': {'anomie': 'rainbow'},
+    'CENameStyles': name_styles(os.environ.get('FANGS_NAME_STYLES', '')),
     # Not read by the client: the backend's catalog per AccelByte namespace (Feb/Dec builds use "fangs", Aug
     # "fangsbeta"). Item class = key (the categoryPath), item id = title = entitlement name.
     'CECatalog': {'fangs': {**{k: v for k, v in cosmetics_feb.items() if k != 'Skin'},

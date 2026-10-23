@@ -4,7 +4,7 @@
   "title": "Patch notes: the Community Patch",
   "subtitle": "FANGS Community Edition · 17 October 2026",
   "intro": [
-    "Our biggest update yet. It brings the community’s patch list (put together by a community member and everyone who chipped in), a Fiorne rework, custom lobby settings, and a pile of fixes.",
+    "Our biggest update yet. It brings the community’s patch list (put together by everyone who chipped in), a Fiorne rework, custom lobby settings, and a pile of fixes.",
     "<b>To get it:</b> start the game through the launcher as usual; it updates itself."
   ],
   "sections": [
@@ -159,5 +159,5 @@
       ]
     }
   ],
-  "outro": "Thanks to a community member and everyone who helped with the list. Tell us how it plays!"
+  "outro": "Thanks to everyone who helped with the list. Tell us how it plays!"
 }

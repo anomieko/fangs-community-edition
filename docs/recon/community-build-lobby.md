@@ -1,6 +1,6 @@
 # Custom lobby settings, the Captain vote, and reconnect (community patch, 16 Oct)
 
-a community member ranked the big features (`docs/recon/community-patchnotes.md`): #1 lobby buttons, #2 reconnect, #3 the
+A community member ranked the big features (`docs/recon/community-patchnotes.md`): #1 lobby buttons, #2 reconnect, #3 the
 custom-game Captain vote, which he wants in this update. This file has the design, what was built and tested (branch
 `cp-lobby`), and the reconnect research. Feb 2023 build.
 

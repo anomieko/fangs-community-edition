@@ -1,11 +1,12 @@
 # Community patch: Ishir's shotgun sound (built 16 Oct 2026)
 
-a community member's wish (community patch list, Q24 and the second PDF): a shotgun sound when the mark of Ishir's ult (Sever
+A community member's wish (community patch list, Q24 and the second PDF): a shotgun sound when the mark of Ishir's ult (Sever
 Spirit) pops, "not overly loud", using a clip a community member linked on myinstants.com. The clip has no stated licence, and we
 ship what's in the patch to every player. **The user decided on 16 Oct to use a community member's clip anyway** ("a community member's clip
 anyway is fine").
 
-Patch: `tools/patch/patches/community-ishir.json` (`"enabled": false`), branch `cp-ishir`.
+Patch: `tools/patch/patches/community-ishir.json` (live since 17 Oct), branch `cp-ishir`. Without the clip the pak is
+built without this patch (`docs/PATCHING.md`, "New sounds").
 
 ## The clip (never in git)
 
@@ -103,7 +104,8 @@ ever get the server's mark: one shotgun, at the pop. Whether the predicted copy'
 (GAS skips it when the server's copy got there first), so with real ping it happens more often than locally.
 The game's own FMOD sounds of the mark (`LifetimeSFX`, `LifetimeEndSFX`) were doubled for Ishir the same way.
 
-**Fix** (`community-ishir.json`, `BP_GA_Backstab_Skill3`): only the server applies the mark. Both
+**Fix** (`BP_GA_Backstab_Skill3`; deployed in `community-ishir.json`, now its own patch `ishir-ult.json` so it
+ships without the clip): only the server applies the mark. Both
 `AbilityTargetDataFromActor(self.Target)` calls in `ApplyMarkToTarget` get
 `SelectObject(self.Target, nullptr, IsServer(self))`, so on a client the target data holds no actor and nothing is
 predicted (`replace-call-arg`; `insert-code` expressions gained `{"null": true}` and `{"this": true}` for it).

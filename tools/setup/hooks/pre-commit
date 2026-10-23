@@ -1,0 +1,5 @@
+#!/bin/sh
+# Refuses a commit that would publish something private (tools/setup/leakcheck.py: addresses, emails, keys, and this
+# machine's join code, server address, pak key and signing key). Turned on by tools/setup/bootstrap.sh
+# (git config core.hooksPath tools/setup/hooks).
+exec python3 -I "$(git rev-parse --show-toplevel)/tools/setup/leakcheck.py" --staged

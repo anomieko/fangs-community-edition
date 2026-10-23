@@ -23,6 +23,12 @@ remote=/opt/fangs-ce
 build=$(tr -d '\r\n' < "$game/MOBA/Content/Data/version.txt")
 [[ $build =~ ^[A-Za-z0-9._-]+$ ]] || { echo "unexpected version.txt in $game: '$build'" >&2; exit 1; }
 code=${FANGS_JOIN_CODE:?set FANGS_JOIN_CODE (players need it; it is baked into the player package)}
+# Optional name styles in the main menu's online list ("<name>=<style>,...", e.g. me=rainbow): FANGS_NAME_STYLES, or
+# the local file work/name-styles (never committed). Empty: plain names for everyone.
+styles=${FANGS_NAME_STYLES-$(cat "$REPO/work/name-styles" 2>/dev/null || true)}
+styles=$(printf '%s' "$styles" | tr -d '\r\n')
+FANGS_NAME_STYLES=$styles python3 -I "$REPO/backend/seed/make_seed.py" 127.0.0.1:8080 /dev/null >/dev/null \
+  || { echo "!! fix FANGS_NAME_STYLES / work/name-styles first" >&2; exit 1; }
 shipped=(backend server tools/ue4ss tools/run/config tools/patch tools/pak player launcher .dockerignore)
 dirty=$(git -C "$REPO" status --porcelain -- "${shipped[@]}" | grep -v '^??' || true)
 if [[ -n $dirty && -z ${UPLOAD_ONLY:-} && -z ${FANGS_DEPLOY_DIRTY:-} ]]; then
@@ -112,7 +118,8 @@ rsync_ -a --delete --exclude .hashcache.json "$dist/" "$target:$remote/repo/serv
 
 echo "==> building and starting (public address: $public)"
 # settings for compose live in a root-only .env next to the compose file (also used on reboot/updates)
-printf 'GAME_DIR=%s\nPUBLIC_HOST=%s\nFANGS_JOIN_CODE=%s\nHOST_PORTS=%s\n' "$remote/builds/$build" "$public" "$code" "${HOST_PORTS:-7777-7778}" \
+printf 'GAME_DIR=%s\nPUBLIC_HOST=%s\nFANGS_JOIN_CODE=%s\nHOST_PORTS=%s\nFANGS_NAME_STYLES=%s\n' "$remote/builds/$build" "$public" "$code" \
+  "${HOST_PORTS:-7777-7778}" "$styles" \
   | ssh_ "sudo install -m 600 /dev/stdin $remote/repo/server/.env"
 ssh_ "set -e; cd $remote/repo/server
       compose() { if sudo docker compose version >/dev/null 2>&1; then sudo docker compose \"\$@\"; else sudo docker-compose \"\$@\"; fi; }

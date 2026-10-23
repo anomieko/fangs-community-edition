@@ -1,5 +1,8 @@
 # Running a Fangs: Community Edition server
 
+Setting one up from scratch: **[SELF-HOSTING.md](SELF-HOSTING.md)** walks through it step by step (getting the game,
+`tools/setup/bootstrap.sh`, the server, players). This file is the reference: sizing, security, day-to-day.
+
 Target: a small x86-64 Linux VPS (tested: Hetzner, 4 vCPU / 8 GB, Debian 13). ARM servers will not
 work (the game is x86 Windows code running under Wine).
 

@@ -70,7 +70,14 @@ Current deploy: `deploy-2026-10-23-1912` (`20e2ee9`); what each deploy changed: 
 
 ## Done, not deployed
 
-Nothing right now. Open: Wylde's E (Lamblaster) holding back LMB/RMB (`Ability.Skill4` in their
+**Self-hosting** (user, 23 Oct: "The repo is meant to let people easily deploy it and run their own server", with the
+user's privacy and security in mind; the user plans to take the original server offline): branch `selfhost`.
+`docs/SELF-HOSTING.md` (from zero to a running server, for people and agents), `tools/setup/bootstrap.sh`,
+`tools/setup/leakcheck.py` (pre-commit + CI), name styles as the operator's setting, the Ishir clip optional
+(`docs/CHANGELOG.md`, "Next deploy"). Next: the `third-party` release (UE4SS and UAssetAPI copies), the clean-clone
+test, the history rewrite (decisions below), a deploy whenever convenient (nothing players notice).
+
+Open: Wylde's E (Lamblaster) holding back LMB/RMB (`Ability.Skill4` in their
 blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lamblaster to cast on the server yet.
 
 ## In progress
@@ -157,7 +164,7 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
      3); dash end 2750 → 0 within 50 ms; after a mid-round restart of the stack system the stacks refill. In the
      combined run she starts with her recommended build (presets now load): Wanderer's Travelpack gives 5 stacks and a
      longer Space cooldown, as its tooltip says.
-   - Next: players' feedback. a community member (Q40): once broken, her stacks stayed broken all match; `community-passives`
+   - Next: players' feedback. A community member (Q40): once broken, her stacks stayed broken all match; `community-passives`
      covers the "never started" case too.
 10. **The community patch list** (a community member's list, 16 Oct): researched (`docs/recon/community-patchnotes.md`), answered
    (42 questions), proposed and OK'd by a community member (second PDF), built in eight streams (`docs/recon/community-build-*.md`)
@@ -220,6 +227,10 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
 
 ## Decisions
 
+- Privacy and self-hosting (user, 23 Oct): the commits' email is rewritten in the whole history to the GitHub noreply
+  address (force-push; deploy tags and changelog hashes remapped); a community member's name is anonymized in the
+  files and the history; UE4SS 3.0.1-1170 and UAssetAPI 3228c1e are mirrored on this repository's `third-party`
+  release (both MIT); the update signing key stays offline with the user, decided later (successors make their own).
 - Next deploy (user, 15 Oct, through the coordinating session fangs-4a): merge into `main` in this order:
   `ranked-fixes` → `install-ux` → `fast-download` → the review sprint's party fix. Then ONE headless regression covering all
   four (test_lobby, test_queue, test_social, test_chat, test_ranked, NOSHOW=1 test_ranked, test_match, test_download,
@@ -244,8 +255,8 @@ blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lam
   the user tests it in multiplayer before it is deployed.
 - Proper patches over hooks (user, 16 Oct: "making proper patches is the proper way"): new game logic goes into the
   patch pak through AssetPatch's function rewriter; FangsHost/FangsBoot are for sessions, lobby and UI.
-- The community list (16 Oct): a community member answers, then a "now → after" proposal for his OK, then build (user). a community member
-  OK'd it the same day, with his changes (`docs/recon/community-patchnotes.md`, "a community member's OK").
+- The community list (16 Oct): a community member answers, then a "now → after" proposal for his OK, then build (user). A community member
+  OK'd it the same day, with his changes (`docs/recon/community-patchnotes.md`, "A community member's OK").
 - Fiorne (user, 16 Oct): the restore plan, rebalanced to 700 HP, the Aug passive cooldown (7 s) and Earthbreaker
   Pommel +95 after a roster comparison.
 - Ishir's ult sound (user, 16 Oct): ship a community member's clip as he asked ("a community member's clip anyway is fine"); it is never committed.

@@ -1,0 +1,18 @@
+{
+  "name": "ishir-ult",
+  "summary": "Ishir's ult: only the server applies the mark, so the mark's end (and community-ishir's shotgun) runs once, at the pop, also for the Ishir player",
+  "build": "Playtest021523v1_v0_0_02",
+  "enabled": true,
+  "research": "docs/recon/community-build-ishir.md",
+  "assets": [
+    {
+      "path": "MOBA/Content/Gameplay/Abilities/Player/BackStab/Skill3/BP_GA_Backstab_Skill3",
+      "why": "Ishir, Sever Spirit (R): the Ishir player heard the shotgun twice, once right on the press. His own game put a stand-in mark on the enemy at the press and dropped it when the server's arrived, and dropping it ran the mark's pop. Only the server puts the mark on now, as every other player already saw it.",
+      "edits": [
+        { "op": "replace-call-arg", "function": "ApplyMarkToTarget", "call": "AbilityTargetDataFromActor", "arg": 0, "from": "self.Target", "count": 2,
+          "to": { "math": "/Script/Engine.KismetMathLibrary:SelectObject", "args": [ { "self": "Target" }, { "null": true },
+                  { "math": "/Script/Engine.KismetSystemLibrary:IsServer", "args": [ { "this": true } ] } ] } }
+      ]
+    }
+  ]
+}

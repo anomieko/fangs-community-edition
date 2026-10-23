@@ -138,7 +138,7 @@ new `insert-code` options: `anchor-match` (pick the one cue call with that tag, 
 (`Generic Spawn System At Location` takes the instigator's pack), so each skin gets its own effect.
 Built with all 8 live patches; `rewrite-check` 0 failed.
 
-a community member's "hit effect on knock-up" isn't a separate effect: the ult's GenericAOE has no hit effect, and knock-ups are
+A community member's "hit effect on knock-up" isn't a separate effect: the ult's GenericAOE has no hit effect, and knock-ups are
 stuns now (`ccrevert`).
 
 ## New AssetPatch edits (docs/PATCHING.md)
@@ -168,7 +168,7 @@ can't revive). Steering aim with `SetMouseLocation` works for the hero's facing;
 
 ## Ethryn nerfs (a community member, 21 Oct)
 
-a community member's list via the user: "Nerf Ethryn: (these are purely number changes …)". All six are plain values, done in
+A community member's list via the user: "Nerf Ethryn: (these are purely number changes …)". All six are plain values, done in
 the new patch `tools/patch/patches/community-ethryn.json` (`"enabled": true`, branch `cp4-ethryn`). Off switch: its
 `"enabled": false`, or remove one asset's entry. Feb build; values read with `AssetPatch info`/`props`, code from
 `work/bp-2023-02-15`. Asset paths under `MOBA/Content/Gameplay/Abilities/Player/ShieldGirl/` unless they start with

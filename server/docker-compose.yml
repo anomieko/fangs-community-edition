@@ -14,6 +14,7 @@ services:
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST to the address players connect to}
       FANGS_JOIN_CODE: ${FANGS_JOIN_CODE:-}
+      FANGS_NAME_STYLES: ${FANGS_NAME_STYLES:-}   # optional: <name>=<style>,... (e.g. me=rainbow) in the online list
       HOST_PORTS: ${HOST_PORTS:-7777-7778}   # ~3 GB RAM per running game server
       FANGS_PAKS: /downloads/overlay/MOBA/Content/Paks   # our patch pak, the same file players download
     volumes:

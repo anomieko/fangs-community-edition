@@ -25,7 +25,7 @@ plant() {   # bob plants a Sourblossom and stands in its ring, 200 from the plan
 }
 sleep 10; host 'lua return FCE_PATCH.health("bob")'   # after a respawn, if anything killed him
 host 'lua return R.rate("bob")'
-# 1. a community member's case: from about 90 HP on a Sourblossom (the passive alone), 15 s
+# 1. A community member's case: from about 90 HP on a Sourblossom (the passive alone), 15 s
 down; plant
 host 'lua return R.track("bob", 15, "Sourblossom from low health")'
 sleep 16

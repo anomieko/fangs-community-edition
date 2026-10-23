@@ -1,6 +1,6 @@
 # Community patch, part 4: game modes, server and backend (built 16 Oct 2026)
 
-a community member OK'd the proposal (the second PDF, `docs/recon/community-patchnotes.md`). This part covers Training, the base
+A community member OK'd the proposal (the second PDF, `docs/recon/community-patchnotes.md`). This part covers Training, the base
 blockers, presets, the two removed artifacts and Wylde's ammo in the dummy phase. Branch `cp-modes`, on top of
 `fiorne-restore`. Nothing is enabled for players or deployed.
 
@@ -18,7 +18,7 @@ Where each change lives, and why not the patch pak:
 
 ## TRAINING loaded Embersong: our map list
 
-a community member (Q16): "the current training tile just loads a solo game on the embersong map". The cause is in our seed, not
+A community member (Q16): "the current training tile just loads a solo game on the embersong map". The cause is in our seed, not
 in FangsBoot (FangsBoot's `onCreate` session code is the Aug 2022 client's):
 - `WB_PlayMenu.PlayGameMode`, mode 0 (Training): `MapGameLevel = "LE_BeautifulCorner"`, `MapPlayerCount = 1`, then
   `CreateCustomGame("Solo", <map_basic_training_title>)` → `WB_CreateLobby.CreateLobby` → `SelectMap("Basic Training")`.
@@ -99,7 +99,7 @@ noted. Post-hook on `Destroy Preround Dummies`: the stacks gained since are remo
 Applied effect, `Modified MaxBullets` and `Base Max Bullets` − 1, the ammo bar).
 
 **For merging with the stream that fixes "0 ammo all game"** (abilities that only set themselves up at round start,
-a community member; that stream edits `BP_GA_Gunslinger_P` and others). This change edits no game asset and is server-only, in
+A community member; that stream edits `BP_GA_Gunslinger_P` and others). This change edits no game asset and is server-only, in
 `tools/ue4ss/Mods/FangsHost/scripts/modes.lua` (`wyldeLoad`, `wyldeUndo`):
 - hooks: `GS_MOBA_Battle_C:Spawn Preround Dummies`, `GS_MOBA_Battle_C:Destroy Preround Dummies` (post, server);
 - calls on `BP_Gunslinger_Char_C`: `Add Loaded Bullets`, `SetUIAmmoMaxStacksOverride`; reads/writes `Modified

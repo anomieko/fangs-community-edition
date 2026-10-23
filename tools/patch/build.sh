@@ -27,14 +27,31 @@ for p in sorted(pathlib.Path(sys.argv[1]).glob('*.json')):
 PY
 )
 fi
-if [[ ${#patches[@]} -eq 0 ]]; then
-  rm -f "$out"; echo "no patch enabled: no patch pak"; exit 0
-fi
 for p in "${patches[@]}"; do
   [[ -f $patchdir/$p.json ]] || { echo "no patch $patchdir/$p.json" >&2; exit 1; }
   want=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["build"])' "$patchdir/$p.json")
   [[ $want == "$build" ]] || { echo "patch $p is for build $want, the game in $game is $build" >&2; exit 1; }
 done
+# A patch that puts a local media file into the game (soundwave-audio: e.g. community-ishir's clip, never in git) is
+# left out with a warning when the file isn't there; FANGS_STRICT_MEDIA=1 stops instead.
+kept=()
+for p in "${patches[@]}"; do
+  missing=$(python3 -I -c 'import json, pathlib, sys
+for a in json.load(open(sys.argv[1]))["assets"]:
+    for e in a["edits"]:
+        if "media" in e and not (pathlib.Path(sys.argv[2]) / e["media"]).is_file():
+            print(e["media"])' "$patchdir/$p.json" "$REPO")
+  if [[ -n $missing ]]; then
+    [[ -n ${FANGS_STRICT_MEDIA:-} ]] && { echo "FAILED: patch $p needs $missing (where to get it: its \"research\" doc)" >&2; exit 1; }
+    echo "!! patch $p left out: $missing is missing (where to get it: its \"research\" doc)" >&2
+    continue
+  fi
+  kept+=("$p")
+done
+patches=("${kept[@]}")
+if [[ ${#patches[@]} -eq 0 ]]; then
+  rm -f "$out"; echo "no patch enabled: no patch pak"; exit 0
+fi
 
 mkdir -p "$REPO/work/patch"
 stage=$(mktemp -d "$REPO/work/patch/stage.XXXXXX"); trap 'rm -rf "$stage"' EXIT

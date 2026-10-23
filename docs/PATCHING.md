@@ -186,9 +186,10 @@ with inline Ogg Vorbis audio, and Blueprints call `GameplayStatics.SpawnSoundAtt
     the asset out once to compute it.
 - **The audio file is never in git.** It sits in `work/media/` and the patch states its sha256 and where it came from.
   - `build.sh` passes `PATCH_MEDIA_ROOT` (the repo).
-  - A missing file fails the build with a message saying where to get it. `server/deploy.sh` runs with `pipefail`, so
-    the deploy stops too.
-  - A deploy needs the file in the deploying checkout's `work/media/`.
+  - A missing file leaves that patch out of the pak, with a warning saying where to get it (its `research` doc);
+    the other patches build as usual. `FANGS_STRICT_MEDIA=1` makes it stop the build instead (and so the deploy).
+    Keep a fix that doesn't need the file in a patch of its own (`ishir-ult.json` next to `community-ishir.json`).
+  - The file must be in the building checkout's `work/media/` for the sound to ship.
 - **`insert-play-sound`** plays the sound where the game already plays one, e.g. next to an FMOD event:
   `SpawnSoundAttached` attached to the same component.
 - **Testing a sound:** test clients run with `-nosound`, so the engine has no audio device and plays nothing. A client

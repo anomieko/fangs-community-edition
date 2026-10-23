@@ -14,7 +14,7 @@ What a community member OK'd (the proposal PDF, cards 3 and 16; `docs/recon/comm
 | Dourling Caltrops: the "cube" | the box component is drawn (`bHiddenInGame` false) | not drawn | `set-export-prop` `Box_GEN_VARIABLE.bHiddenInGame` |
 | Dourling Caltrops: the look | the cue replays Dourling Dive's burst (`VFXPack.Skill1.AOEVFX` = `NS_RowanSpaceAOE`) on Rowan | Iron Thorns (`VFXPack.Skill2.AugmentVFX` = `NS_IronThorns`) at the vines | cue `OnExecute`: `set-name-const` on the tag; `insert-copy` of `BreakGameplayCueParameters` before `GetGroundLocation`, whose location becomes the cue's `Location`; the ability's `MakeGameplayCueParameters` gets `self.ForwardImpactLocation` as `Location` |
 | Dourling Caltrops after the recast (Glimmerbranch Hilt) | — | — | nothing to change: every dash end (the first and the recast) raises `Event.EndDash`, whose handler runs `CheckForItemsPostCast` → `Apply Items Post Cast` → `Apply Dourling Caltrops`. Checked in the match test |
-| Dourling Caltrops' tooltip ("Wall of Roots [SHIFT]") | | unchanged | a community member: may be his own keybinds |
+| Dourling Caltrops' tooltip ("Wall of Roots [SHIFT]") | | unchanged | A community member: may be his own keybinds |
 | Rowan's passive heal on Overgrowth (live 17 Oct, **replaced 21 Oct**: see "21 Oct" below) | proportional to his current missing health, with a strength fixed when he steps on: per 0.25 s, (missing share at step-on × 2 %) × missing health (measured: entered at 530/950, +3.7 HP per tick, 0.88 % of missing). Entered at full health it heals about nothing for that whole stay | 2 % of current missing health plus 3 health per second, every 0.25 s, whatever his health was when he stepped on (Aug) | passive `GetMissingHpValue`: `Multiply(1 − HP/max, rate)` → `Multiply(1.0, rate)` (`set-call-arg`, resized); creep timer `Activate Regenerate Item`: the SetByCaller tag `Data.Heal` → `Data.Heal.MissingMultiple` (the healing execution's fraction of current missing health), and a copy of the `Divide` and of the `AssignTagSetByCallerMagnitude` adds `Data.Heal` = `ModifiedHealPerSecond` (3) ÷ 4 to the same spec |
 | Passive tooltip (live 17 Oct, replaced 21 Oct) | "heals for 2% of his missing HP per second" | "… plus 3 HP per second" | `replace-text` `WoodenSword_P_desc` |
 | Propagator's charge bar | sits near empty, then jumps when the charge comes | fills at the faster speed (not verified in a match, see below) | FangsBoot (player update), see below |
@@ -81,7 +81,7 @@ Test lessons, kept in the helpers:
   this case.
 - **Balance note (17 Oct; superseded 21 Oct):** the Aug rule (2 %/s + 3 HP/s) heals less than Feb's when Rowan steps on
   badly hurt (entered at 56 %: Feb ~14.8 HP/s, patched ~11.4 HP/s at that moment) and more when he steps on healthy or
-  takes damage while standing there (Feb ~0 if entered at full health). a community member asked for the Aug rule, then found it
+  takes damage while standing there (Feb ~0 if entered at full health). A community member asked for the Aug rule, then found it
   heals too little (21 Oct): see below.
 - **Propagator's bar fix is not verified in a match:** the hook runs on the Sourblossom icon (`fangsboot.log`) and
   reads the timer, but the test produced no Propagator-shortened timer to compare (no difference logged). Check it in
@@ -94,7 +94,7 @@ Test lessons, kept in the helpers:
 
 ## 21 Oct: the heal amount, and a Sourblossom losing the passive (a community member's two requests)
 
-Branch `cp4-rowan`. Feb 2023 build. a community member, through the user:
+Branch `cp4-rowan`. Feb 2023 build. A community member, through the user:
 1. "rowan passive heal numbers are much lower than it used to be after the previous patch you did. [...] from 90hp a
    plant with the +82.5% passive heal only heals him to 460 hp over 13s. it used to heal him to ~650 without augment
    from 90hp over the plant duration, and with the +82.5% passive aug to about 800. please revert this shadow nerf, but
@@ -139,7 +139,7 @@ after the cast; the plant lives `LifeTime` 11 s after its 0.6 s setup, then its 
 
 | Formula | 13 s, no augment | 13 s, Heal Sprite | plant's 14.25 s, no augment | 14.25 s, Heal Sprite |
 |---|---|---|---|---|
-| a community member (approx.) | | 460 (live) | ~650 (before 17 Oct) | ~800 (before 17 Oct) |
+| A community member (approx.) | | 460 (live) | ~650 (before 17 Oct) | ~800 (before 17 Oct) |
 | Feb (before 17 Oct) | 617 | 772 | **646** | **797** |
 | live (2 %/s + 3 HP/s) | 322 | 423 | 341 | **448** |
 | **new: 1.8 % of missing per tick (7.2 %/s)** | 616 | 771 | **645** | **796** |
@@ -173,7 +173,7 @@ does it to 1 HP, with and without Heal Sprite (the augment multiplies both the s
   one operator, `*`, and can't compute (x − 1) × 100).
 - Other ways: Feb exactly (remove the passive's entry: the strength fixed at step-on again; the tooltip would then
   give the most, 8 %); a round 8 %/s (remove only the `MissingHealthHPS` edit; the tooltip follows: 678 / 823 in
-  a community member's case, +4 %); a flat 3 HP/s on top as on 17 Oct (`Data.Heal` = 3 ÷ 4 on the creep timer's heal: about
+  A community member's case, +4 %); a flat 3 HP/s on top as on 17 Oct (`Data.Heal` = 3 ÷ 4 on the creep timer's heal: about
   +25 HP over a plant from low health, 3 HP/s near full health).
 
 ### A Sourblossom losing the passive under an Earth Rend arc or the ult's Overgrowth (a community member's request 2)
@@ -229,7 +229,7 @@ tufts-sync`), with the live (17 Oct) `community-rowan.json` for "live", without 
 - Per tick, measured: Feb 1.77 % of missing from 110 (= 0.884 × 2 %), 2.98 % with Heal Sprite's rate from 92 (0.903 ×
   3.3 %); live 0.58 % (0.5 % + 0.75 HP); new 1.80 %, 2.97 % with Heal Sprite's rate. Measured and model agree within
   6 HP. A Sourblossom's ring heals for 56-58 ticks (14-14.5 s) from when he steps in.
-- a community member's numbers are these: ~650 / ~800 before 17 Oct = Feb over the plant's duration; 460 with Heal Sprite on live
+- A community member's numbers are these: ~650 / ~800 before 17 Oct = Feb over the plant's duration; 460 with Heal Sprite on live
   = `rh-live`'s 461.
 - The real Heal Sprite: in `rh-new`'s first try (the 8 %/s build, only The Bloomblade equipped) the default pick was
   Heal Sprite: the server's passive had `ModifiedMissingHealthHPS` 3.3 at round start and healed 3.30 % of missing per

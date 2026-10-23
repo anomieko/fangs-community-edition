@@ -21,7 +21,16 @@ What each deploy put on the server, so a problem can be traced to a change and u
 
 ## Next deploy (not deployed yet)
 
-Nothing yet.
+Branch `selfhost` (23 Oct, the user: "The repo is meant to let people easily deploy it and run their own server"). No
+change players notice: the pak's content and the live name style stay as they are when `work/name-styles` holds
+`anomie=rainbow` (local, never committed) on the deploying machine. No players' notes needed.
+
+| Change | Where | Off switch |
+|---|---|---|
+| Name styles in the online list are the operator's own setting (`FANGS_NAME_STYLES`, or the local file `work/name-styles`: `<name>=<style>,...`), no longer in the public seed: on someone else's server, whoever registered "anomie" got the rainbow name | `backend/seed/make_seed.py`, `server/docker-compose.yml`, `server/deploy.sh` | – (an empty setting: plain names) |
+| Ishir's ult fix is its own patch `ishir-ult` (the same edit as in `deploy-2026-10-23-1912`), so it ships without the clip | `tools/patch/patches/ishir-ult.json`, `community-ishir.json` | `"enabled": false` in `ishir-ult.json` |
+| A patch whose media file (e.g. Ishir's clip) is missing is left out of the pak with a warning instead of stopping the build and the deploy (`FANGS_STRICT_MEDIA=1`: stop) | `tools/patch/build.sh` | `FANGS_STRICT_MEDIA=1` |
+| Self-hosting: `docs/SELF-HOSTING.md`, `tools/setup/bootstrap.sh` (tools, game check, pinned UE4SS and UAssetAPI with a mirror on the `third-party` release, pak key, join code), the privacy check `tools/setup/leakcheck.py` (pre-commit hook and CI), README/SERVER/CLAUDE pointers. Not deployed (local tools and docs) | `tools/setup/`, `docs/`, `.github/workflows/privacy.yml` | – |
 
 ## deploy-2026-10-23-1912 (`20e2ee9`, Feb 2023 build)
 

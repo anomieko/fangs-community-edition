@@ -169,7 +169,7 @@ shorter draw or walk while drawing.
 
 ## Answers (a community member, 16 Oct)
 
-a community member filled in the PDF the same day. His ticks and notes, decoded (`q<NN>` fields of the returned PDF):
+A community member filled in the PDF the same day. His ticks and notes, decoded (`q<NN>` fields of the returned PDF):
 
 | Question | Answer | Notes |
 |---|---|---|
@@ -250,7 +250,7 @@ a community member filled in the PDF the same day. His ticks and notes, decoded 
   rounds, maybe an ally's Spite; add the +3/s to the tooltip.
 - **Q28:** the screenshot item becomes **Burning Harvest**, a red (combat) heirloom: Glade Slash on a Sourblossom
   destroys it and applies its damage over time (no slow) to enemies in its area; must work with Shardpouch. New
-  code. a community member ticked "not this item" at Pwyff's Saplings; which item the screenshot shows needs a check.
+  code. A community member ticked "not this item" at Pwyff's Saplings; which item the screenshot shows needs a check.
 - **Q29:** Wylde's RMB: 95 damage, 1 ammo, 1 s cooldown, hold to keep firing (range: the old short range, to confirm).
 - **Q31:** Ethryn's LMB 40-40-50.
 - **Q32:** the reflect zone as narrow as her body, but the slow-and-push zone stays as it is (one box today, so they
@@ -1361,7 +1361,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - Tooltip `demongirl_unstablepuzzlebox_desc` shows `$TPDamage$`, so it updates by itself.
 - **Effort / risk:** S. Patch pak (players + servers).
 - **Confidence:** high. Match test: the teleport AoE does 75.
-- **a community member:** none.
+- **A community member:** none.
 
 #### WYLDE: LMB base damage 35 → 40
 - **What it is**
@@ -1372,7 +1372,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - Tooltip `gunslinger_basicattack_desc` = `$ModifiedAbilityDamage$`, so it updates by itself.
 - **Effort / risk:** S. Patch pak.
 - **Confidence:** high.
-- **a community member:** none.
+- **A community member:** none.
 
 #### WYLDE: Revert RMB to the short range high dmg release version (PLEASE)
 - **What it is.** RMB "Blight" = `Gunslinger/RMB/BP_GA_Gunslinger_RMB`. It is the same Blueprint in all three builds: one
@@ -1404,7 +1404,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - the tooltip computes the damage by itself and already says "short range".
 - **Effort / risk:** S. Patch pak. Balance risk: 95 plus the RMB proc (+10 flat + 10 % missing HP) up close.
 - **Confidence:** high on the values. Unverified: that "release version" means Aug. We have no build older than Aug.
-- **a community member:**
+- **A community member:**
   - Is this the version you mean: 95 damage, about 60 % of LMB's range, uses 2 ammo, 1 s cooldown (Aug 2022)? Or do you
     remember different numbers?
   - Should holding RMB keep firing (Feb), or one shot per click (Aug)?
@@ -1440,7 +1440,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - Risks: the hook timing (whether the hero exists when dummies spawn), and the UI ammo bar.
 - **Confidence:** medium. A test must show: ammo in the dummy phase, auto-reload after emptying it, no Bounty's Reward
   stacks kept at round start, and the normal round-start reload.
-- **a community member:**
+- **A community member:**
   - Should Wylde start the dummy phase with a full magazine and reload normally?
   - Does anything else Wylde stacks for the rest of the game also need to ignore the dummy phase?
 
@@ -1456,7 +1456,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - `replace-text LOC_EN_AUGMENTS_GUNSLINGER gunslinger_maxammoincrease_desc "lands 35 bullets" → "lands 30 bullets"`.
 - **Effort / risk:** S. Patch pak.
 - **Confidence:** high.
-- **a community member:** none.
+- **A community member:** none.
 
 #### WYLDE: Speedshine +10 % → +20 % move speed
 - **What it is**
@@ -1470,7 +1470,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - Tooltip `$ReloadSpeedBoostPercentageSpeedUp%100$` updates by itself.
 - **Effort / risk:** S. Patch pak.
 - **Confidence:** high.
-- **a community member:** none.
+- **A community member:** none.
 
 #### ETHRYN: M1 damage 50 → 40
 - **What it is**
@@ -1489,7 +1489,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - third hit as a community member decides (`ShieldAttack Damage` 55 → ?; Aug had 40).
 - **Effort / risk:** S. Patch pak.
 - **Confidence:** high.
-- **a community member:** The third hit (shield bash) does 55. Should it go to 40 too (as in Aug 2022), 45, or stay 55?
+- **A community member:** The third hit (shield bash) does 55. Should it go to 40 too (as in Aug 2022), 45, or stay 55?
 
 #### ETHRYN: Holy Brazier cooldown 2 s → 4 s, duration 0.75 s → 1 s
 - **What it is**
@@ -1504,7 +1504,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   - the tooltip (`ShieldGirl_GlintingReflection_desc`, both placeholders) updates by itself.
 - **Effort / risk:** S. Patch pak.
 - **Confidence:** high.
-- **a community member:** none.
+- **A community member:** none.
 
 #### ETHRYN: shield hitbox too big (past her sides) and reflects from behind
 - **What it is**
@@ -1532,7 +1532,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
        (unproven, L).
 - **Effort / risk:** (1) M including the new op and a test. (2) L.
 - **Confidence:** high on the numbers. Medium on how big the visual is versus the box: check in a screenshot.
-- **a community member:**
+- **A community member:**
   - Should the reflecting zone be only as wide as Ethryn's body, even if the visible shield looks a bit wider? Or should
     it match the visible shield?
   - After narrowing, is "reflects from behind" still a problem in your games (e.g. piercing shots that go through her)?
@@ -1554,7 +1554,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
 - **Effort / risk:** S-M (with the op). Patch pak.
 - **Confidence:** medium. Which of the boulder's spheres triggers the shield overlap is native code (not checked). A
   2-player test should measure the reflect distance before and after.
-- **a community member:** Belroth's boulder would also get a smaller hit area against everyone (as the developers did in Dec 2023).
+- **A community member:** Belroth's boulder would also get a smaller hit area against everyone (as the developers did in Dec 2023).
   Is that OK, or should only the reflect distance change (harder)?
 
 #### ETHRYN: reflect one-shots when Wylde's E is reflected
@@ -1576,7 +1576,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
 - **Effort / risk:** test first (2 players: Wylde E into a raised shield, log the damage and effects on Wylde). Then a) is
   S-M, b) and c) are L.
 - **Confidence:** low on the cause.
-- **a community member:**
+- **A community member:**
   - When Ethryn's shield meets Fan the Hammers, what should happen?
     - A) the bullets come back, but each only does its normal damage;
     - B) the shield blocks them (no damage to Ethryn, nothing comes back);
@@ -1592,7 +1592,7 @@ A small new AssetPatch op would cover all three: `set-export-value` with `export
   value, so it needs the new op (`set-default` can't reach it). No tooltip shows base HP.
 - **Effort / risk:** S once the op exists. Patch pak (the GE is applied on the server; clients see the replicated attribute).
 - **Confidence:** high. Match test: Brutus spawns with 1050 / 1050.
-- **a community member:** Brutus has 950 HP now (1000 in Aug 2022). So +100 = 1050. Correct?
+- **A community member:** Brutus has 950 HP now (1000 in Aug 2022). So +100 = 1050. Correct?
 
 ---
 

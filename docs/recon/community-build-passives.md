@@ -1,11 +1,11 @@
 # Passives that stop for a whole match (community patch, 17 Oct)
 
-a community member's reports, via the user:
+A community member's reports, via the user:
 - Wylde had "0 ammo entire game";
 - Fiorne's 0 Bunny Stacks "stays broken all match";
 - Rowan's passive "stops healing for the rest of the game".
 
-a community member's guess: "something relating to all passives in general". This file has what decides whether a hero's passive
+A community member's guess: "something relating to all passives in general". This file has what decides whether a hero's passive
 runs in the Feb 2023 build, the likely trigger, the fix (`tools/patch/patches/community-passives.json`, not enabled),
 and the evidence. Branch `cp-passives`, on top of `fiorne-restore`.
 

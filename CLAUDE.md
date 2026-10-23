@@ -1,5 +1,9 @@
 # Fangs: Community Edition — notes for Claude
 
+**Setting up your own server with this repository?** Follow `docs/SELF-HOSTING.md` and its "For AI agents" section.
+The rest of this file is how the original server's maintainers work; "the user" and their OKs below mean that
+server's operator, not yours.
+
 Goal: keep FANGS playable for a small group (self-hosted backend + game servers on a VPS) and preserve it.
 This is a public, non-commercial fan project: never commit game files, extracted/decompiled game
 content, header dumps, or credentials found in the game. See the README disclaimer.

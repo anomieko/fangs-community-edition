@@ -323,7 +323,7 @@ and the server (the 40th, the nested HP value, `check()` can't read), health **7
 stop dead, stacks refilling after a dash chain and after a mid-round restart of the stack system (0 → 1).
 Those need play.
 
-The 0 stacks trigger in real games is still unconfirmed. a community member (Q40, 16 Oct): when it starts, "not sure"; once
+The 0 stacks trigger in real games is still unconfirmed. A community member (Q40, 16 Oct): when it starts, "not sure"; once
 broken, it "stays broken all match". In Feb the restarted stack system would set itself up again at the next round
 start (it binds the round delegates when it activates), so "all match" points to a second cause: an activation that
 ends before it binds them (`K2_CommitAbility` failing, or no `Player`). The patch covers that too, as long as the
