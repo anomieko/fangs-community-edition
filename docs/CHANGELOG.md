@@ -22,8 +22,7 @@ What each deploy put on the server, so a problem can be traced to a change and u
 ## Next deploy (not deployed yet)
 
 Branch `fix-wylde-ishir` (23 Oct). Player update and server update: the patch pak gets `wylde-ammo` (new) and the
-`community-ishir` change. Players' notes: `backend/patchnotes/2026-10-23-2300.json` (rename it and its tag to the
-deploy's time). Tested in two-player matches with all enabled patches (`tools/run/test_fth.sh`, `MODE=ult
+`community-ishir` change. Players' notes: `backend/patchnotes/2026-10-23-1915.json`. Tested in two-player matches with all enabled patches (`tools/run/test_fth.sh`, `MODE=ult
 tools/run/test_ishir.sh`); the pak builds from all 13 patches.
 
 | Change | Where | Off switch |

@@ -75,8 +75,7 @@ Branch `fix-wylde-ishir` (23 Oct, the user's two bug reports; `docs/CHANGELOG.md
 - **Ishir's ult played the shotgun twice for the Ishir player** (on the press and at the pop): only the server applies
   the mark now (pak `community-ishir.json`; `docs/recon/community-build-ishir.md`). Tested: `MODE=ult
   tools/run/test_ishir.sh` (once per cast, at the pop, on both clients).
-Next: the user's OK to merge and deploy (players' notes `backend/patchnotes/2026-10-23-2300.json`, renamed to the
-deploy's time).
+Next: deploy (the user's OK, 23 Oct; players' notes `backend/patchnotes/2026-10-23-1915.json`).
 
 Open: Wylde's E (Lamblaster) holding back LMB/RMB (`Ability.Skill4` in their
 blocked tags until the recoil hop ends); `tools/run/test_wylde.sh` can't get Lamblaster to cast on the server yet.
